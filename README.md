@@ -40,18 +40,16 @@ Hikvision, pero **necesita validarse contra tu instalación real**:
 - Mientras tanto, podés seguir generando el fichero subiendo el Excel manual
   con `lib/leerExcelHikvision.js` (dejé esa función intacta como respaldo).
 
-### 2. Seguridad de los endpoints admin (server.js)
-`/admin/generar-ahora` y `/admin/registrar-numero` hoy están abiertos. Antes
-de exponer el servidor a internet, agregales una clave simple (por ejemplo,
-un header `x-admin-key` que compares contra una variable de entorno) — te lo
-puedo armar en el próximo paso.
+### 2. Seguridad de los endpoints admin (server.js) — ✅ resuelto
+`/admin/generar-ahora` y `/admin/registrar-numero` están protegidos con el
+middleware `requireAdminKey`: exigen un header `x-admin-key` que tiene que
+coincidir con `ADMIN_API_KEY` (.env). Sin el header correcto, devuelven 401.
 
-### 3. Alta de empleados en WhatsApp
-Por ahora, dar de alta a alguien es un POST manual a `/admin/registrar-numero`
-con `{ "numero": "+549...", "empleado": "Nombre Apellido" }`. Si querés, la
-siguiente iteración puede ser un panel web chiquito (protegido con
-contraseña, como el panel admin que ya tenías en el HTML) para hacer esto sin
-tocar la terminal.
+### 3. Alta de empleados — ✅ resuelto (por WhatsApp)
+El administrador (`ADMIN_WHATSAPP_NUMBER`) puede dar de alta un empleado
+mandándole al bot: `alta +549XXXXXXXXXX Nombre Apellido`. Internamente llama
+a la misma `registrarNumero` que usaba el endpoint HTTP (sigue disponible
+también por `/admin/registrar-numero` si hace falta).
 
 ## Probar el pipeline sin esperar al cron
 
