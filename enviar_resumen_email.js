@@ -4,7 +4,8 @@ const { getSectorDeEmpleado } = require("./lib/motorCalculo");
 const { enviarEmailGmail } = require("./lib/gmailClient");
 
 const PERIODO = "2026-07";
-const DESTINATARIO = "mantenimiento@bpcoronado.com";
+const RANGO = "21/6 al 20/7";
+const DESTINATARIO = "p.saini@bpcoronado.com";
 
 const resumen = db.prepare("SELECT empleado, h50, h100 FROM resumen_mensual WHERE periodo=? ORDER BY empleado").all(PERIODO);
 
@@ -32,7 +33,7 @@ function tablaSector(sector, titulo) {
 
 const html = `
   <div style="font-family:Arial,sans-serif;">
-    <p>Resumen de horas extra - período ${PERIODO}</p>
+    <p>Resumen de horas extra - ${RANGO}</p>
     ${tablaSector("mantenimiento", "Mantenimiento")}
     ${tablaSector("conserjeria", "Conserjería")}
   </div>
@@ -40,7 +41,7 @@ const html = `
 
 enviarEmailGmail({
   to: DESTINATARIO,
-  subject: `Resumen de horas - ${PERIODO} (prueba)`,
+  subject: `Resumen de horas - ${RANGO}`,
   html,
 })
   .then(() => {
