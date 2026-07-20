@@ -24,9 +24,9 @@ cp .env.example .env
 # completá .env con tus datos reales (ver abajo)
 ```
 
-## Antes de poner esto en producción — 3 cosas pendientes
+## Pendiente antes de producción
 
-### 1. Conexión real a HikCentral (lib/hikcentral.js)
+### Conexión real a HikCentral (lib/hikcentral.js)
 El esquema de firma HMAC que dejé es el patrón típico de la API "Artemis" de
 Hikvision, pero **necesita validarse contra tu instalación real**:
 
@@ -39,17 +39,6 @@ Hikvision, pero **necesita validarse contra tu instalación real**:
   `mapearEventoAEmpleado` en `lib/hikcentral.js` de acuerdo a eso.
 - Mientras tanto, podés seguir generando el fichero subiendo el Excel manual
   con `lib/leerExcelHikvision.js` (dejé esa función intacta como respaldo).
-
-### 2. Seguridad de los endpoints admin (server.js) — ✅ resuelto
-`/admin/generar-ahora` y `/admin/registrar-numero` están protegidos con el
-middleware `requireAdminKey`: exigen un header `x-admin-key` que tiene que
-coincidir con `ADMIN_API_KEY` (.env). Sin el header correcto, devuelven 401.
-
-### 3. Alta de empleados — ✅ resuelto (por WhatsApp)
-El administrador (`ADMIN_WHATSAPP_NUMBER`) puede dar de alta un empleado
-mandándole al bot: `alta +549XXXXXXXXXX Nombre Apellido`. Internamente llama
-a la misma `registrarNumero` que usaba el endpoint HTTP (sigue disponible
-también por `/admin/registrar-numero` si hace falta).
 
 ## Probar el pipeline sin esperar al cron
 
