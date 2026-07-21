@@ -145,6 +145,8 @@
       <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
       <h3>Cambios de turno</h3>
       <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
+      <h3>Cancelaciones (deshacer algo ya aprobado)</h3>
+      <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-empleados" style="display:none">
@@ -324,6 +326,7 @@ async function cargarPendientes() {
     const data = await api("/pendientes");
     renderCorrecciones(data.correcciones);
     renderCambios(data.cambios);
+    renderCancelaciones(data.cancelaciones);
   } catch (e) { mostrarToast(e.message); }
 }
 
@@ -371,6 +374,25 @@ function renderCambios(lista) {
   }).join("");
 }
 
+function renderCancelaciones(lista) {
+  const cont = document.getElementById("lista-cancelaciones");
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay pedidos de cancelación pendientes 👍</div>'; return; }
+  cont.innerHTML = lista.map((s) => {
+    return `<div class="card" data-id="${s.id}">
+      <div class="card-row">
+        <div>
+          <div class="card-titulo">#${s.id} — ${s.empleado}</div>
+          <div class="card-sub">Quiere deshacer ${s.tipo === "correccion" ? "la corrección" : "el cambio"} #${s.solicitud_id}</div>
+        </div>
+        <div class="card-acciones">
+          <button class="btn btn-ok" onclick="accionCancelacion(${s.id},'aprobar',this)">Aprobar</button>
+          <button class="btn btn-danger" onclick="accionCancelacion(${s.id},'rechazar',this)">Rechazar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 async function accionCorreccion(id, accion, btn) {
   btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = true));
   try {
@@ -384,6 +406,15 @@ async function accionCambio(id, accion, btn) {
   btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = true));
   try {
     const data = await api(`/cambio/${id}/${accion}`, { method: "POST" });
+    mostrarToast(data.resultado);
+    cargarPendientes();
+  } catch (e) { mostrarToast(e.message); }
+}
+
+async function accionCancelacion(id, accion, btn) {
+  btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try {
+    const data = await api(`/cancelacion/${id}/${accion}`, { method: "POST" });
     mostrarToast(data.resultado);
     cargarPendientes();
   } catch (e) { mostrarToast(e.message); }
