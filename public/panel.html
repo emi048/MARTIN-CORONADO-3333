@@ -110,6 +110,11 @@
   .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
   .badge-si { background: rgba(62,207,142,0.15); color: var(--ok); }
   .badge-no { background: rgba(229,72,77,0.15); color: var(--danger); }
+  .badge-pendiente { background: rgba(245,166,35,0.15); color: var(--warn); }
+  .badge-aprobada { background: rgba(62,207,142,0.15); color: var(--ok); }
+  .badge-rechazada { background: rgba(229,72,77,0.15); color: var(--danger); }
+  .badge-cancelada { background: rgba(138,145,158,0.15); color: var(--text-muted); }
+  .filtros-historial { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 
   select, .periodo-input { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; }
   .toast {
@@ -143,6 +148,7 @@
     <button class="tab-btn" data-tab="fichadas">Fichadas por empleado</button>
     <button class="tab-btn" data-tab="licencias">Licencias</button>
     <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
+    <button class="tab-btn" data-tab="historial">Historial</button>
   </nav>
   <header>
     <div class="header-left">
@@ -270,6 +276,38 @@
         <tbody id="tabla-actividad"></tbody>
       </table>
     </section>
+
+    <section id="tab-historial" style="display:none">
+      <div class="filtros-historial">
+        <div class="form-field">
+          <label for="hist-tipo">Tipo</label>
+          <select id="hist-tipo">
+            <option value="">Todos</option>
+            <option value="Corrección">Corrección</option>
+            <option value="Cambio de turno">Cambio de turno</option>
+            <option value="Cancelación">Cancelación</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="hist-estado">Estado</label>
+          <select id="hist-estado">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="aprobada">Aprobada</option>
+            <option value="rechazada">Rechazada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="hist-empleado">Empleado</label>
+          <input type="text" id="hist-empleado" placeholder="Nombre...">
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Tipo</th><th>Empleado</th><th>Detalle</th><th>Estado</th><th>Creado</th></tr></thead>
+        <tbody id="tabla-historial"><tr><td colspan="5" class="vacio">Cargando…</td></tr></tbody>
+      </table>
+    </section>
   </main>
 </div>
 
@@ -361,6 +399,7 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
     if (btn.dataset.tab === "estadisticas") cargarEstadisticas();
     if (btn.dataset.tab === "licencias") cargarLicencias();
     if (btn.dataset.tab === "fichadas") initFichadasEmpleado();
+    if (btn.dataset.tab === "historial") cargarHistorial();
   });
 });
 
@@ -520,6 +559,79 @@ function formatoFechaHora(iso) {
   const d = new Date(iso);
   return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
+
+let historialCompleto = [];
+
+async function cargarHistorial() {
+  const tbody = document.getElementById("tabla-historial");
+  tbody.innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
+  try {
+    const data = await api("/historial");
+    const filas = [];
+
+    data.correcciones.forEach((s) => {
+      const fecha = s.fecha.split("-").reverse().join("/");
+      const partes = [];
+      if (s.ingreso_propuesto) partes.push("Entrada: " + s.ingreso_propuesto);
+      if (s.egreso_propuesto) partes.push("Salida: " + s.egreso_propuesto);
+      filas.push({
+        tipo: "Corrección", empleado: s.empleado,
+        detalle: `#${s.id} — ${fecha} · ${partes.join(", ")}`,
+        estado: s.estado, creado: s.creado_en,
+      });
+    });
+
+    data.cambios.forEach((s) => {
+      const fechaA = s.fecha_a.split("-").reverse().join("/");
+      const fechaB = s.fecha_b.split("-").reverse().join("/");
+      filas.push({
+        tipo: "Cambio de turno", empleado: `${s.empleado_a} ↔ ${s.empleado_b}`,
+        detalle: `#${s.id} — ${fechaA} / ${fechaB}`,
+        estado: s.estado, creado: s.creado_en,
+      });
+    });
+
+    data.cancelaciones.forEach((s) => {
+      filas.push({
+        tipo: "Cancelación", empleado: s.empleado,
+        detalle: `#${s.id} — deshacer ${s.tipo} #${s.solicitud_id}`,
+        estado: s.estado, creado: s.creado_en,
+      });
+    });
+
+    filas.sort((a, b) => new Date(b.creado) - new Date(a.creado));
+    historialCompleto = filas;
+    renderHistorial();
+  } catch (e) { mostrarToast(e.message); }
+}
+
+function renderHistorial() {
+  const tipo = document.getElementById("hist-tipo").value;
+  const estado = document.getElementById("hist-estado").value;
+  const empleadoFiltro = document.getElementById("hist-empleado").value.trim().toLowerCase();
+
+  const filas = historialCompleto.filter((f) =>
+    (!tipo || f.tipo === tipo) &&
+    (!estado || f.estado === estado) &&
+    (!empleadoFiltro || f.empleado.toLowerCase().includes(empleadoFiltro))
+  );
+
+  const tbody = document.getElementById("tabla-historial");
+  tbody.innerHTML = filas.length
+    ? filas.map((f) => `
+      <tr>
+        <td>${f.tipo}</td>
+        <td>${f.empleado}</td>
+        <td>${f.detalle}</td>
+        <td><span class="badge badge-${f.estado}">${f.estado}</span></td>
+        <td>${formatoFechaHora(f.creado)}</td>
+      </tr>
+    `).join("")
+    : '<tr><td colspan="5" class="vacio">Nada para mostrar con estos filtros</td></tr>';
+}
+
+["hist-tipo", "hist-estado"].forEach((id) => document.getElementById(id).addEventListener("change", renderHistorial));
+document.getElementById("hist-empleado").addEventListener("input", renderHistorial);
 
 async function cargarEstadisticas() {
   try {
