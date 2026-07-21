@@ -69,6 +69,52 @@ hubiera pasado. Falta decidir:
   un franco extra? ¿cuando se "cobra"? ¿se puede acumular mas de uno?) antes
   de poder implementarlo.
 
+## Diseñado, no implementado: gestion de licencias y vacaciones
+
+Charlado pero no construido todavia. Asi quedo pensado:
+
+- **Tabla nueva `licencias`**: empleado, fecha desde, fecha hasta, tipo
+  (vacaciones, licencia medica, estudio, etc.), quien la cargo.
+- **Carga por WhatsApp** (comando de admin, mismo patron que `alta` y
+  `evento`): `licencia Nombre Apellido 10/07 al 20/07 vacaciones`. Reusa
+  `parsearFechas` (ya soporta un dia, un rango, o fechas sueltas), no hay
+  que escribir un parser nuevo.
+- **Efecto en el calculo**: un dia que cae dentro de una licencia activa se
+  marca con el tipo de licencia (ej. `🏖️ Vacaciones`) **sin** la alerta de
+  "falta fichaje", y no se le ofrece al empleado la opcion de pedir una
+  correccion ese dia (no tiene sentido corregir un dia que no trabajo).
+- **Se ve reflejado** tanto en "mis horas" (WhatsApp) como en el Excel,
+  etiquetado aparte de un dia trabajado o de un dia con alerta real.
+
+**Decision pendiente (de negocio, no tecnica):** ¿un dia de licencia/vacaciones
+cuenta como "dia trabajado" en el resumen mensual (a los fines de
+presentismo/sueldo), o queda totalmente aparte del conteo de dias y horas?
+Esto hay que definirlo antes de implementar el calculo de sueldo automatico
+tambien pedido como mejora futura, porque la regla es la misma para los dos.
+
+## Diseñado, no implementado: deteccion de ausencias por WhatsApp
+
+Tambien charlado, tampoco construido. La idea:
+
+1. Recordatorio de fichada 10 minutos antes del horario de entrada esperado
+   de cada empleado (mismo mecanismo que ya existe para el recordatorio de
+   salida olvidada).
+2. Si pasan 3-4hs sin fichada, el bot pregunta con menu numerado (no texto
+   libre): "1) Vine pero me olvide fichar / 2) No vine hoy". La opcion 1
+   entra al flujo de correccion que ya existe. La opcion 2, o si no
+   contesta nada, marca el dia como `AUSENTE` en rojo en el Excel y le
+   avisa al admin para que confirme el motivo real (enganchando con lo de
+   licencias de arriba: un "ausente sin justificar" es una licencia sin
+   clasificar todavia).
+
+**Requisito tecnico previo:** esto necesita saber, de antemano, que dias se
+espera que cada persona trabaje (para no preguntarle a alguien en su dia
+franco). Para el equipo de mantenimiento ya existe esa base
+(`lib/turnosMantenimiento.js`, con la rotacion de turnos y francos). Para el
+resto de los sectores (conserjeria, etc.) todavia no hay un calendario
+esperado equivalente -- hay que definirlo antes de poder activar esto para
+todos, no solo mantenimiento.
+
 ## Probar el pipeline sin esperar al cron
 
 ```bash
