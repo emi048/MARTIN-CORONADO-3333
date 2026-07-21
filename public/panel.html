@@ -81,7 +81,7 @@
   }
   nav button.activo { color: var(--text); border-bottom-color: var(--accent); }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
   .card-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .card-titulo { font-weight: 600; font-size: 14px; }
   .card-sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
@@ -93,6 +93,16 @@
 
   .vacio { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
   .stat-nota { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .stat-tile {
+    background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+    border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .stat-tile.stat-ok { border-top-color: var(--ok); }
+  .stat-tile.stat-warn { border-top-color: var(--warn); }
+  .stat-tile .stat-valor { font-size: 30px; font-weight: 700; line-height: 1.1; }
+  .stat-tile .stat-label { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
 
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
@@ -126,7 +136,8 @@
   <div id="sidebar-overlay"></div>
   <nav id="sidebar">
     <div class="sidebar-titulo">Secciones</div>
-    <button class="tab-btn activo" data-tab="pendientes">Pendientes</button>
+    <button class="tab-btn activo" data-tab="resumen">Resumen</button>
+    <button class="tab-btn" data-tab="pendientes">Pendientes</button>
     <button class="tab-btn" data-tab="empleados">Empleados</button>
     <button class="tab-btn" data-tab="horas">Horas del período</button>
     <button class="tab-btn" data-tab="licencias">Licencias</button>
@@ -141,7 +152,16 @@
     <button id="logout-btn">Cerrar sesión</button>
   </header>
   <main>
-    <section id="tab-pendientes">
+    <section id="tab-resumen">
+      <h3 style="margin-top:0">De un vistazo</h3>
+      <div class="stat-grid" id="stat-grid-pendientes"></div>
+      <div class="stat-grid" id="stat-grid-periodo" style="margin-top:12px"></div>
+
+      <h3>De licencia hoy</h3>
+      <div id="resumen-licencias-hoy"><div class="vacio">Cargando…</div></div>
+    </section>
+
+    <section id="tab-pendientes" style="display:none">
       <h3 style="margin-top:0">Correcciones de fichaje</h3>
       <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
       <h3>Cambios de turno</h3>
@@ -264,7 +284,7 @@ async function api(path, options = {}) {
 function mostrarApp() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
-  cargarPendientes();
+  cargarResumenGeneral();
 }
 
 function cerrarSesion() {
@@ -315,6 +335,8 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
     document.querySelectorAll("main section").forEach((s) => (s.style.display = "none"));
     document.getElementById("tab-" + btn.dataset.tab).style.display = "block";
     cerrarSidebar();
+    if (btn.dataset.tab === "resumen") cargarResumenGeneral();
+    if (btn.dataset.tab === "pendientes") cargarPendientes();
     if (btn.dataset.tab === "empleados") cargarEmpleados();
     if (btn.dataset.tab === "horas") cargarHoras();
     if (btn.dataset.tab === "estadisticas") cargarEstadisticas();
@@ -502,6 +524,42 @@ async function cargarEstadisticas() {
     tbA.innerHTML = actividad.length ? actividad.map((a) => `
       <tr><td>${a.empleado}</td><td>${a.numero}</td><td>${formatoFechaHora(a.actualizadoEn)}</td></tr>
     `).join("") : '<tr><td colspan="3" class="vacio">Nadie interactuó con el bot todavía</td></tr>';
+  } catch (e) { mostrarToast(e.message); }
+}
+
+function statTile(valor, label, clase) {
+  return `<div class="stat-tile ${clase || ""}"><div class="stat-valor">${valor}</div><div class="stat-label">${label}</div></div>`;
+}
+
+async function cargarResumenGeneral() {
+  const gridPendientes = document.getElementById("stat-grid-pendientes");
+  const gridPeriodo = document.getElementById("stat-grid-periodo");
+  const contLicencias = document.getElementById("resumen-licencias-hoy");
+  gridPendientes.innerHTML = '<div class="vacio">Cargando…</div>';
+  gridPeriodo.innerHTML = "";
+  contLicencias.innerHTML = '<div class="vacio">Cargando…</div>';
+  try {
+    const data = await api("/resumen-general");
+    const p = data.pendientes;
+    const totalPendientes = p.correcciones + p.cambios + p.cancelaciones;
+
+    gridPendientes.innerHTML = [
+      statTile(p.correcciones, "Correcciones pendientes", p.correcciones > 0 ? "stat-warn" : ""),
+      statTile(p.cambios, "Cambios de turno pendientes", p.cambios > 0 ? "stat-warn" : ""),
+      statTile(p.cancelaciones, "Cancelaciones pendientes", p.cancelaciones > 0 ? "stat-warn" : ""),
+      statTile(totalPendientes === 0 ? "✓" : totalPendientes, totalPendientes === 0 ? "Todo al día" : "Total pendientes", totalPendientes === 0 ? "stat-ok" : "stat-warn"),
+    ].join("");
+
+    gridPeriodo.innerHTML = [
+      statTile(`${data.empleados.conWhatsapp}/${data.empleados.total}`, "Empleados con WhatsApp registrado"),
+      statTile(data.horas.total, `Horas totales — ${data.periodo}`),
+      statTile(data.horas.h50, "Extra 50% del período"),
+      statTile(data.horas.h100, "Extra 100% del período"),
+    ].join("");
+
+    contLicencias.innerHTML = data.licenciasHoy.length
+      ? data.licenciasHoy.map((l) => `<div class="card"><div class="card-titulo">${l.empleado}</div><div class="card-sub">🏖️ ${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div>`).join("")
+      : '<div class="vacio">Nadie está de licencia hoy</div>';
   } catch (e) { mostrarToast(e.message); }
 }
 
