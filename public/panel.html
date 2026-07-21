@@ -9,6 +9,7 @@
     --bg: #0f1115; --surface: #171a21; --surface2: #1e2229; --border: #2a2f3a;
     --text: #e6e8eb; --text-muted: #8a919e; --accent: #4f8cff; --accent-hover: #3f78e8;
     --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
+    --serie1: #4f8cff; --serie2: #ff9f5a;
   }
   * { box-sizing: border-box; }
   body {
@@ -103,6 +104,10 @@
   .stat-tile.stat-warn { border-top-color: var(--warn); }
   .stat-tile .stat-valor { font-size: 30px; font-weight: 700; line-height: 1.1; }
   .stat-tile .stat-label { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
+
+  .chart-legend { display: flex; gap: 18px; margin-bottom: 10px; font-size: 13px; color: var(--text-muted); }
+  .chart-legend .item { display: flex; align-items: center; gap: 6px; }
+  .chart-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
 
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
@@ -252,10 +257,19 @@
     <section id="tab-estadisticas" style="display:none">
       <div class="stat-nota" id="stat-nota"></div>
 
-      <h3 style="margin-top:0">% de fichadas completas (período actual)</h3>
+      <h3 style="margin-top:0">Horas extra por sector (últimos meses)</h3>
+      <div id="chart-tendencia" class="card"></div>
+
+      <h3>Fichaje perfecto vs con problemas (período actual)</h3>
       <table>
-        <thead><tr><th>Empleado</th><th>Días completos</th><th>Días totales</th><th>%</th></tr></thead>
+        <thead><tr><th>Empleado</th><th>Días completos</th><th>Días totales</th><th>%</th><th></th></tr></thead>
         <tbody id="tabla-fichadas"></tbody>
+      </table>
+
+      <h3>Ranking de pedidos (correcciones + cambios + cancelaciones)</h3>
+      <table>
+        <thead><tr><th>Empleado</th><th>Total de pedidos</th></tr></thead>
+        <tbody id="tabla-pedidos-totales"></tbody>
       </table>
 
       <h3>Correcciones pedidas por empleado</h3>
@@ -633,6 +647,48 @@ function renderHistorial() {
 ["hist-tipo", "hist-estado"].forEach((id) => document.getElementById(id).addEventListener("change", renderHistorial));
 document.getElementById("hist-empleado").addEventListener("input", renderHistorial);
 
+function renderTendenciaHoras(datos) {
+  const cont = document.getElementById("chart-tendencia");
+  if (!datos || datos.length === 0 || datos.every((d) => d.mantenimiento === 0 && d.conserjeria === 0)) {
+    cont.innerHTML = '<div class="vacio">Sin datos suficientes todavía</div>';
+    return;
+  }
+
+  const W = 640, H = 220, padL = 36, padR = 16, padT = 16, padB = 28;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const n = datos.length;
+  const maxVal = Math.max(1, ...datos.map((d) => Math.max(d.mantenimiento, d.conserjeria)));
+
+  const xFor = (i) => (n === 1 ? padL + innerW / 2 : padL + (innerW * i) / (n - 1));
+  const yFor = (v) => padT + innerH - (innerH * v) / maxVal;
+  const puntos = (campo) => datos.map((d, i) => `${xFor(i)},${yFor(d[campo])}`).join(" ");
+  const circulos = (campo, color) => datos.map((d, i) =>
+    `<circle cx="${xFor(i)}" cy="${yFor(d[campo])}" r="4" fill="${color}"><title>${d.periodo} — ${campo}: ${d[campo]}hs</title></circle>`
+  ).join("");
+  const etiquetasX = datos.map((d, i) =>
+    `<text x="${xFor(i)}" y="${H - 8}" font-size="11" fill="var(--text-muted)" text-anchor="middle">${d.periodo.slice(5)}/${d.periodo.slice(2, 4)}</text>`
+  ).join("");
+
+  const linea = (campo, color) => n > 1
+    ? `<polyline points="${puntos(campo)}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />`
+    : "";
+
+  cont.innerHTML = `
+    <div class="chart-legend">
+      <div class="item"><span class="swatch" style="background:var(--serie1)"></span>Mantenimiento</div>
+      <div class="item"><span class="swatch" style="background:var(--serie2)"></span>Conserjería</div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+      <line x1="${padL}" y1="${padT + innerH}" x2="${padL + innerW}" y2="${padT + innerH}" stroke="var(--border)" stroke-width="1" />
+      ${linea("mantenimiento", "var(--serie1)")}
+      ${linea("conserjeria", "var(--serie2)")}
+      ${circulos("mantenimiento", "var(--serie1)")}
+      ${circulos("conserjeria", "var(--serie2)")}
+      ${etiquetasX}
+    </svg>
+  `;
+}
+
 async function cargarEstadisticas() {
   try {
     const data = await api("/estadisticas");
@@ -643,14 +699,26 @@ async function cargarEstadisticas() {
       : 'Todavía no se registró ninguna interacción con el bot desde que se activó este seguimiento.';
 
     const tbF = document.getElementById("tabla-fichadas");
-    tbF.innerHTML = data.fichadas.length ? data.fichadas.map((f) => `
-      <tr><td>${f.empleado}</td><td>${f.diasCompletos}</td><td>${f.diasTotal}</td><td>${f.porcentaje !== null ? f.porcentaje + "%" : "-"}</td></tr>
-    `).join("") : '<tr><td colspan="4" class="vacio">Sin datos para el período actual</td></tr>';
+    const fichadasOrdenadas = [...data.fichadas].sort((a, b) => (a.porcentaje ?? -1) - (b.porcentaje ?? -1));
+    tbF.innerHTML = fichadasOrdenadas.length ? fichadasOrdenadas.map((f) => {
+      const perfecto = f.porcentaje === 100;
+      const badge = f.porcentaje === null ? "" : perfecto
+        ? '<span class="badge badge-si">✓ Perfecto</span>'
+        : '<span class="badge badge-no">Con faltantes</span>';
+      return `<tr><td>${f.empleado}</td><td>${f.diasCompletos}</td><td>${f.diasTotal}</td><td>${f.porcentaje !== null ? f.porcentaje + "%" : "-"}</td><td>${badge}</td></tr>`;
+    }).join("") : '<tr><td colspan="5" class="vacio">Sin datos para el período actual</td></tr>';
+
+    const tbP = document.getElementById("tabla-pedidos-totales");
+    tbP.innerHTML = data.pedidosTotales.length ? data.pedidosTotales.map((p) => `
+      <tr><td>${p.empleado}</td><td>${p.cantidad}</td></tr>
+    `).join("") : '<tr><td colspan="2" class="vacio">Todavía no hay pedidos</td></tr>';
 
     const tbC = document.getElementById("tabla-correcciones");
     tbC.innerHTML = data.correcciones.length ? data.correcciones.map((c) => `
       <tr><td>${c.empleado}</td><td>${c.cantidad}</td></tr>
     `).join("") : '<tr><td colspan="2" class="vacio">Todavía no se pidió ninguna corrección</td></tr>';
+
+    renderTendenciaHoras(data.tendenciaHoras);
 
     const empleadosConInteraccion = Object.keys(data.interacciones);
     const tbI = document.getElementById("tabla-interacciones");
