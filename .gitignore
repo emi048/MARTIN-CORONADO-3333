@@ -3,3 +3,5 @@ node_modules/
 data/
 *.log
 config/gmail_token.json
+.monitor-estado.json
+monitor.log

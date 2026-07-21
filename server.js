@@ -3,6 +3,7 @@ const path = require("path");
 const express = require("express");
 const { iniciarCron } = require("./cron");
 const whatsappRouter = require("./lib/whatsapp");
+const panelRouter = require("./lib/panel");
 const { correrPipelineMensual } = require("./lib/pipeline");
 const { registrarNumero } = require("./lib/db");
 
@@ -10,6 +11,7 @@ const app = express();
 app.use(express.json());
 
 app.use("/whatsapp", whatsappRouter);
+app.use("/panel", panelRouter);
 
 // Los endpoints /admin/* mutan datos o exponen informacion sensible
 // (registrar-numero decide quien puede consultar las horas de quien).

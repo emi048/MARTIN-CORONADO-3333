@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel — Martín Coronado 3333</title>
+<style>
+  :root {
+    --bg: #0f1115; --surface: #171a21; --surface2: #1e2229; --border: #2a2f3a;
+    --text: #e6e8eb; --text-muted: #8a919e; --accent: #4f8cff; --accent-hover: #3f78e8;
+    --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  header button { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  header button:hover { color: var(--text); border-color: var(--text-muted); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+  #login-screen { display: flex; align-items: center; justify-content: center; min-height: 90vh; }
+  .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; width: 320px; }
+  .login-box h2 { margin: 0 0 4px; font-size: 18px; }
+  .login-box p { color: var(--text-muted); font-size: 13px; margin: 0 0 20px; }
+  .login-box input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 14px; }
+  .login-box button { width: 100%; margin-top: 12px; padding: 10px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; font-size: 14px; }
+  .login-box button:hover { background: var(--accent-hover); }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  nav { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  nav button {
+    background: none; border: none; color: var(--text-muted); padding: 10px 14px;
+    cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  nav button.activo { color: var(--text); border-bottom-color: var(--accent); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .card-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .card-titulo { font-weight: 600; font-size: 14px; }
+  .card-sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
+  .card-acciones { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn { border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-ok { background: var(--ok); color: #06231a; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  .vacio { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .badge-si { background: rgba(62,207,142,0.15); color: var(--ok); }
+  .badge-no { background: rgba(229,72,77,0.15); color: var(--danger); }
+
+  select, .periodo-input { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 1px solid var(--border); padding: 10px 18px;
+    border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  }
+  .toast.mostrar { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h2>Panel de administración</h2>
+    <p>Martín Coronado 3333 — Fichero automático</p>
+    <input type="password" id="login-password" placeholder="Contraseña de admin" autofocus>
+    <button id="login-btn">Entrar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>Panel de administración</h1>
+    <button id="logout-btn">Cerrar sesión</button>
+  </header>
+  <main>
+    <nav>
+      <button class="tab-btn activo" data-tab="pendientes">Pendientes</button>
+      <button class="tab-btn" data-tab="empleados">Empleados</button>
+      <button class="tab-btn" data-tab="horas">Horas del período</button>
+    </nav>
+
+    <section id="tab-pendientes">
+      <h3 style="margin-top:0">Correcciones de fichaje</h3>
+      <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
+      <h3>Cambios de turno</h3>
+      <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
+    </section>
+
+    <section id="tab-empleados" style="display:none">
+      <table>
+        <thead><tr><th>Nombre</th><th>Sector</th><th>WhatsApp</th></tr></thead>
+        <tbody id="tabla-empleados"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-horas" style="display:none">
+      <div style="margin-bottom:14px">
+        Período: <input type="month" id="periodo-input" class="periodo-input">
+      </div>
+      <table>
+        <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
+        <tbody id="tabla-horas"></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "/panel/api";
+let token = localStorage.getItem("panel_token");
+
+function mostrarToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("mostrar");
+  setTimeout(() => t.classList.remove("mostrar"), 2500);
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(API + path, {
+    ...options,
+    headers: { ...(options.headers || {}), "Content-Type": "application/json", Authorization: "Bearer " + token },
+  });
+  if (res.status === 401) {
+    cerrarSesion();
+    throw new Error("Sesión vencida");
+  }
+  const data = await res.json();
+  if (!data.ok && data.ok !== undefined) throw new Error(data.error || "Error");
+  return data;
+}
+
+function mostrarApp() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  cargarPendientes();
+}
+
+function cerrarSesion() {
+  localStorage.removeItem("panel_token");
+  token = null;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+}
+
+document.getElementById("login-btn").addEventListener("click", login);
+document.getElementById("login-password").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+
+async function login() {
+  const password = document.getElementById("login-password").value;
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "";
+  try {
+    const res = await fetch(API + "/login", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!data.ok) { errEl.textContent = data.error || "Error"; return; }
+    token = data.token;
+    localStorage.setItem("panel_token", token);
+    mostrarApp();
+  } catch (e) {
+    errEl.textContent = "No se pudo conectar.";
+  }
+}
+
+document.getElementById("logout-btn").addEventListener("click", cerrarSesion);
+
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("activo"));
+    btn.classList.add("activo");
+    document.querySelectorAll("main section").forEach((s) => (s.style.display = "none"));
+    document.getElementById("tab-" + btn.dataset.tab).style.display = "block";
+    if (btn.dataset.tab === "empleados") cargarEmpleados();
+    if (btn.dataset.tab === "horas") cargarHoras();
+  });
+});
+
+async function cargarPendientes() {
+  try {
+    const data = await api("/pendientes");
+    renderCorrecciones(data.correcciones);
+    renderCambios(data.cambios);
+  } catch (e) { mostrarToast(e.message); }
+}
+
+function renderCorrecciones(lista) {
+  const cont = document.getElementById("lista-correcciones");
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay correcciones pendientes 👍</div>'; return; }
+  cont.innerHTML = lista.map((s) => {
+    const fecha = s.fecha.split("-").reverse().join("/");
+    const partes = [];
+    if (s.ingreso_propuesto) partes.push("Entrada: " + s.ingreso_propuesto);
+    if (s.egreso_propuesto) partes.push("Salida: " + s.egreso_propuesto);
+    return `<div class="card" data-id="${s.id}">
+      <div class="card-row">
+        <div>
+          <div class="card-titulo">#${s.id} — ${s.empleado}</div>
+          <div class="card-sub">${fecha} · ${partes.join(", ")}</div>
+        </div>
+        <div class="card-acciones">
+          <button class="btn btn-ok" onclick="accionCorreccion(${s.id},'aprobar',this)">Aprobar</button>
+          <button class="btn btn-danger" onclick="accionCorreccion(${s.id},'rechazar',this)">Rechazar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderCambios(lista) {
+  const cont = document.getElementById("lista-cambios");
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay cambios de turno pendientes 👍</div>'; return; }
+  cont.innerHTML = lista.map((s) => {
+    const fechaA = s.fecha_a.split("-").reverse().join("/");
+    const fechaB = s.fecha_b.split("-").reverse().join("/");
+    return `<div class="card" data-id="${s.id}">
+      <div class="card-row">
+        <div>
+          <div class="card-titulo">#${s.id} — ${s.empleado_a} ↔ ${s.empleado_b}</div>
+          <div class="card-sub">${s.empleado_a} cede ${fechaA} y toma ${fechaB} de ${s.empleado_b}</div>
+        </div>
+        <div class="card-acciones">
+          <button class="btn btn-ok" onclick="accionCambio(${s.id},'aprobar',this)">Aprobar</button>
+          <button class="btn btn-danger" onclick="accionCambio(${s.id},'rechazar',this)">Rechazar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function accionCorreccion(id, accion, btn) {
+  btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try {
+    const data = await api(`/correccion/${id}/${accion}`, { method: "POST" });
+    mostrarToast(data.resultado);
+    cargarPendientes();
+  } catch (e) { mostrarToast(e.message); }
+}
+
+async function accionCambio(id, accion, btn) {
+  btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = true));
+  try {
+    const data = await api(`/cambio/${id}/${accion}`, { method: "POST" });
+    mostrarToast(data.resultado);
+    cargarPendientes();
+  } catch (e) { mostrarToast(e.message); }
+}
+
+async function cargarEmpleados() {
+  const tbody = document.getElementById("tabla-empleados");
+  tbody.innerHTML = '<tr><td colspan="3" class="vacio">Cargando…</td></tr>';
+  try {
+    const data = await api("/empleados");
+    tbody.innerHTML = data.empleados.map((e) => `
+      <tr>
+        <td>${e.nombre}</td>
+        <td>${e.sector || "-"}</td>
+        <td>${e.whatsapp ? `<span class="badge badge-si">${e.whatsapp}</span>` : '<span class="badge badge-no">Sin registrar</span>'}</td>
+      </tr>
+    `).join("");
+  } catch (e) { mostrarToast(e.message); }
+}
+
+function periodoActual() {
+  const hoy = new Date();
+  return hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+}
+
+document.getElementById("periodo-input").addEventListener("change", cargarHoras);
+
+async function cargarHoras() {
+  const input = document.getElementById("periodo-input");
+  if (!input.value) input.value = periodoActual();
+  const tbody = document.getElementById("tabla-horas");
+  tbody.innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
+  try {
+    const data = await api("/resumen?periodo=" + input.value);
+    if (data.resumen.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="vacio">Sin datos para este período</td></tr>'; return; }
+    tbody.innerHTML = data.resumen.map((r) => `
+      <tr>
+        <td>${r.empleado}</td>
+        <td>${r.dias}</td>
+        <td>${r.totalHs}</td>
+        <td>${r.h50}</td>
+        <td>${r.h100}</td>
+      </tr>
+    `).join("");
+  } catch (e) { mostrarToast(e.message); }
+}
+
+if (token) mostrarApp(); else document.getElementById("login-screen").style.display = "flex";
+</script>
+</body>
+</html>

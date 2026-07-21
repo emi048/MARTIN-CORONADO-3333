@@ -81,7 +81,48 @@ async function generarMes(anio, mesIndex0) {
   return { calendarId, creados };
 }
 
-module.exports = { generarMes };
+// Busca el evento de un empleado en una fecha puntual y lo actualiza (o lo
+// crea si no existia, ej. porque el mes todavia no se habia generado) para
+// que refleje un cambio de turno recien aprobado. Usa un rango de +-1 dia
+// para el filtro de la API y despues compara la fecha exacta en el cliente,
+// asi no hay que pelear con el offset de zona horaria en la consulta.
+async function actualizarEventoDia(empleado, fechaISO, nuevoTurno, esFeriado = false) {
+  const auth = getAuth();
+  const calendar = google.calendar({ version: "v3", auth });
+  const calendarId = await getOrCrearCalendario(calendar);
+  const nombreCorto = empleado.split(" ")[0];
+
+  const [y, m, d] = fechaISO.split("-").map(Number);
+  const desde = new Date(y, m - 1, d - 1).toISOString();
+  const hasta = new Date(y, m - 1, d + 2).toISOString();
+
+  const lista = await calendar.events.list({ calendarId, timeMin: desde, timeMax: hasta, singleEvents: true });
+  const existente = (lista.data.items || []).find((ev) => {
+    const evFecha = ev.start.date || (ev.start.dateTime || "").slice(0, 10);
+    return evFecha === fechaISO && (ev.summary || "").startsWith(nombreCorto);
+  });
+
+  const { titulo, colorId } = tituloYColor(empleado, nuevoTurno, esFeriado);
+  const evento = { summary: titulo, colorId };
+  // Al pasar de un evento con horario a uno de dia completo (o viceversa),
+  // hay que limpiar explicitamente el campo que no corresponde -- un patch
+  // parcial que deja restos del tipo anterior tira "Invalid start time".
+  if (nuevoTurno.horario) {
+    evento.start = { dateTime: `${fechaISO}T${nuevoTurno.horario.in}:00`, timeZone: TIMEZONE, date: null };
+    evento.end = { dateTime: `${fechaISO}T${nuevoTurno.horario.out}:00`, timeZone: TIMEZONE, date: null };
+  } else {
+    evento.start = { date: fechaISO, dateTime: null, timeZone: null };
+    evento.end = { date: fechaISO, dateTime: null, timeZone: null };
+  }
+
+  if (existente) {
+    await calendar.events.patch({ calendarId, eventId: existente.id, requestBody: evento });
+  } else {
+    await calendar.events.insert({ calendarId, requestBody: evento });
+  }
+}
+
+module.exports = { generarMes, actualizarEventoDia };
 
 // Uso manual: node generarCalendarioMantenimiento.js 2026 8
 if (require.main === module) {

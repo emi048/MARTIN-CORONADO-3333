@@ -115,6 +115,47 @@ resto de los sectores (conserjeria, etc.) todavia no hay un calendario
 esperado equivalente -- hay que definirlo antes de poder activar esto para
 todos, no solo mantenimiento.
 
+## Panel web de administracion
+
+Disponible en `http://TU_SERVIDOR:3000/panel`. Se loguea con la misma
+`ADMIN_API_KEY` del `.env` (no hay usuario/contraseña separados). Desde ahi
+se puede, sin usar WhatsApp:
+
+- Ver y aprobar/rechazar correcciones de fichaje pendientes.
+- Ver y aprobar/rechazar pedidos de cambio de turno pendientes.
+- Ver la lista de empleados (sector, numero de WhatsApp registrado).
+- Ver el resumen de horas de cualquier periodo.
+
+Aprobar/rechazar desde el panel dispara exactamente la misma logica que el
+comando de WhatsApp (recalculo de horas, aviso al empleado, sync del
+Google Calendar en cambios de turno) -- es el mismo codigo, solo cambia el
+canal desde donde se dispara.
+
+La sesion del panel vive en memoria del proceso (dura 12hs); si el server
+reinicia, hay que volver a loguearse.
+
+## Auto-monitoreo del servidor
+
+Cron externo (`monitorProceso.js`, corre cada 5 minutos via `crontab`, no
+depende de que el server este sano) que avisa por WhatsApp al admin si el
+proceso deja de estar "online" en pm2, o si empieza a reiniciarse solo en
+loop (`unstable_restarts` de pm2 sube).
+
+## Dias de evento por WhatsApp
+
+Comando de admin: `evento Nombre Apellido DD/MM` (tambien admite rango
+"DD/MM al DD/MM" o fechas separadas por coma). Se guarda en la tabla
+`eventos` y lo usa `motorCalculo.esDiaDeEvento` -- mientras no haya conexion
+con Simple Solutions, esta es la forma de cargarlo sin tocar codigo.
+
+## Auto-deploy
+
+Cron (`deploy.sh`, cada 3 minutos) que revisa si hay commits nuevos en
+GitHub (rama `main`) y, si los hay, hace `git pull` + `npm install` +
+`pm2 restart` solo. Pensado para que cambios subidos desde otra sesion (ej.
+Claude Code desde el celular, sin acceso SSH al servidor) se apliquen
+solos.
+
 ## Probar el pipeline sin esperar al cron
 
 ```bash
