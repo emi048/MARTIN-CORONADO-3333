@@ -148,6 +148,28 @@ Comando de admin: `evento Nombre Apellido DD/MM` (tambien admite rango
 `eventos` y lo usa `motorCalculo.esDiaDeEvento` -- mientras no haya conexion
 con Simple Solutions, esta es la forma de cargarlo sin tocar codigo.
 
+## Estadisticas en el panel
+
+Pestaña nueva en el panel web:
+
+- **% de fichadas completas por empleado** (periodo actual) -- de datos que
+  ya existian (`filas_diarias`).
+- **Correcciones pedidas por empleado** -- de `solicitudes_correccion`, que
+  ya existia.
+- **Interacciones con el bot** (consultas de horas, correcciones, etc por
+  empleado) y **ultima actividad** -- estos dos son nuevos: se registran en
+  la tabla `mensajes_whatsapp` a partir de ahora. **No hay forma de
+  reconstruir historial de antes de que se agregara esto** -- antes no se
+  guardaba ningun registro de mensajes, solo el paso actual de la
+  conversacion.
+
+**Sobre las 72hs del Sandbox de Twilio:** se evaluo poder mostrar una cuenta
+regresiva de cuando vence el `join` de cada numero, pero no es posible desde
+nuestro lado -- Twilio intercepta el mensaje "join" antes de que llegue a
+nuestro webhook, asi que el sistema no tiene forma de saber cuando se unio
+cada numero. La unica solucion real sigue siendo salir del Sandbox (ver
+"Preguntas abiertas").
+
 ## Auto-deploy
 
 Cron (`deploy.sh`, cada 3 minutos) que revisa si hay commits nuevos en
