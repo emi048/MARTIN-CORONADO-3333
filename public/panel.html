@@ -18,14 +18,52 @@
   }
   header {
     padding: 18px 24px; border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex; justify-content: space-between; align-items: center; gap: 14px;
   }
+  header .header-left { display: flex; align-items: center; gap: 14px; }
   header h1 { font-size: 19px; margin: 0; font-weight: 700; letter-spacing: 0.02em; }
   header h1 span { color: var(--text-muted); font-weight: 500; }
   header button { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
   header button:hover { color: var(--text); border-color: var(--text-muted); }
 
+  #hamburguesa-btn {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0; font-size: 18px; flex-shrink: 0;
+  }
+  #hamburguesa-btn:hover { border-color: var(--text-muted); }
+
+  #sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40;
+  }
+  #sidebar-overlay.abierto { display: block; }
+
+  #sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 240px; z-index: 50;
+    background: var(--surface); border-right: 1px solid var(--border);
+    transform: translateX(-100%); transition: transform 0.2s ease;
+    display: flex; flex-direction: column; padding: 18px 0;
+  }
+  #sidebar.abierto { transform: translateX(0); }
+  #sidebar .sidebar-titulo {
+    padding: 0 18px 14px; font-size: 13px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+  }
+  #sidebar button.tab-btn {
+    background: none; border: none; color: var(--text-muted); text-align: left;
+    padding: 12px 18px; font-size: 14px; cursor: pointer; border-left: 3px solid transparent;
+  }
+  #sidebar button.tab-btn:hover { color: var(--text); background: var(--surface2); }
+  #sidebar button.tab-btn.activo { color: var(--text); border-left-color: var(--accent); background: var(--surface2); font-weight: 600; }
+
   main { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+  .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field label { font-size: 12px; color: var(--text-muted); }
+  .form-field input, .form-field select { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; }
+  .btn-accent { background: var(--accent); color: white; }
+  .btn-accent:hover { background: var(--accent-hover); }
 
   #login-screen { display: flex; align-items: center; justify-content: center; min-height: 90vh; }
   .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; width: 320px; }
@@ -85,18 +123,23 @@
 </div>
 
 <div id="app" style="display:none">
+  <div id="sidebar-overlay"></div>
+  <nav id="sidebar">
+    <div class="sidebar-titulo">Secciones</div>
+    <button class="tab-btn activo" data-tab="pendientes">Pendientes</button>
+    <button class="tab-btn" data-tab="empleados">Empleados</button>
+    <button class="tab-btn" data-tab="horas">Horas del período</button>
+    <button class="tab-btn" data-tab="licencias">Licencias</button>
+    <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
+  </nav>
   <header>
-    <h1>MARTÍN CORONADO 3333 <span>— Panel de administración</span></h1>
+    <div class="header-left">
+      <button id="hamburguesa-btn" aria-label="Abrir menú">☰</button>
+      <h1>MARTÍN CORONADO 3333 <span>— Panel de administración</span></h1>
+    </div>
     <button id="logout-btn">Cerrar sesión</button>
   </header>
   <main>
-    <nav>
-      <button class="tab-btn activo" data-tab="pendientes">Pendientes</button>
-      <button class="tab-btn" data-tab="empleados">Empleados</button>
-      <button class="tab-btn" data-tab="horas">Horas del período</button>
-      <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
-    </nav>
-
     <section id="tab-pendientes">
       <h3 style="margin-top:0">Correcciones de fichaje</h3>
       <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
@@ -118,6 +161,43 @@
       <table>
         <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
         <tbody id="tabla-horas"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-licencias" style="display:none">
+      <h3 style="margin-top:0">De licencia hoy</h3>
+      <div id="lista-licencias-hoy"><div class="vacio">Cargando…</div></div>
+
+      <h3>Registrar licencia</h3>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="lic-empleado">Empleado</label>
+          <select id="lic-empleado"></select>
+        </div>
+        <div class="form-field">
+          <label for="lic-desde">Desde</label>
+          <input type="date" id="lic-desde">
+        </div>
+        <div class="form-field">
+          <label for="lic-hasta">Hasta</label>
+          <input type="date" id="lic-hasta">
+        </div>
+        <div class="form-field">
+          <label for="lic-tipo">Tipo</label>
+          <select id="lic-tipo">
+            <option value="Vacaciones">Vacaciones</option>
+            <option value="Licencia médica">Licencia médica</option>
+            <option value="Estudio">Estudio</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <button class="btn btn-accent" id="lic-registrar-btn">Registrar</button>
+      </div>
+
+      <h3>Todas las licencias</h3>
+      <table>
+        <thead><tr><th>Empleado</th><th>Desde</th><th>Hasta</th><th>Tipo</th><th></th></tr></thead>
+        <tbody id="tabla-licencias"></tbody>
       </table>
     </section>
 
@@ -214,15 +294,28 @@ async function login() {
 
 document.getElementById("logout-btn").addEventListener("click", cerrarSesion);
 
+function abrirSidebar() {
+  document.getElementById("sidebar").classList.add("abierto");
+  document.getElementById("sidebar-overlay").classList.add("abierto");
+}
+function cerrarSidebar() {
+  document.getElementById("sidebar").classList.remove("abierto");
+  document.getElementById("sidebar-overlay").classList.remove("abierto");
+}
+document.getElementById("hamburguesa-btn").addEventListener("click", abrirSidebar);
+document.getElementById("sidebar-overlay").addEventListener("click", cerrarSidebar);
+
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("activo"));
-    btn.classList.add("activo");
+    document.querySelectorAll(`.tab-btn[data-tab="${btn.dataset.tab}"]`).forEach((b) => b.classList.add("activo"));
     document.querySelectorAll("main section").forEach((s) => (s.style.display = "none"));
     document.getElementById("tab-" + btn.dataset.tab).style.display = "block";
+    cerrarSidebar();
     if (btn.dataset.tab === "empleados") cargarEmpleados();
     if (btn.dataset.tab === "horas") cargarHoras();
     if (btn.dataset.tab === "estadisticas") cargarEstadisticas();
+    if (btn.dataset.tab === "licencias") cargarLicencias();
   });
 });
 
@@ -378,6 +471,62 @@ async function cargarEstadisticas() {
       <tr><td>${a.empleado}</td><td>${a.numero}</td><td>${formatoFechaHora(a.actualizadoEn)}</td></tr>
     `).join("") : '<tr><td colspan="3" class="vacio">Nadie interactuó con el bot todavía</td></tr>';
   } catch (e) { mostrarToast(e.message); }
+}
+
+async function cargarLicencias() {
+  const contHoy = document.getElementById("lista-licencias-hoy");
+  const tbody = document.getElementById("tabla-licencias");
+  const select = document.getElementById("lic-empleado");
+  contHoy.innerHTML = '<div class="vacio">Cargando…</div>';
+  tbody.innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
+  try {
+    const [dataLic, dataEmp] = await Promise.all([api("/licencias"), api("/empleados")]);
+
+    if (!select.dataset.cargado) {
+      select.innerHTML = dataEmp.empleados.map((e) => `<option value="${e.nombre}">${e.nombre}</option>`).join("");
+      select.dataset.cargado = "1";
+    }
+
+    contHoy.innerHTML = dataLic.hoy.length
+      ? dataLic.hoy.map((l) => `<div class="card"><div class="card-titulo">${l.empleado}</div><div class="card-sub">🏖️ ${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div>`).join("")
+      : '<div class="vacio">Nadie está de licencia hoy</div>';
+
+    tbody.innerHTML = dataLic.licencias.length
+      ? dataLic.licencias.map((l) => `
+        <tr>
+          <td>${l.empleado}</td>
+          <td>${l.fechaDesde.split("-").reverse().join("/")}</td>
+          <td>${l.fechaHasta.split("-").reverse().join("/")}</td>
+          <td>${l.tipo}</td>
+          <td><button class="btn btn-danger" onclick="eliminarLicenciaUI(${l.id}, this)">Eliminar</button></td>
+        </tr>
+      `).join("")
+      : '<tr><td colspan="5" class="vacio">Todavía no se registró ninguna licencia</td></tr>';
+  } catch (e) { mostrarToast(e.message); }
+}
+
+document.getElementById("lic-registrar-btn").addEventListener("click", async () => {
+  const empleado = document.getElementById("lic-empleado").value;
+  const fechaDesde = document.getElementById("lic-desde").value;
+  const fechaHasta = document.getElementById("lic-hasta").value;
+  const tipo = document.getElementById("lic-tipo").value;
+  if (!fechaDesde || !fechaHasta) { mostrarToast("Completá las dos fechas"); return; }
+  try {
+    const data = await api("/licencias", { method: "POST", body: JSON.stringify({ empleado, fechaDesde, fechaHasta, tipo }) });
+    mostrarToast(data.omitidos && data.omitidos.length ? `Registrada. ${data.omitidos.length} día(s) ya tenían datos y no se tocaron.` : "Licencia registrada");
+    document.getElementById("lic-desde").value = "";
+    document.getElementById("lic-hasta").value = "";
+    cargarLicencias();
+  } catch (e) { mostrarToast(e.message); }
+});
+
+async function eliminarLicenciaUI(id, btn) {
+  btn.disabled = true;
+  try {
+    await api(`/licencias/${id}`, { method: "DELETE" });
+    mostrarToast("Licencia eliminada");
+    cargarLicencias();
+  } catch (e) { mostrarToast(e.message); btn.disabled = false; }
 }
 
 if (token) mostrarApp(); else document.getElementById("login-screen").style.display = "flex";
