@@ -67,28 +67,36 @@ cambio) chequea si hay una excepcion. Si en el futuro alguien quiere
 "devolver el favor", se hace con otro pedido de cambio de turno como los
 que ya existen -- no hay compensacion automatica.
 
-## Diseñado, no implementado: gestion de licencias y vacaciones
+## Gestion de licencias y vacaciones
 
-Charlado pero no construido todavia. Asi quedo pensado:
+**Implementado**, desde el panel de admin (`/panel` → seccion "Licencias",
+en el menu lateral). No hay carga por WhatsApp todavia, solo panel.
 
-- **Tabla nueva `licencias`**: empleado, fecha desde, fecha hasta, tipo
-  (vacaciones, licencia medica, estudio, etc.), quien la cargo.
-- **Carga por WhatsApp** (comando de admin, mismo patron que `alta` y
-  `evento`): `licencia Nombre Apellido 10/07 al 20/07 vacaciones`. Reusa
-  `parsearFechas` (ya soporta un dia, un rango, o fechas sueltas), no hay
-  que escribir un parser nuevo.
-- **Efecto en el calculo**: un dia que cae dentro de una licencia activa se
-  marca con el tipo de licencia (ej. `🏖️ Vacaciones`) **sin** la alerta de
-  "falta fichaje", y no se le ofrece al empleado la opcion de pedir una
-  correccion ese dia (no tiene sentido corregir un dia que no trabajo).
-- **Se ve reflejado** tanto en "mis horas" (WhatsApp) como en el Excel,
-  etiquetado aparte de un dia trabajado o de un dia con alerta real.
+- **Tabla `licencias`**: empleado, fecha desde, fecha hasta, tipo
+  (Vacaciones / Licencia medica / Estudio / Otro), quien la cargo.
+- **Al registrar una licencia** se materializan filas "placeholder" en
+  `filas_diarias` (columna `licencia_tipo`) para cada dia del rango que
+  todavia no tenga datos reales -- si un dia ya tenia una fila (alguien
+  fichó antes de cargar la licencia), se deja intacta y se avisa en la
+  respuesta ("N dias ya tenian datos y no se tocaron").
+- **Si despues llega un fichaje real** para un dia marcado como licencia
+  (`guardarFilasDiarias`, usado por el pipeline y por las correcciones), se
+  limpia `licencia_tipo` automaticamente -- deja de contar como licencia y
+  pasa a ser un dia trabajado normal.
+- **Efecto en el calculo**: los dias de licencia **no** cuentan como "dia
+  trabajado" en el resumen mensual (se excluyen del `COUNT(*)` de
+  `recalcularResumenEmpleado` y del % de fichadas completas del panel), y
+  no muestran la alerta de "sin dato".
+- **Se ve reflejado** en "mis horas" (WhatsApp, `° 15/7 🏖️ Vacaciones`) y en
+  el Excel (columna Turno = "Licencia", Observación con el tipo).
+- **Borrar una licencia** solo borra los placeholders puros que genero (los
+  que nunca recibieron un dato real) -- si algun dia de ese rango ya tiene
+  fichaje real cargado, no se toca.
 
-**Decision pendiente (de negocio, no tecnica):** ¿un dia de licencia/vacaciones
-cuenta como "dia trabajado" en el resumen mensual (a los fines de
-presentismo/sueldo), o queda totalmente aparte del conteo de dias y horas?
-Esto hay que definirlo antes de implementar el calculo de sueldo automatico
-tambien pedido como mejora futura, porque la regla es la misma para los dos.
+**Decision de negocio ya definida:** por ahora no se esta calculando sueldo
+automatico, asi que no importa si un dia de licencia "cuenta como
+presentismo" o no -- quedo afuera del conteo de dias/horas del resumen. Si
+mas adelante se retoma el calculo de sueldo, hay que revisar esta regla.
 
 ## Diseñado, no implementado: deteccion de ausencias por WhatsApp
 
@@ -115,14 +123,18 @@ todos, no solo mantenimiento.
 
 ## Panel web de administracion
 
-Disponible en `http://TU_SERVIDOR:3000/panel`. Se loguea con la misma
-`ADMIN_API_KEY` del `.env` (no hay usuario/contraseña separados). Desde ahi
-se puede, sin usar WhatsApp:
+Disponible en `http://TU_SERVIDOR:3000/panel`. Se loguea con
+`ADMIN_PANEL_PASSWORD` del `.env` (contraseña propia del panel, separada de
+`ADMIN_API_KEY` que usan los endpoints `/admin/*`). La navegacion es un
+menu lateral (boton ☰ arriba a la izquierda) con todas las secciones.
+Desde ahi se puede, sin usar WhatsApp:
 
 - Ver y aprobar/rechazar correcciones de fichaje pendientes.
 - Ver y aprobar/rechazar pedidos de cambio de turno pendientes.
 - Ver la lista de empleados (sector, numero de WhatsApp registrado).
 - Ver el resumen de horas de cualquier periodo.
+- Registrar y borrar licencias/vacaciones (seccion "Licencias").
+- Ver estadisticas de uso del bot (seccion "Estadisticas").
 
 Aprobar/rechazar desde el panel dispara exactamente la misma logica que el
 comando de WhatsApp (recalculo de horas, aviso al empleado, sync del
