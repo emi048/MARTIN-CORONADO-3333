@@ -140,6 +140,7 @@
     <button class="tab-btn" data-tab="pendientes">Pendientes</button>
     <button class="tab-btn" data-tab="empleados">Empleados</button>
     <button class="tab-btn" data-tab="horas">Horas del período</button>
+    <button class="tab-btn" data-tab="fichadas">Fichadas por empleado</button>
     <button class="tab-btn" data-tab="licencias">Licencias</button>
     <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
   </nav>
@@ -184,6 +185,24 @@
       <table>
         <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
         <tbody id="tabla-horas"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-fichadas" style="display:none">
+      <div class="form-row">
+        <div class="form-field">
+          <label for="fich-empleado">Empleado</label>
+          <select id="fich-empleado"></select>
+        </div>
+        <div class="form-field">
+          <label for="fich-periodo">Período</label>
+          <input type="month" id="fich-periodo" class="periodo-input">
+        </div>
+        <button class="btn btn-accent" id="fich-buscar-btn">Buscar</button>
+      </div>
+      <table>
+        <thead><tr><th>Fecha</th><th>Turno</th><th>Ingreso</th><th>Egreso</th><th>Hs.</th><th>50%</th><th>100%</th><th>Observación</th></tr></thead>
+        <tbody id="tabla-fichadas-empleado"><tr><td colspan="8" class="vacio">Elegí un empleado y buscá</td></tr></tbody>
       </table>
     </section>
 
@@ -341,6 +360,7 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
     if (btn.dataset.tab === "horas") cargarHoras();
     if (btn.dataset.tab === "estadisticas") cargarEstadisticas();
     if (btn.dataset.tab === "licencias") cargarLicencias();
+    if (btn.dataset.tab === "fichadas") initFichadasEmpleado();
   });
 });
 
@@ -351,6 +371,15 @@ async function cargarPendientes() {
     renderCambios(data.cambios);
     renderCancelaciones(data.cancelaciones);
   } catch (e) { mostrarToast(e.message); }
+}
+
+function textoDatoActual(s) {
+  const a = s.dato_actual;
+  if (!a) return 'Dato actual: <span style="color:var(--text-muted)">ese día no tiene ningún fichaje cargado</span>';
+  const ingreso = a.ingreso || "sin dato";
+  const egreso = a.egreso || "sin dato";
+  const alerta = a.alerta ? ` · ${a.alerta}` : "";
+  return `Dato actual: Entrada ${ingreso} · Salida ${egreso}${alerta}`;
 }
 
 function renderCorrecciones(lista) {
@@ -365,7 +394,8 @@ function renderCorrecciones(lista) {
       <div class="card-row">
         <div>
           <div class="card-titulo">#${s.id} — ${s.empleado}</div>
-          <div class="card-sub">${fecha} · ${partes.join(", ")}</div>
+          <div class="card-sub">${fecha} · Pide: ${partes.join(", ")}</div>
+          <div class="card-sub">${textoDatoActual(s)}</div>
         </div>
         <div class="card-acciones">
           <button class="btn btn-ok" onclick="accionCorreccion(${s.id},'aprobar',this)">Aprobar</button>
@@ -562,6 +592,43 @@ async function cargarResumenGeneral() {
       : '<div class="vacio">Nadie está de licencia hoy</div>';
   } catch (e) { mostrarToast(e.message); }
 }
+
+async function initFichadasEmpleado() {
+  const select = document.getElementById("fich-empleado");
+  const periodoInput = document.getElementById("fich-periodo");
+  if (!periodoInput.value) periodoInput.value = periodoActual();
+  if (!select.dataset.cargado) {
+    try {
+      const data = await api("/empleados");
+      select.innerHTML = data.empleados.map((e) => `<option value="${e.nombre}">${e.nombre}</option>`).join("");
+      select.dataset.cargado = "1";
+    } catch (e) { mostrarToast(e.message); }
+  }
+}
+
+async function buscarFichadasEmpleado() {
+  const empleado = document.getElementById("fich-empleado").value;
+  const periodo = document.getElementById("fich-periodo").value || periodoActual();
+  const tbody = document.getElementById("tabla-fichadas-empleado");
+  if (!empleado) { mostrarToast("Elegí un empleado"); return; }
+  tbody.innerHTML = '<tr><td colspan="8" class="vacio">Buscando…</td></tr>';
+  try {
+    const data = await api(`/dias?empleado=${encodeURIComponent(empleado)}&periodo=${periodo}`);
+    if (data.dias.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="vacio">Sin fichadas para este período</td></tr>'; return; }
+    tbody.innerHTML = data.dias.map((d) => {
+      const fecha = d.fecha.split("-").reverse().join("/");
+      const obs = d.licencia_tipo ? `🏖️ ${d.licencia_tipo}` : (d.alerta || "");
+      return `<tr>
+        <td>${fecha}</td><td>${d.turno || "-"}</td>
+        <td>${d.ingreso || '<span style="color:var(--danger)">sin dato</span>'}</td>
+        <td>${d.egreso || '<span style="color:var(--danger)">sin dato</span>'}</td>
+        <td>${d.total_hs}</td><td>${d.h50}</td><td>${d.h100}</td><td>${obs}</td>
+      </tr>`;
+    }).join("");
+  } catch (e) { mostrarToast(e.message); }
+}
+
+document.getElementById("fich-buscar-btn").addEventListener("click", buscarFichadasEmpleado);
 
 async function cargarLicencias() {
   const contHoy = document.getElementById("lista-licencias-hoy");
