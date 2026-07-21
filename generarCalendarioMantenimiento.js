@@ -81,16 +81,21 @@ async function generarMes(anio, mesIndex0) {
   return { calendarId, creados };
 }
 
-const [, , anioArg, mesArg] = process.argv;
-const anio = Number(anioArg);
-const mesIndex0 = Number(mesArg) - 1;
+module.exports = { generarMes };
 
-generarMes(anio, mesIndex0)
-  .then(({ calendarId, creados }) => {
-    console.log(`Listo. Calendario: ${calendarId}`);
-    console.log(`Eventos creados: ${creados}`);
-  })
-  .catch((err) => {
-    console.error("ERROR:", err.message);
-    process.exit(1);
-  });
+// Uso manual: node generarCalendarioMantenimiento.js 2026 8
+if (require.main === module) {
+  const [, , anioArg, mesArg] = process.argv;
+  const anio = Number(anioArg);
+  const mesIndex0 = Number(mesArg) - 1;
+
+  generarMes(anio, mesIndex0)
+    .then(({ calendarId, creados }) => {
+      console.log(`Listo. Calendario: ${calendarId}`);
+      console.log(`Eventos creados: ${creados}`);
+    })
+    .catch((err) => {
+      console.error("ERROR:", err.message);
+      process.exit(1);
+    });
+}

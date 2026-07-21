@@ -2,6 +2,7 @@ const cron = require("node-cron");
 const { correrPipelineMensual } = require("../lib/pipeline");
 const { revisarFichadasRecientes, revisarPendientesDeSalida } = require("../lib/monitorFichadas");
 const { enviarWhatsapp } = require("../lib/twilioClient");
+const { generarMes } = require("../generarCalendarioMantenimiento");
 
 function iniciarCron() {
   const expresion = process.env.CRON_SCHEDULE || "0 8 21 * *";
@@ -49,6 +50,30 @@ function iniciarCron() {
       await revisarPendientesDeSalida();
     } catch (err) {
       console.error("[cron] Error revisando pendientes de salida:", err);
+    }
+  }, { timezone });
+
+  // Genera en Google Calendar los turnos de mantenimiento del mes que arranca.
+  const expresionCalendario = process.env.CRON_CALENDARIO_MANTENIMIENTO || "0 6 1 * *";
+  console.log(`[cron] Calendario de mantenimiento: "${expresionCalendario}" (${timezone})`);
+  cron.schedule(expresionCalendario, async () => {
+    const hoy = new Date();
+    console.log("[cron] Generando calendario de mantenimiento del mes...");
+    try {
+      const { creados } = await generarMes(hoy.getFullYear(), hoy.getMonth());
+      console.log(`[cron] Calendario de mantenimiento listo: ${creados} eventos.`);
+    } catch (err) {
+      console.error("[cron] Error generando calendario de mantenimiento:", err);
+      if (process.env.ADMIN_WHATSAPP_NUMBER) {
+        try {
+          await enviarWhatsapp(
+            process.env.ADMIN_WHATSAPP_NUMBER,
+            `⚠️ Falló la generación automática del calendario de mantenimiento: ${err.message}`
+          );
+        } catch (errAviso) {
+          console.error("[cron] Encima no se pudo avisar por WhatsApp:", errAviso.message);
+        }
+      }
     }
   }, { timezone });
 }
