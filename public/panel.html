@@ -99,12 +99,20 @@
   }
   nav button.activo { color: var(--text); border-bottom-color: var(--accent); }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--card-accent, var(--accent));
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.28); }
+  .card-content { display: flex; align-items: center; gap: 12px; }
+  .card-icono { font-size: 20px; flex-shrink: 0; }
   .card-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .card-titulo { font-weight: 600; font-size: 14px; }
   .card-sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
   .card-acciones { display: flex; gap: 8px; flex-shrink: 0; }
-  .btn { border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn { border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: filter 0.12s, transform 0.12s; }
+  .btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
   .btn-ok { background: var(--ok); color: #06231a; }
   .btn-danger { background: var(--danger); color: white; }
   .btn:disabled { opacity: 0.5; cursor: default; }
@@ -176,9 +184,19 @@
   .chart-legend .item { display: flex; align-items: center; gap: 6px; }
   .chart-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+  table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    background: var(--surface); border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18); margin-bottom: 12px;
+  }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  th {
+    color: var(--text-muted); font-weight: 700; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; background: var(--surface2); border-bottom: 1px solid var(--border);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+  tbody tr:hover { background: rgba(79,140,255,0.07); }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
   .badge-si { background: rgba(62,207,142,0.15); color: var(--ok); }
   .badge-no { background: rgba(229,72,77,0.15); color: var(--danger); }
@@ -214,15 +232,15 @@
   <div id="sidebar-overlay"></div>
   <nav id="sidebar">
     <div class="sidebar-titulo">Secciones</div>
-    <button class="tab-btn activo" data-tab="resumen">Resumen</button>
-    <button class="tab-btn" data-tab="pendientes">Pendientes</button>
-    <button class="tab-btn" data-tab="empleados">Empleados</button>
-    <button class="tab-btn" data-tab="horas">Horas del período</button>
-    <button class="tab-btn" data-tab="fichadas">Fichadas por empleado</button>
-    <button class="tab-btn" data-tab="licencias">Licencias</button>
-    <button class="tab-btn" data-tab="turnos">Turnos (mantenimiento)</button>
-    <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
-    <button class="tab-btn" data-tab="historial">Historial</button>
+    <button class="tab-btn activo" data-tab="resumen">🏠 Resumen</button>
+    <button class="tab-btn" data-tab="pendientes">📥 Pendientes</button>
+    <button class="tab-btn" data-tab="empleados">👥 Empleados</button>
+    <button class="tab-btn" data-tab="horas">⏱️ Horas del período</button>
+    <button class="tab-btn" data-tab="fichadas">🔍 Fichadas por empleado</button>
+    <button class="tab-btn" data-tab="licencias">🏖️ Licencias</button>
+    <button class="tab-btn" data-tab="turnos">🔧 Turnos (mantenimiento)</button>
+    <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
+    <button class="tab-btn" data-tab="historial">🕓 Historial</button>
   </nav>
   <header>
     <div class="header-left">
@@ -237,37 +255,37 @@
       <div id="turno-hoy-titulo" class="turno-hoy-titulo"></div>
       <div id="resumen-turno-hoy"><div class="vacio">Cargando…</div></div>
 
-      <h3>De un vistazo</h3>
+      <h3>📊 De un vistazo</h3>
       <div class="stat-grid" id="stat-grid-pendientes"></div>
 
       <div class="medidores-row" id="medidores-row"></div>
 
       <div class="stat-grid" id="stat-grid-periodo" style="margin-top:12px"></div>
 
-      <h3>Necesita atención</h3>
+      <h3>⚠️ Necesita atención</h3>
       <div id="resumen-alertas"><div class="vacio">Cargando…</div></div>
 
-      <h3>Próximos días libres (7 días)</h3>
+      <h3>📅 Próximos días libres (7 días)</h3>
       <div id="resumen-proximos-libres"><div class="vacio">Cargando…</div></div>
 
-      <h3>De licencia hoy</h3>
+      <h3>🏖️ De licencia hoy</h3>
       <div id="resumen-licencias-hoy"><div class="vacio">Cargando…</div></div>
 
-      <h3>Estado del sistema</h3>
+      <h3>🖥️ Estado del sistema</h3>
       <div id="resumen-sistema" class="card"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-pendientes" style="display:none">
-      <h3 style="margin-top:0">Correcciones de fichaje</h3>
+      <h3 style="margin-top:0">✏️ Correcciones de fichaje</h3>
       <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
-      <h3>Cambios de turno</h3>
+      <h3>🔄 Cambios de turno</h3>
       <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
-      <h3>Cancelaciones (deshacer algo ya aprobado)</h3>
+      <h3>↩️ Cancelaciones (deshacer algo ya aprobado)</h3>
       <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-empleados" style="display:none">
-      <h3 style="margin-top:0">Registrar / cambiar número de WhatsApp</h3>
+      <h3 style="margin-top:0">📱 Registrar / cambiar número de WhatsApp</h3>
       <div class="form-row">
         <div class="form-field">
           <label for="emp-empleado">Empleado</label>
@@ -317,10 +335,10 @@
     </section>
 
     <section id="tab-licencias" style="display:none">
-      <h3 style="margin-top:0">De licencia hoy</h3>
+      <h3 style="margin-top:0">🏖️ De licencia hoy</h3>
       <div id="lista-licencias-hoy"><div class="vacio">Cargando…</div></div>
 
-      <h3>Registrar licencia</h3>
+      <h3>➕ Registrar licencia</h3>
       <div class="form-row">
         <div class="form-field">
           <label for="lic-empleado">Empleado</label>
@@ -346,7 +364,7 @@
         <button class="btn btn-accent" id="lic-registrar-btn">Registrar</button>
       </div>
 
-      <h3>Todas las licencias</h3>
+      <h3>📋 Todas las licencias</h3>
       <table>
         <thead><tr><th>Empleado</th><th>Desde</th><th>Hasta</th><th>Tipo</th><th></th></tr></thead>
         <tbody id="tabla-licencias"></tbody>
@@ -370,34 +388,34 @@
     <section id="tab-estadisticas" style="display:none">
       <div class="stat-nota" id="stat-nota"></div>
 
-      <h3 style="margin-top:0">Horas extra por sector (últimos meses)</h3>
+      <h3 style="margin-top:0">📈 Horas extra por sector (últimos meses)</h3>
       <div id="chart-tendencia" class="card"></div>
 
-      <h3>Fichaje perfecto vs con problemas <span id="rango-estadisticas" class="card-sub"></span></h3>
+      <h3>✅ Fichaje perfecto vs con problemas <span id="rango-estadisticas" class="card-sub"></span></h3>
       <table>
         <thead><tr><th>Empleado</th><th>Días completos</th><th>Días totales</th><th>%</th><th></th></tr></thead>
         <tbody id="tabla-fichadas"></tbody>
       </table>
 
-      <h3>Ranking de pedidos (correcciones + cambios + cancelaciones)</h3>
+      <h3>🏆 Ranking de pedidos (correcciones + cambios + cancelaciones)</h3>
       <table>
         <thead><tr><th>Empleado</th><th>Total de pedidos</th></tr></thead>
         <tbody id="tabla-pedidos-totales"></tbody>
       </table>
 
-      <h3>Correcciones pedidas por empleado</h3>
+      <h3>✏️ Correcciones pedidas por empleado</h3>
       <table>
         <thead><tr><th>Empleado</th><th>Cantidad</th></tr></thead>
         <tbody id="tabla-correcciones"></tbody>
       </table>
 
-      <h3>Interacciones con el bot</h3>
+      <h3>💬 Interacciones con el bot</h3>
       <table>
         <thead><tr><th>Empleado</th><th>Total</th><th>Consultó horas</th><th>Pidió corrección</th><th>¿Fiché hoy?</th><th>Mis solicitudes</th><th>Cambio turno</th></tr></thead>
         <tbody id="tabla-interacciones"></tbody>
       </table>
 
-      <h3>Última actividad</h3>
+      <h3>🕐 Última actividad</h3>
       <table>
         <thead><tr><th>Empleado</th><th>Número</th><th>Última vez</th></tr></thead>
         <tbody id="tabla-actividad"></tbody>
@@ -560,10 +578,10 @@ function renderCorrecciones(lista) {
     const partes = [];
     if (s.ingreso_propuesto) partes.push("Entrada: " + s.ingreso_propuesto);
     if (s.egreso_propuesto) partes.push("Salida: " + s.egreso_propuesto);
-    return `<div class="card" data-id="${s.id}">
+    return `<div class="card" data-id="${s.id}" style="--card-accent:#f5a623">
       <div class="card-row">
         <div>
-          <div class="card-titulo">#${s.id} — ${s.empleado}</div>
+          <div class="card-titulo">✏️ #${s.id} — ${s.empleado}</div>
           <div class="card-sub">${fecha} · Pide: ${partes.join(", ")}</div>
           <div class="card-sub">${textoDatoActual(s)}</div>
         </div>
@@ -582,10 +600,10 @@ function renderCambios(lista) {
   cont.innerHTML = lista.map((s) => {
     const fechaA = s.fecha_a.split("-").reverse().join("/");
     const fechaB = s.fecha_b.split("-").reverse().join("/");
-    return `<div class="card" data-id="${s.id}">
+    return `<div class="card" data-id="${s.id}" style="--card-accent:#9d7be0">
       <div class="card-row">
         <div>
-          <div class="card-titulo">#${s.id} — ${s.empleado_a} ↔ ${s.empleado_b}</div>
+          <div class="card-titulo">🔄 #${s.id} — ${s.empleado_a} ↔ ${s.empleado_b}</div>
           <div class="card-sub">${s.empleado_a} cede ${fechaA} y toma ${fechaB} de ${s.empleado_b}</div>
         </div>
         <div class="card-acciones">
@@ -601,10 +619,10 @@ function renderCancelaciones(lista) {
   const cont = document.getElementById("lista-cancelaciones");
   if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay pedidos de cancelación pendientes 👍</div>'; return; }
   cont.innerHTML = lista.map((s) => {
-    return `<div class="card" data-id="${s.id}">
+    return `<div class="card" data-id="${s.id}" style="--card-accent:#e5484d">
       <div class="card-row">
         <div>
-          <div class="card-titulo">#${s.id} — ${s.empleado}</div>
+          <div class="card-titulo">↩️ #${s.id} — ${s.empleado}</div>
           <div class="card-sub">Quiere deshacer ${s.tipo === "correccion" ? "la corrección" : "el cambio"} #${s.solicitud_id}</div>
         </div>
         <div class="card-acciones">
@@ -1011,16 +1029,16 @@ async function cargarResumenGeneral() {
     ].join("");
 
     contLicencias.innerHTML = data.licenciasHoy.length
-      ? data.licenciasHoy.map((l) => `<div class="card"><div class="card-titulo">${l.empleado}</div><div class="card-sub">🏖️ ${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div>`).join("")
+      ? data.licenciasHoy.map((l) => `<div class="card" style="--card-accent:#3ecf8e"><div class="card-content"><span class="card-icono">🏖️</span><div><div class="card-titulo">${l.empleado}</div><div class="card-sub">${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div></div></div>`).join("")
       : '<div class="vacio">Nadie está de licencia hoy</div>';
 
     const al = data.alertas;
     const bloquesAlertas = [];
     if (al.fichajeBajo.length) {
-      bloquesAlertas.push(`<div class="card"><div class="card-titulo">⚠️ Fichaje incompleto este período</div><div class="card-sub">${al.fichajeBajo.map((f) => `${f.empleado} (${f.porcentaje}%)`).join(" · ")}</div></div>`);
+      bloquesAlertas.push(`<div class="card" style="--card-accent:#f5a623"><div class="card-content"><span class="card-icono">⚠️</span><div><div class="card-titulo">Fichaje incompleto este período</div><div class="card-sub">${al.fichajeBajo.map((f) => `${f.empleado} (${f.porcentaje}%)`).join(" · ")}</div></div></div></div>`);
     }
     if (al.sinActividad.length) {
-      bloquesAlertas.push(`<div class="card"><div class="card-titulo">💤 Sin usar el bot hace más de 7 días</div><div class="card-sub">${al.sinActividad.map((x) => x.empleado).join(" · ")}</div></div>`);
+      bloquesAlertas.push(`<div class="card" style="--card-accent:#5ec8d8"><div class="card-content"><span class="card-icono">💤</span><div><div class="card-titulo">Sin usar el bot hace más de 7 días</div><div class="card-sub">${al.sinActividad.map((x) => x.empleado).join(" · ")}</div></div></div></div>`);
     }
     contAlertas.innerHTML = bloquesAlertas.length ? bloquesAlertas.join("") : '<div class="vacio">Nada que atender por ahora 👍</div>';
 
@@ -1063,7 +1081,7 @@ async function cargarResumenGeneral() {
       : '<div class="vacio">Sin datos</div>';
 
     contProximos.innerHTML = data.proximosLibres.length
-      ? data.proximosLibres.map((f) => `<div class="card"><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo === "Franco" ? "🏠" : "🏖️"} ${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div>`).join("")
+      ? data.proximosLibres.map((f) => `<div class="card" style="--card-accent:${f.tipo === "Franco" ? "#3ecf8e" : "#e87ba4"}"><div class="card-content"><span class="card-icono">${f.tipo === "Franco" ? "🏠" : "🏖️"}</span><div><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div></div></div>`).join("")
       : '<div class="vacio">Nadie tiene franco ni licencia en los próximos 7 días</div>';
 
     const s = data.sistema;
@@ -1132,7 +1150,7 @@ async function cargarLicencias() {
     }
 
     contHoy.innerHTML = dataLic.hoy.length
-      ? dataLic.hoy.map((l) => `<div class="card"><div class="card-titulo">${l.empleado}</div><div class="card-sub">🏖️ ${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div>`).join("")
+      ? dataLic.hoy.map((l) => `<div class="card" style="--card-accent:#3ecf8e"><div class="card-content"><span class="card-icono">🏖️</span><div><div class="card-titulo">${l.empleado}</div><div class="card-sub">${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div></div></div>`).join("")
       : '<div class="vacio">Nadie está de licencia hoy</div>';
 
     tbody.innerHTML = dataLic.licencias.length
