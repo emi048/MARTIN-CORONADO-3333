@@ -96,6 +96,26 @@
   .stat-nota { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+
+  .medidores-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
+  .medidor {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 150px;
+  }
+  .medidor svg { display: block; }
+  .medidor-label { margin-top: 6px; font-size: 13px; color: var(--text); font-weight: 600; }
+  .medidor-sublabel { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .sistema-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .sistema-item { display: flex; align-items: center; gap: 10px; }
+  .sistema-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .sistema-dot.dot-ok { background: var(--ok); }
+  .sistema-dot.dot-warn { background: var(--warn); }
+  .sistema-dot.dot-danger { background: var(--danger); }
+  .sistema-texto .sistema-valor { font-size: 14px; font-weight: 600; }
+  .sistema-texto .sistema-label { font-size: 12px; color: var(--text-muted); }
   .stat-tile {
     background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
     border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
@@ -167,10 +187,19 @@
     <section id="tab-resumen">
       <h3 style="margin-top:0">De un vistazo</h3>
       <div class="stat-grid" id="stat-grid-pendientes"></div>
+
+      <div class="medidores-row" id="medidores-row"></div>
+
       <div class="stat-grid" id="stat-grid-periodo" style="margin-top:12px"></div>
+
+      <h3>Próximos días libres (7 días)</h3>
+      <div id="resumen-proximos-libres"><div class="vacio">Cargando…</div></div>
 
       <h3>De licencia hoy</h3>
       <div id="resumen-licencias-hoy"><div class="vacio">Cargando…</div></div>
+
+      <h3>Estado del sistema</h3>
+      <div id="resumen-sistema" class="card"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-pendientes" style="display:none">
@@ -755,13 +784,53 @@ function statTile(valor, label, clase) {
   return `<div class="stat-tile ${clase || ""}"><div class="stat-valor">${valor}</div><div class="stat-label">${label}</div></div>`;
 }
 
+// Medidor circular (un solo valor contra un limite, no una comparacion entre
+// categorias -- por eso un anillo de progreso y no un pie/donut de "slices").
+// El color del relleno indica severidad: bien / atencion / mal.
+function medidorCircular(porcentaje, label, sublabel) {
+  if (porcentaje === null || porcentaje === undefined) {
+    return `<div class="medidor"><div class="vacio" style="padding:40px 0">Sin datos</div><div class="medidor-label">${label}</div></div>`;
+  }
+  const p = Math.max(0, Math.min(100, porcentaje));
+  const r = 50;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - p / 100);
+  const color = p < 70 ? "var(--danger)" : p < 90 ? "var(--warn)" : "var(--ok)";
+  return `
+    <div class="medidor">
+      <svg viewBox="0 0 120 120" width="140" height="140">
+        <circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--border)" stroke-width="10" />
+        <circle cx="60" cy="60" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="${c}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)" />
+        <text x="60" y="67" text-anchor="middle" font-size="26" font-weight="700" fill="var(--text)">${Math.round(p)}%</text>
+      </svg>
+      <div class="medidor-label">${label}</div>
+      ${sublabel ? `<div class="medidor-sublabel">${sublabel}</div>` : ""}
+    </div>
+  `;
+}
+
+function formatoUptime(segundos) {
+  const h = Math.floor(segundos / 3600);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h`;
+  if (h > 0) return `${h}h ${Math.floor((segundos % 3600) / 60)}min`;
+  return `${Math.floor(segundos / 60)}min`;
+}
+
 async function cargarResumenGeneral() {
   const gridPendientes = document.getElementById("stat-grid-pendientes");
   const gridPeriodo = document.getElementById("stat-grid-periodo");
   const contLicencias = document.getElementById("resumen-licencias-hoy");
+  const contMedidores = document.getElementById("medidores-row");
+  const contProximos = document.getElementById("resumen-proximos-libres");
+  const contSistema = document.getElementById("resumen-sistema");
   gridPendientes.innerHTML = '<div class="vacio">Cargando…</div>';
   gridPeriodo.innerHTML = "";
   contLicencias.innerHTML = '<div class="vacio">Cargando…</div>';
+  contMedidores.innerHTML = '<div class="vacio">Cargando…</div>';
+  contProximos.innerHTML = '<div class="vacio">Cargando…</div>';
+  contSistema.innerHTML = '<div class="vacio">Cargando…</div>';
   try {
     const data = await api("/resumen-general");
     const p = data.pendientes;
@@ -774,6 +843,13 @@ async function cargarResumenGeneral() {
       statTile(totalPendientes === 0 ? "✓" : totalPendientes, totalPendientes === 0 ? "Todo al día" : "Total pendientes", totalPendientes === 0 ? "stat-ok" : "stat-warn"),
     ].join("");
 
+    const pctBot = data.empleados.total > 0 ? Math.round((data.empleados.conWhatsapp / data.empleados.total) * 100) : null;
+    const pctFichaje = data.fichaje.total > 0 ? Math.round((data.fichaje.completos / data.fichaje.total) * 100) : null;
+    contMedidores.innerHTML = [
+      medidorCircular(pctBot, "Empleados con bot activo", `${data.empleados.conWhatsapp} de ${data.empleados.total}`),
+      medidorCircular(pctFichaje, "Fichaje completo del período", `${data.fichaje.completos} de ${data.fichaje.total} días`),
+    ].join("");
+
     gridPeriodo.innerHTML = [
       statTile(`${data.empleados.conWhatsapp}/${data.empleados.total}`, "Empleados con WhatsApp registrado"),
       statTile(data.horas.total, `Horas totales ${formatoRango(data.rango)}`),
@@ -784,6 +860,21 @@ async function cargarResumenGeneral() {
     contLicencias.innerHTML = data.licenciasHoy.length
       ? data.licenciasHoy.map((l) => `<div class="card"><div class="card-titulo">${l.empleado}</div><div class="card-sub">🏖️ ${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div>`).join("")
       : '<div class="vacio">Nadie está de licencia hoy</div>';
+
+    contProximos.innerHTML = data.proximosLibres.length
+      ? data.proximosLibres.map((f) => `<div class="card"><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo === "Franco" ? "🏠" : "🏖️"} ${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div>`).join("")
+      : '<div class="vacio">Nadie tiene franco ni licencia en los próximos 7 días</div>';
+
+    const s = data.sistema;
+    const twilioTxt = s.twilio.error ? "No se pudo consultar" : `${s.twilio.tipo} · ${s.twilio.status}`;
+    const twilioDot = s.twilio.error ? "dot-danger" : s.twilio.tipo === "Full" ? "dot-ok" : "dot-warn";
+    const saludDot = s.avisadoCaido ? "dot-danger" : s.unstableRestarts > 0 ? "dot-warn" : "dot-ok";
+    const saludTxt = s.avisadoCaido ? "Con problemas detectados" : "Sin caídas detectadas";
+    contSistema.innerHTML = `<div class="sistema-grid">
+      <div class="sistema-item"><span class="sistema-dot dot-ok"></span><div class="sistema-texto"><div class="sistema-valor">${formatoUptime(s.uptimeSegundos)}</div><div class="sistema-label">Tiempo activo sin reiniciar</div></div></div>
+      <div class="sistema-item"><span class="sistema-dot ${saludDot}"></span><div class="sistema-texto"><div class="sistema-valor">${saludTxt}</div><div class="sistema-label">Watchdog (cada 5 min)</div></div></div>
+      <div class="sistema-item"><span class="sistema-dot ${twilioDot}"></span><div class="sistema-texto"><div class="sistema-valor">${twilioTxt}</div><div class="sistema-label">Cuenta de Twilio</div></div></div>
+    </div>`;
   } catch (e) { mostrarToast(e.message); }
 }
 
