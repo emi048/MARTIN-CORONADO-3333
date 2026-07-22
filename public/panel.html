@@ -192,6 +192,9 @@
 
       <div class="stat-grid" id="stat-grid-periodo" style="margin-top:12px"></div>
 
+      <h3>Necesita atención</h3>
+      <div id="resumen-alertas"><div class="vacio">Cargando…</div></div>
+
       <h3>Próximos días libres (7 días)</h3>
       <div id="resumen-proximos-libres"><div class="vacio">Cargando…</div></div>
 
@@ -212,8 +215,21 @@
     </section>
 
     <section id="tab-empleados" style="display:none">
+      <h3 style="margin-top:0">Registrar / cambiar número de WhatsApp</h3>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="emp-empleado">Empleado</label>
+          <select id="emp-empleado"></select>
+        </div>
+        <div class="form-field">
+          <label for="emp-numero">Número</label>
+          <input type="text" id="emp-numero" placeholder="+5491122334455">
+        </div>
+        <button class="btn btn-accent" id="emp-guardar-btn">Guardar</button>
+      </div>
+
       <table>
-        <thead><tr><th>Nombre</th><th>Sector</th><th>WhatsApp</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Sector</th><th>WhatsApp</th><th></th></tr></thead>
         <tbody id="tabla-empleados"></tbody>
       </table>
     </section>
@@ -559,17 +575,46 @@ async function accionCancelacion(id, accion, btn) {
 
 async function cargarEmpleados() {
   const tbody = document.getElementById("tabla-empleados");
-  tbody.innerHTML = '<tr><td colspan="3" class="vacio">Cargando…</td></tr>';
+  const select = document.getElementById("emp-empleado");
+  tbody.innerHTML = '<tr><td colspan="4" class="vacio">Cargando…</td></tr>';
   try {
     const data = await api("/empleados");
+
+    if (!select.dataset.cargado) {
+      select.innerHTML = data.empleados.map((e) => `<option value="${e.nombre}">${e.nombre}</option>`).join("");
+      select.dataset.cargado = "1";
+    }
+
     tbody.innerHTML = data.empleados.map((e) => `
       <tr>
         <td>${e.nombre}</td>
         <td>${e.sector || "-"}</td>
         <td>${e.whatsapp ? `<span class="badge badge-si">${e.whatsapp}</span>` : '<span class="badge badge-no">Sin registrar</span>'}</td>
+        <td>${e.whatsapp ? `<button class="btn btn-danger" onclick="quitarWhatsappUI('${e.nombre}', this)">Quitar</button>` : ""}</td>
       </tr>
     `).join("");
   } catch (e) { mostrarToast(e.message); }
+}
+
+document.getElementById("emp-guardar-btn").addEventListener("click", async () => {
+  const empleado = document.getElementById("emp-empleado").value;
+  const numero = document.getElementById("emp-numero").value.trim();
+  if (!numero) { mostrarToast("Ingresá un número"); return; }
+  try {
+    await api("/empleados/whatsapp", { method: "POST", body: JSON.stringify({ empleado, numero }) });
+    mostrarToast(`Número guardado para ${empleado}`);
+    document.getElementById("emp-numero").value = "";
+    cargarEmpleados();
+  } catch (e) { mostrarToast(e.message); }
+});
+
+async function quitarWhatsappUI(empleado, btn) {
+  btn.disabled = true;
+  try {
+    await api(`/empleados/whatsapp/${encodeURIComponent(empleado)}`, { method: "DELETE" });
+    mostrarToast(`Número de ${empleado} quitado`);
+    cargarEmpleados();
+  } catch (e) { mostrarToast(e.message); btn.disabled = false; }
 }
 
 function periodoActual() {
@@ -787,7 +832,27 @@ function statTile(valor, label, clase) {
 // Medidor circular (un solo valor contra un limite, no una comparacion entre
 // categorias -- por eso un anillo de progreso y no un pie/donut de "slices").
 // El color del relleno indica severidad: bien / atencion / mal.
-function medidorCircular(porcentaje, label, sublabel) {
+// Sparkline chica para la tendencia debajo del medidor -- tono apagado para
+// la linea, un solo punto en el acento (el valor actual), sin ejes ni
+// etiquetas (es un adorno de contexto, el numero grande ya esta arriba).
+function sparkline(valores, ancho, alto) {
+  ancho = ancho || 100; alto = alto || 22;
+  const conDato = valores.map((v, i) => ({ v, i })).filter((p) => p.v !== null && p.v !== undefined);
+  if (conDato.length < 2) return "";
+  const vals = conDato.map((p) => p.v);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const rango = max - min || 1;
+  const paso = ancho / (valores.length - 1);
+  const puntos = conDato.map((p) => ({ x: p.i * paso, y: alto - ((p.v - min) / rango) * (alto - 4) - 2 }));
+  const path = puntos.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const ultimo = puntos[puntos.length - 1];
+  return `<svg width="${ancho}" height="${alto}" viewBox="0 0 ${ancho} ${alto}" style="margin-top:6px">
+    <path d="${path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5" />
+    <circle cx="${ultimo.x.toFixed(1)}" cy="${ultimo.y.toFixed(1)}" r="2.5" fill="var(--accent)" />
+  </svg>`;
+}
+
+function medidorCircular(porcentaje, label, sublabel, tendencia) {
   if (porcentaje === null || porcentaje === undefined) {
     return `<div class="medidor"><div class="vacio" style="padding:40px 0">Sin datos</div><div class="medidor-label">${label}</div></div>`;
   }
@@ -796,6 +861,7 @@ function medidorCircular(porcentaje, label, sublabel) {
   const c = 2 * Math.PI * r;
   const offset = c * (1 - p / 100);
   const color = p < 70 ? "var(--danger)" : p < 90 ? "var(--warn)" : "var(--ok)";
+  const spark = tendencia ? sparkline(tendencia.map((t) => t.porcentaje)) : "";
   return `
     <div class="medidor">
       <svg viewBox="0 0 120 120" width="140" height="140">
@@ -806,6 +872,7 @@ function medidorCircular(porcentaje, label, sublabel) {
       </svg>
       <div class="medidor-label">${label}</div>
       ${sublabel ? `<div class="medidor-sublabel">${sublabel}</div>` : ""}
+      ${spark}
     </div>
   `;
 }
@@ -818,6 +885,17 @@ function formatoUptime(segundos) {
   return `${Math.floor(segundos / 60)}min`;
 }
 
+// Mas horas trabajadas no es "bueno" ni "malo" en si mismo -- es informacion
+// neutra, asi que el delta va en tinta apagada (nunca rojo/verde) y solo la
+// flecha marca la direccion.
+function deltaTexto(actual, anterior) {
+  if (actual === 0 && anterior === 0) return "";
+  const diff = Math.round((actual - anterior) * 10) / 10;
+  const signo = diff > 0 ? "▲" : diff < 0 ? "▼" : "→";
+  const valor = diff > 0 ? `+${diff}` : diff;
+  return ` <span style="color:var(--text-muted);font-weight:400;font-size:11px">${signo} ${valor} vs mes anterior</span>`;
+}
+
 async function cargarResumenGeneral() {
   const gridPendientes = document.getElementById("stat-grid-pendientes");
   const gridPeriodo = document.getElementById("stat-grid-periodo");
@@ -825,12 +903,14 @@ async function cargarResumenGeneral() {
   const contMedidores = document.getElementById("medidores-row");
   const contProximos = document.getElementById("resumen-proximos-libres");
   const contSistema = document.getElementById("resumen-sistema");
+  const contAlertas = document.getElementById("resumen-alertas");
   gridPendientes.innerHTML = '<div class="vacio">Cargando…</div>';
   gridPeriodo.innerHTML = "";
   contLicencias.innerHTML = '<div class="vacio">Cargando…</div>';
   contMedidores.innerHTML = '<div class="vacio">Cargando…</div>';
   contProximos.innerHTML = '<div class="vacio">Cargando…</div>';
   contSistema.innerHTML = '<div class="vacio">Cargando…</div>';
+  contAlertas.innerHTML = '<div class="vacio">Cargando…</div>';
   try {
     const data = await api("/resumen-general");
     const p = data.pendientes;
@@ -847,19 +927,30 @@ async function cargarResumenGeneral() {
     const pctFichaje = data.fichaje.total > 0 ? Math.round((data.fichaje.completos / data.fichaje.total) * 100) : null;
     contMedidores.innerHTML = [
       medidorCircular(pctBot, "Empleados con bot activo", `${data.empleados.conWhatsapp} de ${data.empleados.total}`),
-      medidorCircular(pctFichaje, "Fichaje completo del período", `${data.fichaje.completos} de ${data.fichaje.total} días`),
+      medidorCircular(pctFichaje, "Fichaje completo del período", `${data.fichaje.completos} de ${data.fichaje.total} días`, data.tendenciaFichaje),
     ].join("");
 
+    const c = data.comparacion;
     gridPeriodo.innerHTML = [
       statTile(`${data.empleados.conWhatsapp}/${data.empleados.total}`, "Empleados con WhatsApp registrado"),
-      statTile(data.horas.total, `Horas totales ${formatoRango(data.rango)}`),
-      statTile(data.horas.h50, "Extra 50% del período"),
-      statTile(data.horas.h100, "Extra 100% del período"),
+      statTile(data.horas.total, `Horas totales ${formatoRango(data.rango)}${deltaTexto(data.horas.total, c.horas.total)}`),
+      statTile(data.horas.h50, `Extra 50% del período${deltaTexto(data.horas.h50, c.horas.h50)}`),
+      statTile(data.horas.h100, `Extra 100% del período${deltaTexto(data.horas.h100, c.horas.h100)}`),
     ].join("");
 
     contLicencias.innerHTML = data.licenciasHoy.length
       ? data.licenciasHoy.map((l) => `<div class="card"><div class="card-titulo">${l.empleado}</div><div class="card-sub">🏖️ ${l.tipo} — hasta ${l.fechaHasta.split("-").reverse().join("/")}</div></div>`).join("")
       : '<div class="vacio">Nadie está de licencia hoy</div>';
+
+    const al = data.alertas;
+    const bloquesAlertas = [];
+    if (al.fichajeBajo.length) {
+      bloquesAlertas.push(`<div class="card"><div class="card-titulo">⚠️ Fichaje incompleto este período</div><div class="card-sub">${al.fichajeBajo.map((f) => `${f.empleado} (${f.porcentaje}%)`).join(" · ")}</div></div>`);
+    }
+    if (al.sinActividad.length) {
+      bloquesAlertas.push(`<div class="card"><div class="card-titulo">💤 Sin usar el bot hace más de 7 días</div><div class="card-sub">${al.sinActividad.map((x) => x.empleado).join(" · ")}</div></div>`);
+    }
+    contAlertas.innerHTML = bloquesAlertas.length ? bloquesAlertas.join("") : '<div class="vacio">Nada que atender por ahora 👍</div>';
 
     contProximos.innerHTML = data.proximosLibres.length
       ? data.proximosLibres.map((f) => `<div class="card"><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo === "Franco" ? "🏠" : "🏖️"} ${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div>`).join("")
