@@ -116,6 +116,11 @@
   .sistema-dot.dot-danger { background: var(--danger); }
   .sistema-texto .sistema-valor { font-size: 14px; font-weight: 600; }
   .sistema-texto .sistema-label { font-size: 12px; color: var(--text-muted); }
+
+  .turnos-leyenda { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; color: var(--text-muted); }
+  .turnos-leyenda .item { display: flex; align-items: center; gap: 6px; }
+  .turnos-leyenda .swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .badge-turno { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .stat-tile {
     background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
     border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
@@ -172,6 +177,7 @@
     <button class="tab-btn" data-tab="horas">Horas del período</button>
     <button class="tab-btn" data-tab="fichadas">Fichadas por empleado</button>
     <button class="tab-btn" data-tab="licencias">Licencias</button>
+    <button class="tab-btn" data-tab="turnos">Turnos (mantenimiento)</button>
     <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
     <button class="tab-btn" data-tab="historial">Historial</button>
   </nav>
@@ -298,6 +304,20 @@
       <table>
         <thead><tr><th>Empleado</th><th>Desde</th><th>Hasta</th><th>Tipo</th><th></th></tr></thead>
         <tbody id="tabla-licencias"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-turnos" style="display:none">
+      <div class="form-row">
+        <div class="form-field">
+          <label for="turnos-mes">Mes</label>
+          <input type="month" id="turnos-mes" class="periodo-input">
+        </div>
+      </div>
+      <div class="turnos-leyenda" id="turnos-leyenda"></div>
+      <table>
+        <thead><tr id="turnos-header"></tr></thead>
+        <tbody id="tabla-turnos"></tbody>
       </table>
     </section>
 
@@ -461,6 +481,7 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
     if (btn.dataset.tab === "licencias") cargarLicencias();
     if (btn.dataset.tab === "fichadas") initFichadasEmpleado();
     if (btn.dataset.tab === "historial") cargarHistorial();
+    if (btn.dataset.tab === "turnos") cargarTurnos();
   });
 });
 
@@ -1062,6 +1083,54 @@ async function eliminarLicenciaUI(id, btn) {
     cargarLicencias();
   } catch (e) { mostrarToast(e.message); btn.disabled = false; }
 }
+
+const TURNO_INFO = {
+  mañana: { texto: "Mañana", color: "#4f8cff" },
+  tarde: { texto: "Tarde", color: "#ff9f5a" },
+  sabado_corto: { texto: "Sáb 8-12", color: "#9d7be0" },
+  sabado_largo: { texto: "Sáb 9-17", color: "#5ec8d8" },
+  domingo: { texto: "Dom 9-17", color: "#e87ba4" },
+  franco: { texto: "Franco", color: "#3ecf8e" },
+  descanso: { texto: "Descanso", color: "#8a919e" },
+};
+
+function badgeTurno(turno) {
+  if (!turno) return "-";
+  const info = TURNO_INFO[turno.tipo] || { texto: turno.tipo, color: "#8a919e" };
+  return `<span class="badge-turno" style="background:${info.color}22;color:${info.color}">${info.texto}</span>`;
+}
+
+const DIAS_SEMANA_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+async function cargarTurnos() {
+  const mesInput = document.getElementById("turnos-mes");
+  if (!mesInput.value) mesInput.value = periodoActual();
+  const headerRow = document.getElementById("turnos-header");
+  const tbody = document.getElementById("tabla-turnos");
+  const leyenda = document.getElementById("turnos-leyenda");
+  tbody.innerHTML = '<tr><td class="vacio">Cargando…</td></tr>';
+  try {
+    const data = await api("/turnos?mes=" + mesInput.value);
+    headerRow.innerHTML = "<th>Día</th>" + data.equipo.map((e) => `<th>${e.split(" ")[0]}</th>`).join("");
+
+    leyenda.innerHTML = Object.values(TURNO_INFO).map((v) =>
+      `<div class="item"><span class="swatch" style="background:${v.color}"></span>${v.texto}</div>`
+    ).join("") + '<div class="item">🔴 Feriado</div>';
+
+    tbody.innerHTML = data.dias.map((d) => {
+      const [, m, dd] = d.fecha.split("-");
+      const nombreDia = DIAS_SEMANA_CORTO[d.diaSemana];
+      const esFinde = d.diaSemana === 0 || d.diaSemana === 6;
+      const feriadoTag = d.esFeriado ? " 🔴" : "";
+      return `<tr style="${esFinde ? "background:rgba(255,255,255,0.02)" : ""}">
+        <td>${dd}/${m} ${nombreDia}${feriadoTag}</td>
+        ${data.equipo.map((e) => `<td>${badgeTurno(d.turnos[e])}</td>`).join("")}
+      </tr>`;
+    }).join("");
+  } catch (e) { mostrarToast(e.message); }
+}
+
+document.getElementById("turnos-mes").addEventListener("change", cargarTurnos);
 
 if (token) mostrarApp(); else document.getElementById("login-screen").style.display = "flex";
 </script>
