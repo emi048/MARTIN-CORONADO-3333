@@ -40,6 +40,35 @@ Hikvision, pero **necesita validarse contra tu instalación real**:
 - Mientras tanto, podés seguir generando el fichero subiendo el Excel manual
   con `lib/leerExcelHikvision.js` (dejé esa función intacta como respaldo).
 
+### Salir del Sandbox de Twilio + menú con botones
+
+**En curso.** El bot hoy corre sobre el Sandbox de WhatsApp de Twilio, que
+tiene dos límites: los empleados tienen que re-mandar el código "join" cada
+72hs de inactividad, y no se pueden usar Content Templates propias (botones,
+listas) -- el Sandbox solo permite un puñado de plantillas genéricas de
+Twilio.
+
+- **Paso 1 (en curso, lo hace el admin):** conseguir un número dedicado
+  (chip propio, no uno comprado a Twilio) y registrarlo como WhatsApp Sender
+  de producción en Twilio ("Bring Your Own Number") -- pide verificación de
+  negocio con Meta Business Manager, puede tardar de horas a días.
+- **Paso 2 (ya hecho):** ya están creadas 6 Content Templates en la cuenta
+  de Twilio (menú principal con y sin la opción de cambio de turno, cuántos
+  días corregir, qué corregir, qué día del finde cambiar, con quién) -- sus
+  SIDs están en `.env` (`CONTENT_SID_*`). No las usa ningún código todavía.
+  `lib/twilioClient.js` ya tiene `enviarWhatsappInteractivo(numero,
+  contentSid, variables)` lista para mandarlas.
+- **Paso 3 (falta, bloqueado por el Paso 1):** el `<Message>` de TwiML **no
+  soporta `ContentSid`** -- solo se puede mandar una Content Template por la
+  API REST de forma asíncrona, no como respuesta directa al webhook. Esto
+  significa que hay que cambiar el mecanismo de respuesta del bot (hoy cada
+  paso del menú simplemente `return`a un texto que se envuelve en TwiML) en
+  los puntos que pasan a usar botones/listas: menú principal, "cuántos días
+  corregir", "qué corregir", "qué día cambiar" y "con quién". No se puede
+  probar en Sandbox (no renderiza Content Templates custom), así que no
+  conviene tocar esto hasta tener el número de producción activo para poder
+  verificar el flujo real antes de que lo use todo el equipo.
+
 ## Preguntas resueltas sobre cambios de turno
 
 ### 1. Sincronizar el Google Calendar cuando se aprueba un cambio de turno
