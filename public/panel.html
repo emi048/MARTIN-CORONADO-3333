@@ -138,8 +138,31 @@
   .turnos-leyenda .item { display: flex; align-items: center; gap: 6px; }
   .turnos-leyenda .swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   .badge-turno { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .turno-hoy-linea { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
-  .turno-hoy-linea:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .turno-hoy-titulo { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 10px; }
+  .turno-hoy-grid { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+  .turno-hoy-card {
+    flex: 1; min-width: 220px; border-radius: 14px; padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  .turno-hoy-cabecera { display: flex; align-items: center; gap: 12px; }
+  .turno-hoy-icono {
+    font-size: 26px; width: 48px; height: 48px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .turno-hoy-nombre { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .turno-hoy-horario { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .turno-hoy-personas { display: flex; flex-wrap: wrap; gap: 8px; }
+  .turno-hoy-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.07); border-radius: 100px; padding: 5px 14px 5px 5px;
+    font-size: 14px; font-weight: 700; color: var(--text);
+  }
+  .turno-hoy-avatar {
+    width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #06070a; flex-shrink: 0;
+  }
   .stat-tile {
     background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
     border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
@@ -211,7 +234,10 @@
   </header>
   <main>
     <section id="tab-resumen">
-      <h3 style="margin-top:0">De un vistazo</h3>
+      <div id="turno-hoy-titulo" class="turno-hoy-titulo"></div>
+      <div id="resumen-turno-hoy"><div class="vacio">Cargando…</div></div>
+
+      <h3>De un vistazo</h3>
       <div class="stat-grid" id="stat-grid-pendientes"></div>
 
       <div class="medidores-row" id="medidores-row"></div>
@@ -220,9 +246,6 @@
 
       <h3>Necesita atención</h3>
       <div id="resumen-alertas"><div class="vacio">Cargando…</div></div>
-
-      <h3>Turno de hoy (mantenimiento)</h3>
-      <div id="resumen-turno-hoy" class="card"><div class="vacio">Cargando…</div></div>
 
       <h3>Próximos días libres (7 días)</h3>
       <div id="resumen-proximos-libres"><div class="vacio">Cargando…</div></div>
@@ -1001,18 +1024,43 @@ async function cargarResumenGeneral() {
     }
     contAlertas.innerHTML = bloquesAlertas.length ? bloquesAlertas.join("") : '<div class="vacio">Nada que atender por ahora 👍</div>';
 
+    document.getElementById("turno-hoy-titulo").textContent =
+      "🔧 Turno de mantenimiento hoy — " + new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+
     const gruposTurnoHoy = {};
+    const horarioPorTipo = {};
     data.turnoHoy.forEach(({ empleado, turno }) => {
       const tipo = turno ? turno.tipo : "otro";
       (gruposTurnoHoy[tipo] = gruposTurnoHoy[tipo] || []).push(empleado.split(" ")[0]);
+      if (turno && turno.horario) horarioPorTipo[tipo] = turno.horario;
     });
-    const lineasTurnoHoy = Object.keys(TURNO_INFO)
+    const tarjetasTurnoHoy = Object.keys(TURNO_INFO)
       .filter((tipo) => gruposTurnoHoy[tipo])
       .map((tipo) => {
         const info = TURNO_INFO[tipo];
-        return `<div class="turno-hoy-linea"><span class="badge-turno" style="background:${info.color}22;color:${info.color}">${info.texto}</span> ${gruposTurnoHoy[tipo].join(", ")}</div>`;
+        const h = horarioPorTipo[tipo];
+        const chips = gruposTurnoHoy[tipo].map((nombre) => `
+          <span class="turno-hoy-chip">
+            <span class="turno-hoy-avatar" style="background:${info.color}">${nombre[0]}</span>
+            ${nombre}
+          </span>
+        `).join("");
+        return `
+          <div class="turno-hoy-card" style="background:linear-gradient(160deg, ${info.color}26, ${info.color}08); border-top: 3px solid ${info.color}">
+            <div class="turno-hoy-cabecera">
+              <span class="turno-hoy-icono" style="background:${info.color}22">${info.icono}</span>
+              <div>
+                <div class="turno-hoy-nombre">${info.texto}</div>
+                ${h ? `<div class="turno-hoy-horario">${h.in} a ${h.out} hs</div>` : `<div class="turno-hoy-horario">Día libre</div>`}
+              </div>
+            </div>
+            <div class="turno-hoy-personas">${chips}</div>
+          </div>
+        `;
       });
-    contTurnoHoy.innerHTML = lineasTurnoHoy.length ? lineasTurnoHoy.join("") : '<div class="vacio">Sin datos</div>';
+    contTurnoHoy.innerHTML = tarjetasTurnoHoy.length
+      ? `<div class="turno-hoy-grid">${tarjetasTurnoHoy.join("")}</div>`
+      : '<div class="vacio">Sin datos</div>';
 
     contProximos.innerHTML = data.proximosLibres.length
       ? data.proximosLibres.map((f) => `<div class="card"><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo === "Franco" ? "🏠" : "🏖️"} ${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div>`).join("")
@@ -1126,13 +1174,13 @@ async function eliminarLicenciaUI(id, btn) {
 }
 
 const TURNO_INFO = {
-  mañana: { texto: "Mañana", color: "#4f8cff" },
-  tarde: { texto: "Tarde", color: "#ff9f5a" },
-  sabado_corto: { texto: "Sáb 8-12", color: "#9d7be0" },
-  sabado_largo: { texto: "Sáb 9-17", color: "#5ec8d8" },
-  domingo: { texto: "Dom 9-17", color: "#e87ba4" },
-  franco: { texto: "Franco", color: "#3ecf8e" },
-  descanso: { texto: "Descanso", color: "#8a919e" },
+  mañana: { texto: "Mañana", color: "#4f8cff", icono: "🌅" },
+  tarde: { texto: "Tarde", color: "#ff9f5a", icono: "🌇" },
+  sabado_corto: { texto: "Sábado corto", color: "#9d7be0", icono: "☀️" },
+  sabado_largo: { texto: "Sábado largo", color: "#5ec8d8", icono: "☀️" },
+  domingo: { texto: "Domingo", color: "#e87ba4", icono: "🌞" },
+  franco: { texto: "Franco", color: "#3ecf8e", icono: "🏖️" },
+  descanso: { texto: "Descanso", color: "#8a919e", icono: "😌" },
 };
 
 function badgeTurno(turno) {
