@@ -138,6 +138,8 @@
   .turnos-leyenda .item { display: flex; align-items: center; gap: 6px; }
   .turnos-leyenda .swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   .badge-turno { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .turno-hoy-linea { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; }
+  .turno-hoy-linea:not(:last-child) { border-bottom: 1px solid var(--border); }
   .stat-tile {
     background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
     border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
@@ -218,6 +220,9 @@
 
       <h3>Necesita atención</h3>
       <div id="resumen-alertas"><div class="vacio">Cargando…</div></div>
+
+      <h3>Turno de hoy (mantenimiento)</h3>
+      <div id="resumen-turno-hoy" class="card"><div class="vacio">Cargando…</div></div>
 
       <h3>Próximos días libres (7 días)</h3>
       <div id="resumen-proximos-libres"><div class="vacio">Cargando…</div></div>
@@ -946,6 +951,7 @@ async function cargarResumenGeneral() {
   const contProximos = document.getElementById("resumen-proximos-libres");
   const contSistema = document.getElementById("resumen-sistema");
   const contAlertas = document.getElementById("resumen-alertas");
+  const contTurnoHoy = document.getElementById("resumen-turno-hoy");
   gridPendientes.innerHTML = '<div class="vacio">Cargando…</div>';
   gridPeriodo.innerHTML = "";
   contLicencias.innerHTML = '<div class="vacio">Cargando…</div>';
@@ -953,6 +959,7 @@ async function cargarResumenGeneral() {
   contProximos.innerHTML = '<div class="vacio">Cargando…</div>';
   contSistema.innerHTML = '<div class="vacio">Cargando…</div>';
   contAlertas.innerHTML = '<div class="vacio">Cargando…</div>';
+  contTurnoHoy.innerHTML = '<div class="vacio">Cargando…</div>';
   try {
     const data = await api("/resumen-general");
     const p = data.pendientes;
@@ -993,6 +1000,19 @@ async function cargarResumenGeneral() {
       bloquesAlertas.push(`<div class="card"><div class="card-titulo">💤 Sin usar el bot hace más de 7 días</div><div class="card-sub">${al.sinActividad.map((x) => x.empleado).join(" · ")}</div></div>`);
     }
     contAlertas.innerHTML = bloquesAlertas.length ? bloquesAlertas.join("") : '<div class="vacio">Nada que atender por ahora 👍</div>';
+
+    const gruposTurnoHoy = {};
+    data.turnoHoy.forEach(({ empleado, turno }) => {
+      const tipo = turno ? turno.tipo : "otro";
+      (gruposTurnoHoy[tipo] = gruposTurnoHoy[tipo] || []).push(empleado.split(" ")[0]);
+    });
+    const lineasTurnoHoy = Object.keys(TURNO_INFO)
+      .filter((tipo) => gruposTurnoHoy[tipo])
+      .map((tipo) => {
+        const info = TURNO_INFO[tipo];
+        return `<div class="turno-hoy-linea"><span class="badge-turno" style="background:${info.color}22;color:${info.color}">${info.texto}</span> ${gruposTurnoHoy[tipo].join(", ")}</div>`;
+      });
+    contTurnoHoy.innerHTML = lineasTurnoHoy.length ? lineasTurnoHoy.join("") : '<div class="vacio">Sin datos</div>';
 
     contProximos.innerHTML = data.proximosLibres.length
       ? data.proximosLibres.map((f) => `<div class="card"><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo === "Franco" ? "🏠" : "🏖️"} ${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div>`).join("")
