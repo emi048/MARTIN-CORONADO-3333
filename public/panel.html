@@ -192,6 +192,7 @@
     <section id="tab-horas" style="display:none">
       <div style="margin-bottom:14px">
         Período: <input type="month" id="periodo-input" class="periodo-input">
+        <span id="rango-horas" class="card-sub" style="margin-left:8px"></span>
       </div>
       <table>
         <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
@@ -210,6 +211,7 @@
           <input type="month" id="fich-periodo" class="periodo-input">
         </div>
         <button class="btn btn-accent" id="fich-buscar-btn">Buscar</button>
+        <span id="rango-fichadas" class="card-sub"></span>
       </div>
       <table>
         <thead><tr><th>Fecha</th><th>Turno</th><th>Ingreso</th><th>Egreso</th><th>Hs.</th><th>50%</th><th>100%</th><th>Observación</th></tr></thead>
@@ -260,7 +262,7 @@
       <h3 style="margin-top:0">Horas extra por sector (últimos meses)</h3>
       <div id="chart-tendencia" class="card"></div>
 
-      <h3>Fichaje perfecto vs con problemas (período actual)</h3>
+      <h3>Fichaje perfecto vs con problemas <span id="rango-estadisticas" class="card-sub"></span></h3>
       <table>
         <thead><tr><th>Empleado</th><th>Días completos</th><th>Días totales</th><th>%</th><th></th></tr></thead>
         <tbody id="tabla-fichadas"></tbody>
@@ -555,6 +557,7 @@ async function cargarHoras() {
   tbody.innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
   try {
     const data = await api("/resumen?periodo=" + input.value);
+    document.getElementById("rango-horas").textContent = formatoRango(data.rango);
     if (data.resumen.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="vacio">Sin datos para este período</td></tr>'; return; }
     tbody.innerHTML = data.resumen.map((r) => `
       <tr>
@@ -572,6 +575,15 @@ function formatoFechaHora(iso) {
   if (!iso) return "-";
   const d = new Date(iso);
   return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// El "periodo" (ej "2026-07") es una etiqueta interna -- el rango real de
+// dias cargados no coincide con el mes calendario. { desde, hasta } vienen
+// como "YYYY-MM-DD"; null si todavia no hay ningun dato para ese periodo.
+function formatoRango(rango) {
+  if (!rango) return "";
+  const f = (iso) => iso.split("-").reverse().slice(0, 2).join("/");
+  return `(del ${f(rango.desde)} al ${f(rango.hasta)})`;
 }
 
 let historialCompleto = [];
@@ -698,6 +710,8 @@ async function cargarEstadisticas() {
       ? `Las interacciones con el bot (secciones "Interacciones" y "Última actividad") se registran desde el ${formatoFechaHora(data.desde)} — no hay datos de antes de esa fecha.`
       : 'Todavía no se registró ninguna interacción con el bot desde que se activó este seguimiento.';
 
+    document.getElementById("rango-estadisticas").textContent = formatoRango(data.rango);
+
     const tbF = document.getElementById("tabla-fichadas");
     const fichadasOrdenadas = [...data.fichadas].sort((a, b) => (a.porcentaje ?? -1) - (b.porcentaje ?? -1));
     tbF.innerHTML = fichadasOrdenadas.length ? fichadasOrdenadas.map((f) => {
@@ -762,7 +776,7 @@ async function cargarResumenGeneral() {
 
     gridPeriodo.innerHTML = [
       statTile(`${data.empleados.conWhatsapp}/${data.empleados.total}`, "Empleados con WhatsApp registrado"),
-      statTile(data.horas.total, `Horas totales — ${data.periodo}`),
+      statTile(data.horas.total, `Horas totales ${formatoRango(data.rango)}`),
       statTile(data.horas.h50, "Extra 50% del período"),
       statTile(data.horas.h100, "Extra 100% del período"),
     ].join("");
@@ -794,6 +808,7 @@ async function buscarFichadasEmpleado() {
   tbody.innerHTML = '<tr><td colspan="8" class="vacio">Buscando…</td></tr>';
   try {
     const data = await api(`/dias?empleado=${encodeURIComponent(empleado)}&periodo=${periodo}`);
+    document.getElementById("rango-fichadas").textContent = formatoRango(data.rango);
     if (data.dias.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="vacio">Sin fichadas para este período</td></tr>'; return; }
     tbody.innerHTML = data.dias.map((d) => {
       const fecha = d.fecha.split("-").reverse().join("/");
