@@ -136,6 +136,14 @@
     border-radius: 8px; padding: 12px 16px; font-size: 14px; font-weight: 600;
   }
 
+  .historial-mini { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .historial-mini-titulo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
+  .historial-mini-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .historial-mini-item:last-child { border-bottom: none; }
+  .historial-mini-estado { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .historial-mini-estado.aprobada { color: var(--ok); }
+  .historial-mini-estado.rechazada { color: var(--danger); }
+
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 
   .medidores-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
@@ -295,14 +303,17 @@
       <div class="seccion-pendiente" style="--accent-seccion:#f5a623">
         <h3>✏️ Correcciones de fichaje <span id="badge-correcciones"></span></h3>
         <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
+        <div id="historial-correcciones" class="historial-mini"></div>
       </div>
       <div class="seccion-pendiente" style="--accent-seccion:#9d7be0">
         <h3>🔄 Cambios de turno <span id="badge-cambios"></span></h3>
         <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
+        <div id="historial-cambios" class="historial-mini"></div>
       </div>
       <div class="seccion-pendiente" style="--accent-seccion:#e5484d">
         <h3>↩️ Cancelaciones (deshacer algo ya aprobado) <span id="badge-cancelaciones"></span></h3>
         <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
+        <div id="historial-cancelaciones" class="historial-mini"></div>
       </div>
     </section>
 
@@ -581,6 +592,47 @@ async function cargarPendientes() {
     renderCambios(data.cambios);
     renderCancelaciones(data.cancelaciones);
   } catch (e) { mostrarToast(e.message); }
+  cargarHistorialMini();
+}
+
+// Historial reciente (ya resuelto) de cada categoria, mostrado dentro de la
+// misma caja que sus pendientes -- para no tener que ir a la pestaña
+// Historial aparte solo para ver que paso con un pedido ya viejo.
+async function cargarHistorialMini() {
+  try {
+    const data = await api("/historial");
+    renderHistorialMini("historial-correcciones", data.correcciones, (s) => {
+      const fecha = s.fecha.split("-").reverse().join("/");
+      return `#${s.id} — ${s.empleado} · ${fecha}`;
+    });
+    renderHistorialMini("historial-cambios", data.cambios, (s) => {
+      const fechaA = s.fecha_a.split("-").reverse().join("/");
+      const fechaB = s.fecha_b.split("-").reverse().join("/");
+      return `#${s.id} — ${s.empleado_a} ↔ ${s.empleado_b} · ${fechaA}/${fechaB}`;
+    });
+    renderHistorialMini("historial-cancelaciones", data.cancelaciones, (s) => {
+      return `#${s.id} — ${s.empleado} · deshacer ${s.tipo} #${s.solicitud_id}`;
+    });
+  } catch (e) { /* no tapar el error de pendientes con el de este panel secundario */ }
+}
+
+function renderHistorialMini(contId, lista, detalleFn) {
+  const cont = document.getElementById(contId);
+  const resueltos = lista
+    .filter((s) => s.estado !== "pendiente")
+    .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en))
+    .slice(0, 5);
+
+  const titulo = '<div class="historial-mini-titulo">Historial reciente</div>';
+  if (resueltos.length === 0) {
+    cont.innerHTML = titulo + '<div class="vacio" style="padding:4px 0;text-align:left">Todavía no hay nada resuelto</div>';
+    return;
+  }
+  cont.innerHTML = titulo + resueltos.map((s) => `
+    <div class="historial-mini-item">
+      <span>${detalleFn(s)}</span>
+      <span class="historial-mini-estado ${s.estado}">${s.estado === "aprobada" ? "✅ Aprobada" : "❌ Rechazada"}</span>
+    </div>`).join("");
 }
 
 function textoDatoActual(s) {
