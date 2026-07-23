@@ -120,6 +120,22 @@
   .vacio { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
   .stat-nota { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 
+  .seccion-pendiente {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent-seccion, var(--accent));
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+  }
+  .seccion-pendiente h3 { margin: 0 0 14px 0; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+  .badge-count {
+    background: var(--accent-seccion, var(--accent)); color: #06070a; font-size: 12px; font-weight: 800;
+    border-radius: 100px; padding: 2px 10px; min-width: 22px; text-align: center;
+  }
+  .vacio-ok {
+    display: flex; align-items: center; gap: 10px; color: var(--ok); text-align: left;
+    background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.25);
+    border-radius: 8px; padding: 12px 16px; font-size: 14px; font-weight: 600;
+  }
+
   .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 
   .medidores-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
@@ -276,12 +292,18 @@
     </section>
 
     <section id="tab-pendientes" style="display:none">
-      <h3 style="margin-top:0">✏️ Correcciones de fichaje</h3>
-      <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
-      <h3>🔄 Cambios de turno</h3>
-      <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
-      <h3>↩️ Cancelaciones (deshacer algo ya aprobado)</h3>
-      <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
+      <div class="seccion-pendiente" style="--accent-seccion:#f5a623">
+        <h3>✏️ Correcciones de fichaje <span id="badge-correcciones"></span></h3>
+        <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
+      </div>
+      <div class="seccion-pendiente" style="--accent-seccion:#9d7be0">
+        <h3>🔄 Cambios de turno <span id="badge-cambios"></span></h3>
+        <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
+      </div>
+      <div class="seccion-pendiente" style="--accent-seccion:#e5484d">
+        <h3>↩️ Cancelaciones (deshacer algo ya aprobado) <span id="badge-cancelaciones"></span></h3>
+        <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
+      </div>
     </section>
 
     <section id="tab-empleados" style="display:none">
@@ -572,7 +594,8 @@ function textoDatoActual(s) {
 
 function renderCorrecciones(lista) {
   const cont = document.getElementById("lista-correcciones");
-  if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay correcciones pendientes 👍</div>'; return; }
+  document.getElementById("badge-correcciones").innerHTML = lista.length > 0 ? `<span class="badge-count">${lista.length}</span>` : "";
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio-ok">✅ No hay correcciones pendientes</div>'; return; }
   cont.innerHTML = lista.map((s) => {
     const fecha = s.fecha.split("-").reverse().join("/");
     const partes = [];
@@ -596,7 +619,8 @@ function renderCorrecciones(lista) {
 
 function renderCambios(lista) {
   const cont = document.getElementById("lista-cambios");
-  if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay cambios de turno pendientes 👍</div>'; return; }
+  document.getElementById("badge-cambios").innerHTML = lista.length > 0 ? `<span class="badge-count">${lista.length}</span>` : "";
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio-ok">✅ No hay cambios de turno pendientes</div>'; return; }
   cont.innerHTML = lista.map((s) => {
     const fechaA = s.fecha_a.split("-").reverse().join("/");
     const fechaB = s.fecha_b.split("-").reverse().join("/");
@@ -617,7 +641,8 @@ function renderCambios(lista) {
 
 function renderCancelaciones(lista) {
   const cont = document.getElementById("lista-cancelaciones");
-  if (lista.length === 0) { cont.innerHTML = '<div class="vacio">No hay pedidos de cancelación pendientes 👍</div>'; return; }
+  document.getElementById("badge-cancelaciones").innerHTML = lista.length > 0 ? `<span class="badge-count">${lista.length}</span>` : "";
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio-ok">✅ No hay pedidos de cancelación pendientes</div>'; return; }
   cont.innerHTML = lista.map((s) => {
     return `<div class="card" data-id="${s.id}" style="--card-accent:#e5484d">
       <div class="card-row">
