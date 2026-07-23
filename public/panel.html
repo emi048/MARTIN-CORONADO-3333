@@ -120,10 +120,11 @@
   .vacio { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
   .stat-nota { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 
+  .pendientes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; }
   .seccion-pendiente {
     background: var(--surface); border: 1px solid var(--border);
     border-left: 4px solid var(--accent-seccion, var(--accent));
-    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+    border-radius: 12px; padding: 18px 20px;
   }
   .seccion-pendiente h3 { margin: 0 0 14px 0; font-size: 15px; display: flex; align-items: center; gap: 10px; }
   .badge-count {
@@ -292,17 +293,20 @@
     </section>
 
     <section id="tab-pendientes" style="display:none">
-      <div class="seccion-pendiente" style="--accent-seccion:#f5a623">
-        <h3>✏️ Correcciones de fichaje <span id="badge-correcciones"></span></h3>
-        <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
-      </div>
-      <div class="seccion-pendiente" style="--accent-seccion:#9d7be0">
-        <h3>🔄 Cambios de turno <span id="badge-cambios"></span></h3>
-        <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
-      </div>
-      <div class="seccion-pendiente" style="--accent-seccion:#e5484d">
-        <h3>↩️ Cancelaciones (deshacer algo ya aprobado) <span id="badge-cancelaciones"></span></h3>
-        <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
+      <div class="pendientes-grid">
+        <div class="seccion-pendiente" style="--accent-seccion:#f5a623">
+          <h3>✏️ Correcciones de fichaje <span id="badge-correcciones"></span></h3>
+          <div id="lista-correcciones"><div class="vacio">Cargando…</div></div>
+        </div>
+        <div class="seccion-pendiente" style="--accent-seccion:#9d7be0">
+          <h3>🔄 Cambios de turno <span id="badge-cambios"></span></h3>
+          <div id="lista-cambios"><div class="vacio">Cargando…</div></div>
+        </div>
+        <div class="seccion-pendiente" style="--accent-seccion:#e5484d">
+          <h3>↩️ Cancelaciones <span id="badge-cancelaciones"></span></h3>
+          <div class="card-sub" style="margin:-8px 0 14px 0">Deshacer algo ya aprobado</div>
+          <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
+        </div>
       </div>
     </section>
 
