@@ -273,6 +273,9 @@
       <div id="turno-hoy-titulo" class="turno-hoy-titulo"></div>
       <div id="resumen-turno-hoy"><div class="vacio">Cargando…</div></div>
 
+      <div id="turno-hoy-titulo-conserjeria" class="turno-hoy-titulo"></div>
+      <div id="resumen-turno-hoy-conserjeria"><div class="vacio">Cargando…</div></div>
+
       <h3>📊 De un vistazo</h3>
       <div class="stat-grid" id="stat-grid-pendientes"></div>
 
@@ -405,10 +408,19 @@
           <input type="month" id="turnos-mes" class="periodo-input">
         </div>
       </div>
+
+      <h3 style="margin-top:0">🔧 Mantenimiento</h3>
       <div class="turnos-leyenda" id="turnos-leyenda"></div>
       <table>
         <thead><tr id="turnos-header"></tr></thead>
         <tbody id="tabla-turnos"></tbody>
+      </table>
+
+      <h3>🛎️ Conserjería</h3>
+      <div class="turnos-leyenda" id="turnos-leyenda-conserjeria"></div>
+      <table>
+        <thead><tr id="turnos-header-conserjeria"></tr></thead>
+        <tbody id="tabla-turnos-conserjeria"></tbody>
       </table>
     </section>
 
@@ -950,6 +962,46 @@ function deltaTexto(actual, anterior) {
   return ` <span style="color:var(--text-muted);font-weight:400;font-size:11px">${signo} ${valor} vs mes anterior</span>`;
 }
 
+// Arma las tarjetas grandes de "quien esta hoy" -- se usa tanto para
+// mantenimiento como para conserjeria, agrupando por tipo de turno (mañana/
+// tarde/franco/etc, ver TURNO_INFO) a quienes les toca lo mismo hoy.
+function renderTurnoHoy(contenedor, lista) {
+  const gruposTurnoHoy = {};
+  const horarioPorTipo = {};
+  (lista || []).forEach(({ empleado, turno }) => {
+    const tipo = turno ? turno.tipo : "otro";
+    (gruposTurnoHoy[tipo] = gruposTurnoHoy[tipo] || []).push(empleado.split(" ")[0]);
+    if (turno && turno.horario) horarioPorTipo[tipo] = turno.horario;
+  });
+  const tarjetas = Object.keys(TURNO_INFO)
+    .filter((tipo) => gruposTurnoHoy[tipo])
+    .map((tipo) => {
+      const info = TURNO_INFO[tipo];
+      const h = horarioPorTipo[tipo];
+      const chips = gruposTurnoHoy[tipo].map((nombre) => `
+        <span class="turno-hoy-chip">
+          <span class="turno-hoy-avatar" style="background:${info.color}">${nombre[0]}</span>
+          ${nombre}
+        </span>
+      `).join("");
+      return `
+        <div class="turno-hoy-card" style="background:linear-gradient(160deg, ${info.color}26, ${info.color}08); border-top: 3px solid ${info.color}">
+          <div class="turno-hoy-cabecera">
+            <span class="turno-hoy-icono" style="background:${info.color}22">${info.icono}</span>
+            <div>
+              <div class="turno-hoy-nombre">${info.texto}</div>
+              ${h ? `<div class="turno-hoy-horario">${h.in} a ${h.out} hs</div>` : `<div class="turno-hoy-horario">Día libre</div>`}
+            </div>
+          </div>
+          <div class="turno-hoy-personas">${chips}</div>
+        </div>
+      `;
+    });
+  contenedor.innerHTML = tarjetas.length
+    ? `<div class="turno-hoy-grid">${tarjetas.join("")}</div>`
+    : '<div class="vacio">Sin datos</div>';
+}
+
 async function cargarResumenGeneral() {
   const gridPendientes = document.getElementById("stat-grid-pendientes");
   const gridPeriodo = document.getElementById("stat-grid-periodo");
@@ -967,6 +1019,7 @@ async function cargarResumenGeneral() {
   contSistema.innerHTML = '<div class="vacio">Cargando…</div>';
   contAlertas.innerHTML = '<div class="vacio">Cargando…</div>';
   contTurnoHoy.innerHTML = '<div class="vacio">Cargando…</div>';
+  document.getElementById("resumen-turno-hoy-conserjeria").innerHTML = '<div class="vacio">Cargando…</div>';
   try {
     const data = await api("/resumen-general");
     const p = data.pendientes;
@@ -1008,43 +1061,12 @@ async function cargarResumenGeneral() {
     }
     contAlertas.innerHTML = bloquesAlertas.length ? bloquesAlertas.join("") : '<div class="vacio">Nada que atender por ahora 👍</div>';
 
-    document.getElementById("turno-hoy-titulo").textContent =
-      "🔧 Turno de mantenimiento hoy — " + new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    const fechaHoyTexto = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    document.getElementById("turno-hoy-titulo").textContent = "🔧 Turno de mantenimiento hoy — " + fechaHoyTexto;
+    document.getElementById("turno-hoy-titulo-conserjeria").textContent = "🛎️ Turno de conserjería hoy — " + fechaHoyTexto;
 
-    const gruposTurnoHoy = {};
-    const horarioPorTipo = {};
-    data.turnoHoy.forEach(({ empleado, turno }) => {
-      const tipo = turno ? turno.tipo : "otro";
-      (gruposTurnoHoy[tipo] = gruposTurnoHoy[tipo] || []).push(empleado.split(" ")[0]);
-      if (turno && turno.horario) horarioPorTipo[tipo] = turno.horario;
-    });
-    const tarjetasTurnoHoy = Object.keys(TURNO_INFO)
-      .filter((tipo) => gruposTurnoHoy[tipo])
-      .map((tipo) => {
-        const info = TURNO_INFO[tipo];
-        const h = horarioPorTipo[tipo];
-        const chips = gruposTurnoHoy[tipo].map((nombre) => `
-          <span class="turno-hoy-chip">
-            <span class="turno-hoy-avatar" style="background:${info.color}">${nombre[0]}</span>
-            ${nombre}
-          </span>
-        `).join("");
-        return `
-          <div class="turno-hoy-card" style="background:linear-gradient(160deg, ${info.color}26, ${info.color}08); border-top: 3px solid ${info.color}">
-            <div class="turno-hoy-cabecera">
-              <span class="turno-hoy-icono" style="background:${info.color}22">${info.icono}</span>
-              <div>
-                <div class="turno-hoy-nombre">${info.texto}</div>
-                ${h ? `<div class="turno-hoy-horario">${h.in} a ${h.out} hs</div>` : `<div class="turno-hoy-horario">Día libre</div>`}
-              </div>
-            </div>
-            <div class="turno-hoy-personas">${chips}</div>
-          </div>
-        `;
-      });
-    contTurnoHoy.innerHTML = tarjetasTurnoHoy.length
-      ? `<div class="turno-hoy-grid">${tarjetasTurnoHoy.join("")}</div>`
-      : '<div class="vacio">Sin datos</div>';
+    renderTurnoHoy(contTurnoHoy, data.turnoHoy);
+    renderTurnoHoy(document.getElementById("resumen-turno-hoy-conserjeria"), data.turnoHoyConserjeria);
 
     contProximos.innerHTML = data.proximosLibres.length
       ? data.proximosLibres.map((f) => `<div class="card" style="--card-accent:${f.tipo === "Franco" ? "#3ecf8e" : "#e87ba4"}"><div class="card-content"><span class="card-icono">${f.tipo === "Franco" ? "🏠" : "🏖️"}</span><div><div class="card-titulo">${f.empleado}</div><div class="card-sub">${f.tipo} — ${f.fecha.split("-").reverse().join("/")}</div></div></div></div>`).join("")
@@ -1175,15 +1197,13 @@ function badgeTurno(turno) {
 
 const DIAS_SEMANA_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-async function cargarTurnos() {
-  const mesInput = document.getElementById("turnos-mes");
-  if (!mesInput.value) mesInput.value = periodoActual();
-  const headerRow = document.getElementById("turnos-header");
-  const tbody = document.getElementById("tabla-turnos");
-  const leyenda = document.getElementById("turnos-leyenda");
+async function cargarTablaTurnos(endpoint, mesValue, headerId, tbodyId, leyendaId) {
+  const headerRow = document.getElementById(headerId);
+  const tbody = document.getElementById(tbodyId);
+  const leyenda = document.getElementById(leyendaId);
   tbody.innerHTML = '<tr><td class="vacio">Cargando…</td></tr>';
   try {
-    const data = await api("/turnos?mes=" + mesInput.value);
+    const data = await api(`/${endpoint}?mes=` + mesValue);
     headerRow.innerHTML = "<th>Día</th>" + data.equipo.map((e) => `<th>${e.split(" ")[0]}</th>`).join("");
 
     leyenda.innerHTML = Object.values(TURNO_INFO).map((v) =>
@@ -1201,6 +1221,15 @@ async function cargarTurnos() {
       </tr>`;
     }).join("");
   } catch (e) { mostrarToast(e.message); }
+}
+
+async function cargarTurnos() {
+  const mesInput = document.getElementById("turnos-mes");
+  if (!mesInput.value) mesInput.value = periodoActual();
+  await Promise.all([
+    cargarTablaTurnos("turnos", mesInput.value, "turnos-header", "tabla-turnos", "turnos-leyenda"),
+    cargarTablaTurnos("turnos-conserjeria", mesInput.value, "turnos-header-conserjeria", "tabla-turnos-conserjeria", "turnos-leyenda-conserjeria"),
+  ]);
 }
 
 document.getElementById("turnos-mes").addEventListener("change", cargarTurnos);
