@@ -1248,6 +1248,10 @@ const TIPOS_DESTACADOS = new Set(["sabado_corto", "sabado_largo", "domingo", "fr
 
 function badgeTurno(turno) {
   if (!turno) return "-";
+  // Descanso = "hoy no le toca" nomas (contracara de haber laburado el otro
+  // dia del finde) -- no suma nada aclararlo, con el guion ya se entiende
+  // que esa celda esta "vacia" igual que cuando no hay turno.
+  if (turno.tipo === "descanso") return "-";
   const info = TURNO_INFO[turno.tipo] || { texto: turno.tipo, color: "#8a919e" };
   const destacar = TIPOS_DESTACADOS.has(turno.tipo);
   const clase = destacar ? "badge-turno destacado" : "badge-turno";
