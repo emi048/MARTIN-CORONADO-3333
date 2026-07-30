@@ -166,12 +166,23 @@
   .sistema-texto .sistema-valor { font-size: 14px; font-weight: 600; }
   .sistema-texto .sistema-label { font-size: 12px; color: var(--text-muted); }
 
-  .turnos-leyenda { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; color: var(--text-muted); }
-  .turnos-leyenda .item { display: flex; align-items: center; gap: 6px; }
-  .turnos-leyenda .swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-  .badge-turno { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .turnos-leyenda { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 11.5px; color: var(--text-muted); }
+  .turnos-leyenda .item { display: flex; align-items: center; gap: 5px; }
+  .turnos-leyenda .swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .badge-turno { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .badge-turno .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-  .turnos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .conserjeria-grid { display: flex; flex-direction: column; gap: 10px; }
+  .conserjeria-ficha { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
+  .conserjeria-ficha .avatar { width: 38px; height: 38px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+  .conserjeria-ficha .info { flex: 1; min-width: 0; }
+  .conserjeria-ficha .nombre { font-weight: 700; font-size: 14px; }
+  .conserjeria-ficha .detalle { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+  .conserjeria-ficha .estado-hoy { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 100px; flex-shrink: 0; white-space: nowrap; }
+  .conserjeria-ficha .estado-hoy.trabaja { background: rgba(62,207,142,0.15); color: var(--ok); }
+  .conserjeria-ficha .estado-hoy.franco { background: rgba(138,145,158,0.15); color: var(--text-muted); }
+
+  .turnos-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .turnos-grid { grid-template-columns: 1fr; } }
   .turnos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
   .turnos-card h3 { margin: 0 0 12px; }
@@ -440,13 +451,8 @@
 
         <div class="turnos-card">
           <h3>🛎️ Conserjería</h3>
-          <div class="turnos-leyenda" id="turnos-leyenda-conserjeria"></div>
-          <div class="turnos-tabla-wrap">
-            <table class="tabla-turnos">
-              <thead><tr id="turnos-header-conserjeria"></tr></thead>
-              <tbody id="tabla-turnos-conserjeria"></tbody>
-            </table>
-          </div>
+          <div class="card-sub" style="margin-bottom:12px">Turno fijo semana a semana — no hace falta un calendario, esto es quién trabaja y quién libra.</div>
+          <div class="conserjeria-grid" id="conserjeria-fichas"><div class="vacio">Cargando…</div></div>
         </div>
       </div>
     </section>
@@ -1228,7 +1234,7 @@ const TURNO_INFO = {
 function badgeTurno(turno) {
   if (!turno) return "-";
   const info = TURNO_INFO[turno.tipo] || { texto: turno.tipo, color: "#8a919e" };
-  return `<span class="badge-turno" style="background:${info.color}22;color:${info.color}">${info.texto}</span>`;
+  return `<span class="badge-turno"><span class="dot" style="background:${info.color}"></span>${info.texto}</span>`;
 }
 
 const DIAS_SEMANA_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -1272,12 +1278,48 @@ async function cargarTablaTurnos(endpoint, mesValue, headerId, tbodyId, leyendaI
   } catch (e) { mostrarToast(e.message); }
 }
 
+// Conserjeria tiene turno fijo (no rota) -- en vez de repetir el mismo dato
+// 31 veces en una tabla, se arma una ficha por persona con su horario, su
+// dia franco y si hoy le toca laburar o librar. Siempre mira el mes real
+// actual (no el que este eligiendo el admin para mantenimiento), porque
+// "hoy" no depende de que mes este mirando en el calendario de al lado.
+async function cargarFichasConserjeria() {
+  const cont = document.getElementById("conserjeria-fichas");
+  cont.innerHTML = '<div class="vacio">Cargando…</div>';
+  try {
+    const data = await api(`/turnos-conserjeria?mes=` + periodoActual());
+    const hoyDate = new Date();
+    const hoyISOStr = `${hoyDate.getFullYear()}-${String(hoyDate.getMonth() + 1).padStart(2, "0")}-${String(hoyDate.getDate()).padStart(2, "0")}`;
+    const diaHoy = data.dias.find((d) => d.fecha === hoyISOStr);
+
+    cont.innerHTML = data.equipo.map((empleado) => {
+      const diaTrabajo = data.dias.find((d) => d.turnos[empleado] && d.turnos[empleado].tipo !== "franco");
+      const diaFranco = data.dias.find((d) => d.turnos[empleado] && d.turnos[empleado].tipo === "franco");
+      const turnoHoy = diaHoy ? diaHoy.turnos[empleado] : null;
+      const trabajaHoy = turnoHoy && turnoHoy.tipo !== "franco";
+      const info = diaTrabajo ? (TURNO_INFO[diaTrabajo.turnos[empleado].tipo] || {}) : {};
+      const horario = diaTrabajo ? diaTrabajo.turnos[empleado].horario : null;
+      const nombreFranco = diaFranco ? DIAS_SEMANA_CORTO[diaFranco.diaSemana] : "-";
+      const iniciales = empleado.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
+      return `<div class="conserjeria-ficha">
+        <div class="avatar" style="background:${info.color || "#4f8cff"}">${iniciales}</div>
+        <div class="info">
+          <div class="nombre">${empleado}</div>
+          <div class="detalle">${info.texto || ""}${horario ? ` ${horario.in}–${horario.out}` : ""} · Franco los ${nombreFranco}</div>
+        </div>
+        <span class="estado-hoy ${trabajaHoy ? "trabaja" : "franco"}">${trabajaHoy ? "Trabaja hoy" : "Franco hoy"}</span>
+      </div>`;
+    }).join("");
+  } catch (e) { mostrarToast(e.message); }
+}
+
 async function cargarTurnos() {
   const mesInput = document.getElementById("turnos-mes");
   if (!mesInput.value) mesInput.value = periodoActual();
   await Promise.all([
     cargarTablaTurnos("turnos", mesInput.value, "turnos-header", "tabla-turnos", "turnos-leyenda"),
-    cargarTablaTurnos("turnos-conserjeria", mesInput.value, "turnos-header-conserjeria", "tabla-turnos-conserjeria", "turnos-leyenda-conserjeria"),
+    cargarFichasConserjeria(),
   ]);
 }
 
