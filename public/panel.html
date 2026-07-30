@@ -171,6 +171,7 @@
   .turnos-leyenda .swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .badge-turno { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
   .badge-turno .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .badge-turno.destacado { font-weight: 800; font-size: 13px; }
 
   .conserjeria-grid { display: flex; flex-direction: column; gap: 10px; }
   .conserjeria-ficha { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
@@ -1232,17 +1233,26 @@ async function eliminarLicenciaUI(id, btn) {
 const TURNO_INFO = {
   mañana: { texto: "Mañana", color: "#4f8cff", icono: "🌅" },
   tarde: { texto: "Tarde", color: "#ff9f5a", icono: "🌇" },
-  sabado_corto: { texto: "Sábado corto", color: "#9d7be0", icono: "☀️" },
-  sabado_largo: { texto: "Sábado largo", color: "#5ec8d8", icono: "☀️" },
-  domingo: { texto: "Domingo", color: "#e87ba4", icono: "🌞" },
-  franco: { texto: "Franco", color: "#3ecf8e", icono: "🏖️" },
+  sabado_corto: { texto: "Sáb 8-12hs", color: "#9d7be0", icono: "☀️" },
+  sabado_largo: { texto: "Sáb 9-17hs", color: "#5ec8d8", icono: "☀️" },
+  domingo: { texto: "Dom 9-17hs", color: "#e87ba4", icono: "🌞" },
+  franco: { texto: "FRANCO", color: "#3ecf8e", icono: "🏖️" },
   descanso: { texto: "Descanso", color: "#8a919e", icono: "😌" },
 };
+
+// Sabado/domingo son lo que mas cuesta leer de un vistazo (quien libra vs
+// quien labura y en que horario) -- esos tipos se resaltan en negrita y con
+// el texto del color del turno; el resto (mañana/tarde/descanso, que ya son
+// obvios entre semana) quedan con el estilo normal.
+const TIPOS_DESTACADOS = new Set(["sabado_corto", "sabado_largo", "domingo", "franco"]);
 
 function badgeTurno(turno) {
   if (!turno) return "-";
   const info = TURNO_INFO[turno.tipo] || { texto: turno.tipo, color: "#8a919e" };
-  return `<span class="badge-turno"><span class="dot" style="background:${info.color}"></span>${info.texto}</span>`;
+  const destacar = TIPOS_DESTACADOS.has(turno.tipo);
+  const clase = destacar ? "badge-turno destacado" : "badge-turno";
+  const estiloTexto = destacar ? `color:${info.color}` : "";
+  return `<span class="${clase}"><span class="dot" style="background:${info.color}"></span><span style="${estiloTexto}">${info.texto}</span></span>`;
 }
 
 const DIAS_SEMANA_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
