@@ -186,7 +186,14 @@
   @media (max-width: 900px) { .turnos-grid { grid-template-columns: 1fr; } }
   .turnos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
   .turnos-card h3 { margin: 0 0 12px; }
-  .turnos-tabla-wrap { max-height: 560px; overflow: auto; border-radius: 8px; border: 1px solid var(--border); }
+  .turnos-tabla-wrap {
+    max-height: 560px; overflow: auto; border-radius: 8px; border: 1px solid var(--border);
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .turnos-tabla-wrap::-webkit-scrollbar { width: 10px; height: 10px; }
+  .turnos-tabla-wrap::-webkit-scrollbar-track { background: transparent; }
+  .turnos-tabla-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; border: 2px solid var(--surface); background-clip: padding-box; }
+  .turnos-tabla-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-muted); background-clip: padding-box; }
   .tabla-turnos { width: 100%; border-collapse: collapse; font-size: 13px; }
   .tabla-turnos thead th { position: sticky; top: 0; background: var(--surface2); z-index: 1; padding: 10px 6px; border-bottom: 1px solid var(--border); }
   .tabla-turnos th.col-dia, .tabla-turnos td.col-dia { text-align: left; padding-left: 10px; }
@@ -197,6 +204,7 @@
   .tabla-turnos td.col-dia { font-weight: 600; white-space: nowrap; }
   .fila-hoy { background: rgba(79,140,255,0.13) !important; }
   .fila-hoy td.col-dia { color: var(--accent); }
+  .col-dia-feriado { color: var(--danger); }
   .tag-hoy { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 100px; background: var(--accent); color: white; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; vertical-align: middle; }
   .turno-hoy-titulo { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 10px; }
   .turno-hoy-grid { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -453,16 +461,6 @@
           <h3>🛎️ Conserjería</h3>
           <div class="card-sub" style="margin-bottom:12px">Turno fijo semana a semana — no hace falta un calendario, esto es quién trabaja y quién libra.</div>
           <div class="conserjeria-grid" id="conserjeria-fichas"><div class="vacio">Cargando…</div></div>
-        </div>
-      </div>
-
-      <div class="turnos-card" style="margin-top:16px">
-        <div class="card-row">
-          <div>
-            <h3 style="margin:0">📅 Google Calendar — Turnos Mantenimiento</h3>
-            <div class="card-sub">Mismo horario que la tabla de arriba, para verlo desde el celular o recibir notificaciones.</div>
-          </div>
-          <a href="https://calendar.google.com/calendar/u/0?cid=a9737298cd5430c6673fb65c53bbaaa94dd6ad64a596e75fa6b5c18d5c2c7566%40group.calendar.google.com" target="_blank" rel="noopener" class="btn btn-accent">Abrir en Google Calendar ↗</a>
         </div>
       </div>
     </section>
@@ -1269,9 +1267,7 @@ async function cargarTablaTurnos(endpoint, mesValue, headerId, tbodyId, leyendaI
 
     const hoyDate = new Date();
     const hoyISOStr = `${hoyDate.getFullYear()}-${String(hoyDate.getMonth() + 1).padStart(2, "0")}-${String(hoyDate.getDate()).padStart(2, "0")}`;
-    // Dias mas recientes arriba -- ordenado por fecha descendente en vez de
-    // ascendente (asi lo que importa hoy queda a la vista sin scrollear).
-    const diasOrdenados = [...data.dias].sort((a, b) => b.fecha.localeCompare(a.fecha));
+    const diasOrdenados = [...data.dias].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
     tbody.innerHTML = diasOrdenados.map((d) => {
       const [, m, dd] = d.fecha.split("-");
@@ -1281,7 +1277,7 @@ async function cargarTablaTurnos(endpoint, mesValue, headerId, tbodyId, leyendaI
       const feriadoTag = d.esFeriado ? " 🔴" : "";
       const hoyTag = esHoy ? '<span class="tag-hoy">HOY</span>' : "";
       return `<tr class="${esHoy ? "fila-hoy" : ""}" style="${!esHoy && esFinde ? "background:rgba(255,255,255,0.02)" : ""}">
-        <td class="col-dia">${dd}/${m} ${nombreDia}${feriadoTag}${hoyTag}</td>
+        <td class="col-dia${d.esFeriado ? " col-dia-feriado" : ""}">${dd}/${m} ${nombreDia}${feriadoTag}${hoyTag}</td>
         ${data.equipo.map((e) => `<td>${badgeTurno(d.turnos[e])}</td>`).join("")}
       </tr>`;
     }).join("");
