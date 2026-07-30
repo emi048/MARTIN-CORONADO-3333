@@ -170,6 +170,23 @@
   .turnos-leyenda .item { display: flex; align-items: center; gap: 6px; }
   .turnos-leyenda .swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
   .badge-turno { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+  .turnos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .turnos-grid { grid-template-columns: 1fr; } }
+  .turnos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+  .turnos-card h3 { margin: 0 0 12px; }
+  .turnos-tabla-wrap { max-height: 560px; overflow: auto; border-radius: 8px; border: 1px solid var(--border); }
+  .tabla-turnos { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tabla-turnos thead th { position: sticky; top: 0; background: var(--surface2); z-index: 1; padding: 10px 6px; border-bottom: 1px solid var(--border); }
+  .tabla-turnos th.col-dia, .tabla-turnos td.col-dia { text-align: left; padding-left: 10px; }
+  .tabla-turnos th.col-empleado { text-align: center; min-width: 74px; }
+  .tabla-turnos th .nombre-grande { display: block; font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .tabla-turnos th .apellido-chico { display: block; font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 1px; }
+  .tabla-turnos td { padding: 7px 6px; text-align: center; border-bottom: 1px solid var(--border); }
+  .tabla-turnos td.col-dia { font-weight: 600; white-space: nowrap; }
+  .fila-hoy { background: rgba(79,140,255,0.13) !important; }
+  .fila-hoy td.col-dia { color: var(--accent); }
+  .tag-hoy { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 100px; background: var(--accent); color: white; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; vertical-align: middle; }
   .turno-hoy-titulo { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 10px; }
   .turno-hoy-grid { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
   .turno-hoy-card {
@@ -409,19 +426,29 @@
         </div>
       </div>
 
-      <h3 style="margin-top:0">🔧 Mantenimiento</h3>
-      <div class="turnos-leyenda" id="turnos-leyenda"></div>
-      <table>
-        <thead><tr id="turnos-header"></tr></thead>
-        <tbody id="tabla-turnos"></tbody>
-      </table>
+      <div class="turnos-grid">
+        <div class="turnos-card">
+          <h3>🔧 Mantenimiento</h3>
+          <div class="turnos-leyenda" id="turnos-leyenda"></div>
+          <div class="turnos-tabla-wrap">
+            <table class="tabla-turnos">
+              <thead><tr id="turnos-header"></tr></thead>
+              <tbody id="tabla-turnos"></tbody>
+            </table>
+          </div>
+        </div>
 
-      <h3>🛎️ Conserjería</h3>
-      <div class="turnos-leyenda" id="turnos-leyenda-conserjeria"></div>
-      <table>
-        <thead><tr id="turnos-header-conserjeria"></tr></thead>
-        <tbody id="tabla-turnos-conserjeria"></tbody>
-      </table>
+        <div class="turnos-card">
+          <h3>🛎️ Conserjería</h3>
+          <div class="turnos-leyenda" id="turnos-leyenda-conserjeria"></div>
+          <div class="turnos-tabla-wrap">
+            <table class="tabla-turnos">
+              <thead><tr id="turnos-header-conserjeria"></tr></thead>
+              <tbody id="tabla-turnos-conserjeria"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="tab-estadisticas" style="display:none">
@@ -1204,19 +1231,32 @@ async function cargarTablaTurnos(endpoint, mesValue, headerId, tbodyId, leyendaI
   tbody.innerHTML = '<tr><td class="vacio">Cargando…</td></tr>';
   try {
     const data = await api(`/${endpoint}?mes=` + mesValue);
-    headerRow.innerHTML = "<th>Día</th>" + data.equipo.map((e) => `<th>${e.split(" ")[0]}</th>`).join("");
+    headerRow.innerHTML = '<th class="col-dia">Día</th>' + data.equipo.map((e) => {
+      const partes = e.split(" ");
+      const nombre = partes[0];
+      const apellido = partes.slice(1).join(" ");
+      return `<th class="col-empleado"><span class="nombre-grande">${nombre}</span><span class="apellido-chico">${apellido}</span></th>`;
+    }).join("");
 
     leyenda.innerHTML = Object.values(TURNO_INFO).map((v) =>
       `<div class="item"><span class="swatch" style="background:${v.color}"></span>${v.texto}</div>`
     ).join("") + '<div class="item">🔴 Feriado</div>';
 
-    tbody.innerHTML = data.dias.map((d) => {
+    const hoyDate = new Date();
+    const hoyISOStr = `${hoyDate.getFullYear()}-${String(hoyDate.getMonth() + 1).padStart(2, "0")}-${String(hoyDate.getDate()).padStart(2, "0")}`;
+    // Dias mas recientes arriba -- ordenado por fecha descendente en vez de
+    // ascendente (asi lo que importa hoy queda a la vista sin scrollear).
+    const diasOrdenados = [...data.dias].sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+    tbody.innerHTML = diasOrdenados.map((d) => {
       const [, m, dd] = d.fecha.split("-");
       const nombreDia = DIAS_SEMANA_CORTO[d.diaSemana];
       const esFinde = d.diaSemana === 0 || d.diaSemana === 6;
+      const esHoy = d.fecha === hoyISOStr;
       const feriadoTag = d.esFeriado ? " 🔴" : "";
-      return `<tr style="${esFinde ? "background:rgba(255,255,255,0.02)" : ""}">
-        <td>${dd}/${m} ${nombreDia}${feriadoTag}</td>
+      const hoyTag = esHoy ? '<span class="tag-hoy">HOY</span>' : "";
+      return `<tr class="${esHoy ? "fila-hoy" : ""}" style="${!esHoy && esFinde ? "background:rgba(255,255,255,0.02)" : ""}">
+        <td class="col-dia">${dd}/${m} ${nombreDia}${feriadoTag}${hoyTag}</td>
         ${data.equipo.map((e) => `<td>${badgeTurno(d.turnos[e])}</td>`).join("")}
       </tr>`;
     }).join("");
