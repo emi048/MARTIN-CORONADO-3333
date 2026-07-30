@@ -433,7 +433,7 @@
       <div class="form-row">
         <div class="form-field">
           <label for="turnos-mes">Mes</label>
-          <input type="month" id="turnos-mes" class="periodo-input">
+          <select id="turnos-mes" class="periodo-input"></select>
         </div>
       </div>
 
@@ -1324,9 +1324,28 @@ async function cargarFichasConserjeria() {
   } catch (e) { mostrarToast(e.message); }
 }
 
+// Desplegable con nombres de mes (Junio, Julio, Agosto...) en vez del
+// selector nativo de fecha -- se puebla una sola vez, no en cada visita a
+// la pestana, para no perder el mes que este mirando el admin.
+function poblarSelectorMesTurnos() {
+  const select = document.getElementById("turnos-mes");
+  const hoy = new Date();
+  select.innerHTML = "";
+  for (let i = -3; i <= 3; i++) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+    const valor = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    const etiqueta = d.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+    const option = document.createElement("option");
+    option.value = valor;
+    option.textContent = etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
+    if (i === 0) option.selected = true;
+    select.appendChild(option);
+  }
+}
+poblarSelectorMesTurnos();
+
 async function cargarTurnos() {
   const mesInput = document.getElementById("turnos-mes");
-  if (!mesInput.value) mesInput.value = periodoActual();
   await Promise.all([
     cargarTablaTurnos("turnos", mesInput.value, "turnos-header", "tabla-turnos", "turnos-leyenda"),
     cargarFichasConserjeria(),
