@@ -521,7 +521,9 @@ async function api(path, options = {}) {
 function mostrarApp() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
-  cargarResumenGeneral();
+  const tabGuardada = localStorage.getItem("panel_tab");
+  const existe = tabGuardada && document.getElementById("tab-" + tabGuardada);
+  activarTab(existe ? tabGuardada : "resumen");
 }
 
 function cerrarSesion(avisarServidor) {
@@ -568,22 +570,29 @@ function cerrarSidebar() {
 document.getElementById("hamburguesa-btn").addEventListener("click", abrirSidebar);
 document.getElementById("sidebar-overlay").addEventListener("click", cerrarSidebar);
 
+// Centraliza el cambio de pestaña (se usa tanto al hacer click como al
+// restaurar la ultima pestaña vista despues de un F5) y la guarda en
+// localStorage para que un refresh no te mande siempre a Resumen.
+function activarTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("activo"));
+  document.querySelectorAll(`.tab-btn[data-tab="${tab}"]`).forEach((b) => b.classList.add("activo"));
+  document.querySelectorAll("main section").forEach((s) => (s.style.display = "none"));
+  document.getElementById("tab-" + tab).style.display = "block";
+  cerrarSidebar();
+  localStorage.setItem("panel_tab", tab);
+
+  if (tab === "resumen") cargarResumenGeneral();
+  if (tab === "pendientes") cargarPendientes();
+  if (tab === "empleados") cargarEmpleados();
+  if (tab === "horas") cargarHoras();
+  if (tab === "estadisticas") cargarEstadisticas();
+  if (tab === "licencias") cargarLicencias();
+  if (tab === "fichadas") initFichadasEmpleado();
+  if (tab === "turnos") cargarTurnos();
+}
+
 document.querySelectorAll(".tab-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("activo"));
-    document.querySelectorAll(`.tab-btn[data-tab="${btn.dataset.tab}"]`).forEach((b) => b.classList.add("activo"));
-    document.querySelectorAll("main section").forEach((s) => (s.style.display = "none"));
-    document.getElementById("tab-" + btn.dataset.tab).style.display = "block";
-    cerrarSidebar();
-    if (btn.dataset.tab === "resumen") cargarResumenGeneral();
-    if (btn.dataset.tab === "pendientes") cargarPendientes();
-    if (btn.dataset.tab === "empleados") cargarEmpleados();
-    if (btn.dataset.tab === "horas") cargarHoras();
-    if (btn.dataset.tab === "estadisticas") cargarEstadisticas();
-    if (btn.dataset.tab === "licencias") cargarLicencias();
-    if (btn.dataset.tab === "fichadas") initFichadasEmpleado();
-    if (btn.dataset.tab === "turnos") cargarTurnos();
-  });
+  btn.addEventListener("click", () => activarTab(btn.dataset.tab));
 });
 
 async function cargarPendientes() {
