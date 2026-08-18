@@ -5,6 +5,7 @@ const { iniciarCron } = require("./cron");
 const whatsappRouter = require("./lib/whatsapp");
 const { correrPipelineMensual } = require("./lib/pipeline");
 const { registrarNumero } = require("./lib/db");
+const { generarPaginaTurnos } = require("./lib/turnosView");
 
 const app = express();
 app.use(express.json());
@@ -54,6 +55,17 @@ app.get("/files/:nombre", (req, res) => {
   res.sendFile(path.join(__dirname, "data", nombre), (err) => {
     if (err && !res.headersSent) res.status(404).send("No encontrado");
   });
+});
+
+// Pestaña de turnos: calendario de los ultimos dias, Mantenimiento y
+// Conserjeria lado a lado. Misma proteccion por query param que /files,
+// porque muestra horas de trabajo de todo el personal (dato sensible).
+app.get("/turnos", (req, res) => {
+  if (!process.env.ADMIN_API_KEY || req.query.key !== process.env.ADMIN_API_KEY) {
+    return res.status(401).send("No autorizado");
+  }
+  const dias = Math.min(60, Math.max(1, parseInt(req.query.dias, 10) || 14));
+  res.send(generarPaginaTurnos(dias));
 });
 
 const PORT = process.env.PORT || 3000;
