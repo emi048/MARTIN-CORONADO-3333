@@ -4,8 +4,8 @@ const { FERIADOS, getSectorDeEmpleado } = require("./lib/motorCalculo");
 const { enviarEmailGmail } = require("./lib/gmailClient");
 
 const PERIODO = "2026-08";
-const RANGO = "20/7 al 19/8";
-const DESTINATARIOS = ["mantenimiento@bpcoronado.com"];
+const RANGO = "20/7 al 20/8";
+const DESTINATARIOS = ["p.saini@bpcoronado.com", "mantenimiento@bpcoronado.com"];
 
 // Ajustes manuales puntuales para un envio especifico - no tocan
 // filas_diarias/resumen_mensual, solo se suman aca para el reporte.
