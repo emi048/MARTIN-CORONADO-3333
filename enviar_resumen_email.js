@@ -3,14 +3,22 @@ const db = require("better-sqlite3")("./data/fichero.sqlite");
 const { FERIADOS, getSectorDeEmpleado } = require("./lib/motorCalculo");
 const { enviarEmailGmail } = require("./lib/gmailClient");
 
-const PERIODO = "2026-07";
-const RANGO = "21/6 al 20/7";
-const DESTINATARIOS = ["p.saini@bpcoronado.com", "mantenimiento@bpcoronado.com"];
+const PERIODO = "2026-08";
+const RANGO = "20/7 al 19/8";
+const DESTINATARIOS = ["mantenimiento@bpcoronado.com"];
 
 // Ajustes manuales puntuales para un envio especifico - no tocan
 // filas_diarias/resumen_mensual, solo se suman aca para el reporte.
 // Se vacia despues de cada envio; completar solo si corresponde para el rango actual.
 const AJUSTES_MANUALES = {};
+
+// Dias de poker de Martin: se pagan como hora extra normal al 50% (no como
+// evento con piso de 100%), pero igual conviene mostrarlas separadas del
+// resto de sus horas al 50% en el reporte -- mismo criterio que ya se usa
+// para separar los feriados de las horas al 100%.
+const FECHAS_POKER = {
+  "Martin Torres": ["2026-07-22", "2026-07-29", "2026-08-03"],
+};
 
 const resumen = db.prepare("SELECT empleado, h50, h100 FROM resumen_mensual WHERE periodo=? ORDER BY empleado").all(PERIODO);
 
@@ -19,23 +27,62 @@ function feriadosDelEmpleado(empleado) {
   return filas.filter((f) => FERIADOS.has(f.fecha));
 }
 
+function eventosDelEmpleado(empleado) {
+  const fechas = db.prepare("SELECT fecha FROM eventos WHERE empleado=?").all(empleado).map((r) => r.fecha);
+  if (fechas.length === 0) return [];
+  const filas = db.prepare("SELECT fecha, h100 FROM filas_diarias WHERE empleado=? AND periodo=?").all(empleado, PERIODO);
+  return filas.filter((f) => fechas.includes(f.fecha));
+}
+
+function pokerDelEmpleado(empleado) {
+  const fechas = FECHAS_POKER[empleado] || [];
+  if (fechas.length === 0) return [];
+  const filas = db.prepare("SELECT fecha, h50 FROM filas_diarias WHERE empleado=? AND periodo=?").all(empleado, PERIODO);
+  return filas.filter((f) => fechas.includes(f.fecha));
+}
+
+function fechaCorta(fecha) {
+  const [, m, d] = fecha.split("-").map(Number);
+  return `${d}/${m}`;
+}
+
+function sumarHoras(filas, campo) {
+  return Math.round(filas.reduce((acc, f) => acc + f[campo], 0) * 100) / 100;
+}
+
+function textoHoras(horas, filas) {
+  if (horas <= 0) return "-";
+  const fechas = filas.map((f) => fechaCorta(f.fecha)).join(", ");
+  return `${horas}hs (${fechas})`;
+}
+
 function filaDatos(r) {
   const feriadosFilas = feriadosDelEmpleado(r.empleado);
-  const horasFeriado = Math.round(feriadosFilas.reduce((acc, f) => acc + f.h100, 0) * 100) / 100;
-  const fechasFeriado = feriadosFilas
-    .map((f) => {
-      const [, m, d] = f.fecha.split("-").map(Number);
-      return `${d}/${m}`;
-    })
-    .join(", ");
+  const horasFeriado = sumarHoras(feriadosFilas, "h100");
+
+  const eventoFilas = eventosDelEmpleado(r.empleado);
+  const horasEvento = sumarHoras(eventoFilas, "h100");
+
+  const pokerFilas = pokerDelEmpleado(r.empleado);
+  const horasPoker = sumarHoras(pokerFilas, "h50");
 
   const ajuste = AJUSTES_MANUALES[r.empleado] || { h50: 0, h100: 0 };
-  const h50 = Math.round((r.h50 + ajuste.h50) * 100) / 100;
+  const h50Total = Math.round((r.h50 + ajuste.h50) * 100) / 100;
   const h100Total = Math.round((r.h100 + ajuste.h100) * 100) / 100;
-  const h100SinFeriado = Math.round((h100Total - horasFeriado) * 100) / 100;
-  const feriadoTxt = horasFeriado > 0 ? `${horasFeriado}hs (${fechasFeriado})` : "-";
 
-  return { empleado: r.empleado, h50, h100: h100SinFeriado, feriadoTxt };
+  const h50 = Math.round((h50Total - horasPoker) * 100) / 100;
+  const h100 = Math.round((h100Total - horasFeriado - horasEvento) * 100) / 100;
+
+  return {
+    empleado: r.empleado,
+    h50,
+    h100,
+    feriadoTxt: textoHoras(horasFeriado, feriadosFilas),
+    eventoTxt: textoHoras(horasEvento, eventoFilas),
+    pokerTxt: textoHoras(horasPoker, pokerFilas),
+    horasEvento,
+    eventoFilas,
+  };
 }
 
 function filaHtml(datos) {
@@ -44,11 +91,13 @@ function filaHtml(datos) {
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.h50}</td>
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.h100}</td>
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.feriadoTxt}</td>
+    <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.eventoTxt}</td>
+    <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.pokerTxt}</td>
   </tr>`;
 }
 
-function tablaSector(sector, titulo) {
-  const filas = resumen.filter((r) => getSectorDeEmpleado(r.empleado) === sector).map(filaDatos);
+function tablaSector(sector, titulo, todosDatos) {
+  const datos = todosDatos.filter((d) => getSectorDeEmpleado(d.empleado) === sector);
   return `
     <h3 style="margin-top:24px;">${titulo}</h3>
     <table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">
@@ -57,16 +106,44 @@ function tablaSector(sector, titulo) {
         <th style="padding:4px 10px;border:1px solid #ccc;">50%</th>
         <th style="padding:4px 10px;border:1px solid #ccc;">100%</th>
         <th style="padding:4px 10px;border:1px solid #ccc;">Feriado</th>
+        <th style="padding:4px 10px;border:1px solid #ccc;">Evento</th>
+        <th style="padding:4px 10px;border:1px solid #ccc;">Poker</th>
       </tr>
-      ${filas.map(filaHtml).join("\n")}
+      ${datos.map(filaHtml).join("\n")}
     </table>`;
 }
+
+function tablaEventos(todosDatos) {
+  const conEvento = todosDatos.filter((d) => d.horasEvento > 0);
+  if (conEvento.length === 0) return "";
+  return `
+    <h3 style="margin-top:24px;">📌 Eventos</h3>
+    <table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">
+      <tr style="background:#fff3cd;">
+        <th style="padding:4px 10px;border:1px solid #ccc;">Nombre</th>
+        <th style="padding:4px 10px;border:1px solid #ccc;">Horas al 100% (piso 8hs)</th>
+        <th style="padding:4px 10px;border:1px solid #ccc;">Fechas</th>
+      </tr>
+      ${conEvento
+        .map(
+          (d) => `<tr>
+        <td style="padding:4px 10px;border:1px solid #ccc;">${d.empleado}</td>
+        <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${d.horasEvento}</td>
+        <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${d.eventoFilas.map((f) => fechaCorta(f.fecha)).join(", ")}</td>
+      </tr>`
+        )
+        .join("\n")}
+    </table>`;
+}
+
+const todosDatos = resumen.map(filaDatos);
 
 const html = `
   <div style="font-family:Arial,sans-serif;">
     <p>Resumen de horas extra - ${RANGO}</p>
-    ${tablaSector("mantenimiento", "Mantenimiento")}
-    ${tablaSector("conserjeria", "Conserjería")}
+    ${tablaSector("mantenimiento", "Mantenimiento", todosDatos)}
+    ${tablaSector("conserjeria", "Conserjería", todosDatos)}
+    ${tablaEventos(todosDatos)}
   </div>
 `;
 
