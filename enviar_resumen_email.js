@@ -85,19 +85,22 @@ function filaDatos(r) {
   };
 }
 
-function filaHtml(datos) {
+function filaHtml(datos, mostrarPoker) {
   return `<tr>
     <td style="padding:4px 10px;border:1px solid #ccc;">${datos.empleado}</td>
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.h50}</td>
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.h100}</td>
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.feriadoTxt}</td>
     <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.eventoTxt}</td>
-    <td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.pokerTxt}</td>
+    ${mostrarPoker ? `<td style="padding:4px 10px;border:1px solid #ccc;text-align:center;">${datos.pokerTxt}</td>` : ""}
   </tr>`;
 }
 
+// El poker lo cubre solo Martin (conserjeria) -- la columna Poker no tiene
+// sentido en la tabla de Mantenimiento, nunca va a tener datos ahi.
 function tablaSector(sector, titulo, todosDatos) {
   const datos = todosDatos.filter((d) => getSectorDeEmpleado(d.empleado) === sector);
+  const mostrarPoker = sector === "conserjeria";
   return `
     <h3 style="margin-top:24px;">${titulo}</h3>
     <table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">
@@ -107,9 +110,9 @@ function tablaSector(sector, titulo, todosDatos) {
         <th style="padding:4px 10px;border:1px solid #ccc;">100%</th>
         <th style="padding:4px 10px;border:1px solid #ccc;">Feriado</th>
         <th style="padding:4px 10px;border:1px solid #ccc;">Evento</th>
-        <th style="padding:4px 10px;border:1px solid #ccc;">Poker</th>
+        ${mostrarPoker ? `<th style="padding:4px 10px;border:1px solid #ccc;">Poker</th>` : ""}
       </tr>
-      ${datos.map(filaHtml).join("\n")}
+      ${datos.map((d) => filaHtml(d, mostrarPoker)).join("\n")}
     </table>`;
 }
 
@@ -121,7 +124,7 @@ function tablaEventos(todosDatos) {
     <table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">
       <tr style="background:#fff3cd;">
         <th style="padding:4px 10px;border:1px solid #ccc;">Nombre</th>
-        <th style="padding:4px 10px;border:1px solid #ccc;">Horas al 100% (piso 8hs)</th>
+        <th style="padding:4px 10px;border:1px solid #ccc;">Horas</th>
         <th style="padding:4px 10px;border:1px solid #ccc;">Fechas</th>
       </tr>
       ${conEvento
