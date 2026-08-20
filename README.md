@@ -278,6 +278,23 @@ regresiva de cuando vence el `join` de cada numero -- Twilio intercepta ese
 mensaje antes de que llegue al webhook. La unica solucion real sigue siendo
 salir del Sandbox (ver arriba).
 
+## Mejoras de infraestructura pendientes
+
+- **HTTPS / proxy:** hoy el panel corre en HTTP plano, directo en el
+  puerto 3000, sin nginx ni ningun proxy adelante -- la contraseña del
+  panel y la sesion viajan sin cifrar. Pendiente sumar un proxy (nginx) con
+  certificado (Let's Encrypt) para tener HTTPS. No es urgente para el
+  tamaño actual del proyecto, pero es la mejora de seguridad mas importante
+  de las pendientes.
+- **Base de datos separada:** hoy es SQLite, un solo archivo local en el
+  mismo servidor (`data/fichero.sqlite`), sin un servidor de base de datos
+  aparte. Funciona bien para el volumen actual, pero a futuro (mas
+  empleados, mas historial, necesidad de backups/replicacion mas robustos
+  que un archivo copiado a mano) tendria sentido migrar a un motor de base
+  de datos dedicado (Postgres/MySQL) corriendo aparte -- mejora
+  escalabilidad y facilita backups automaticos, no es un problema de
+  seguridad puntual hoy.
+
 ## Auto-deploy
 
 Cron (`deploy.sh`, cada 3 minutos) que revisa si hay commits nuevos en
