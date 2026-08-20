@@ -49,8 +49,8 @@ cp .env.example .env
 
 **Bloqueado, no en curso.** El plan original era conectarse a la API OpenAPI
 ("Artemis") de HikCentral con un AppKey/AppSecret generado por el
-administrador del sistema (Ale, el integrador de Hikvision del edificio) --
-pero **Ale no quiere dar ese acceso**. `HIKCENTRAL_HOST` /
+administrador del sistema (el integrador de Hikvision del edificio) --
+pero **no pudimos obtener las credenciales necesarias**. `HIKCENTRAL_HOST` /
 `HIKCENTRAL_APP_KEY` / `HIKCENTRAL_APP_SECRET` en `.env` siguen vacíos, y
 `obtenerEventosAcceso` tira `ERR_INVALID_URL` cada vez que corre (se ve en
 los logs de pm2 cada 2 minutos, por el poller de `monitorFichadas.js`).
@@ -63,11 +63,12 @@ normaliza fechas/horas). Esto ya no es solo un "respaldo", es como se carga
 la data hoy.
 
 **Plan en evaluación:** sacar el lector facial (Hikvision DS-K1T671M) de la
-red de HikCentral de Ale y ponerlo standalone, conectado a la red de
+red de HikCentral del edificio y ponerlo standalone, conectado a la red de
 invitados del edificio junto con una PC/mini PC que corra un script puente
 -- ese script consultaría al facial por su API local (ISAPI, con
-usuario/contraseña propios del aparato, sin depender de Ale para nada) y
-empujaría las marcaciones nuevas a este servidor por HTTPS saliente. Esto
+usuario/contraseña propios del aparato, sin depender de credenciales de
+terceros) y empujaría las marcaciones nuevas a este servidor por HTTPS
+saliente. Esto
 destrabaría también el monitoreo en tiempo real (ver más abajo). Sin
 construir todavía -- depende de tener el hardware/red del lado del edificio
 resuelto primero.
