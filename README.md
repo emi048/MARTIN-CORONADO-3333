@@ -15,6 +15,27 @@ a la página HTML → clic en "Generar") por un backend que corre solo en tu VPS
    horas — el acceso se controla por número de teléfono, no hay forma de
    consultar los datos de otra persona.
 
+## Estructura del proyecto
+
+```
+server.js        -> arranque de la app
+routes/           -> registro de endpoints (panel.js, whatsapp.js)
+controllers/      -> logica de cada endpoint (panelController.js, whatsappController.js)
+services/         -> logica de negocio, calculo e integraciones
+  db.js               - acceso a la base SQLite
+  motorCalculo.js      - calculo de horas (50%/100%, feriados, eventos)
+  pipeline.js          - pipeline mensual (trae eventos, calcula, genera excel, manda mail)
+  hikcentral.js        - llamada a la API OpenAPI de HikCentral (Artemis)
+  leerExcelHikvision.js - lector del excel exportado a mano (respaldo/via principal actual)
+  monitorFichadas.js   - poller de fichadas en tiempo real (bloqueado, ver abajo)
+  generarExcel.js, mailer.js, gmailClient.js, twilioClient.js,
+  turnosMantenimiento.js, turnosConserjeria.js, asistente.js
+cron/             -> tareas programadas (pipeline mensual, poll de fichadas, recordatorios)
+```
+
+Reorganizado a esta convención (antes todo vivía junto en `lib/`) para que
+sea más fácil de entender para alguien de afuera del proyecto.
+
 ## Instalación
 
 ```bash
@@ -24,50 +45,64 @@ cp .env.example .env
 # completá .env con tus datos reales (ver abajo)
 ```
 
-## Pendiente antes de producción
+## Estado real de la conexión con HikCentral (services/hikcentral.js)
 
-### Conexión real a HikCentral (lib/hikcentral.js)
-El esquema de firma HMAC que dejé es el patrón típico de la API "Artemis" de
-Hikvision, pero **necesita validarse contra tu instalación real**:
+**Bloqueado, no en curso.** El plan original era conectarse a la API OpenAPI
+("Artemis") de HikCentral con un AppKey/AppSecret generado por el
+administrador del sistema (Ale, el integrador de Hikvision del edificio) --
+pero **Ale no quiere dar ese acceso**. `HIKCENTRAL_HOST` /
+`HIKCENTRAL_APP_KEY` / `HIKCENTRAL_APP_SECRET` en `.env` siguen vacíos, y
+`obtenerEventosAcceso` tira `ERR_INVALID_URL` cada vez que corre (se ve en
+los logs de pm2 cada 2 minutos, por el poller de `monitorFichadas.js`).
 
-- Generá el AppKey/AppSecret en HikCentral: *Configuración del sistema →
-  Cuenta OpenAPI*.
-- Pedile a tu proveedor/integrador de Hikvision la colección de Postman de
-  HikCentral OpenAPI (o descargala del portal de partners de Hikvision).
-- Probá ahí el endpoint de eventos de acceso, confirmá el formato exacto de
-  headers y de la respuesta JSON, y ajustá `firmarRequest` y
-  `mapearEventoAEmpleado` en `lib/hikcentral.js` de acuerdo a eso.
-- Mientras tanto, podés seguir generando el fichero subiendo el Excel manual
-  con `lib/leerExcelHikvision.js` (dejé esa función intacta como respaldo).
+**Mientras tanto, la vía real que se usa** es la manual: exportar
+"Búsqueda de acceso de persona" desde el software de Hikvision (HikCentral
+o iVMS-4200) y subir ese Excel -- lo procesa
+`services/leerExcelHikvision.js` (matchea nombres contra el roster,
+normaliza fechas/horas). Esto ya no es solo un "respaldo", es como se carga
+la data hoy.
+
+**Plan en evaluación:** sacar el lector facial (Hikvision DS-K1T671M) de la
+red de HikCentral de Ale y ponerlo standalone, conectado a la red de
+invitados del edificio junto con una PC/mini PC que corra un script puente
+-- ese script consultaría al facial por su API local (ISAPI, con
+usuario/contraseña propios del aparato, sin depender de Ale para nada) y
+empujaría las marcaciones nuevas a este servidor por HTTPS saliente. Esto
+destrabaría también el monitoreo en tiempo real (ver más abajo). Sin
+construir todavía -- depende de tener el hardware/red del lado del edificio
+resuelto primero.
 
 ### Salir del Sandbox de Twilio + menú con botones
 
-**En curso.** El bot hoy corre sobre el Sandbox de WhatsApp de Twilio, que
-tiene dos límites: los empleados tienen que re-mandar el código "join" cada
-72hs de inactividad, y no se pueden usar Content Templates propias (botones,
-listas) -- el Sandbox solo permite un puñado de plantillas genéricas de
-Twilio.
+**En curso, con un bloqueo activo.** El bot corre sobre el Sandbox de
+WhatsApp de Twilio, que tiene dos límites: los empleados tienen que
+re-mandar el código "join" cada 72hs de inactividad, y no se pueden usar
+Content Templates propias (botones, listas).
 
-- **Paso 1 (en curso, lo hace el admin):** conseguir un número dedicado
-  (chip propio, no uno comprado a Twilio) y registrarlo como WhatsApp Sender
-  de producción en Twilio ("Bring Your Own Number") -- pide verificación de
-  negocio con Meta Business Manager, puede tardar de horas a días.
+- **Paso 1 (hecho, con problema pendiente):** ya se registró un número de
+  producción propio (+54 9 11 2567-3711, "Martín Coronado") como WhatsApp
+  Sender via Twilio BYON. El Sender figura "Online" en Twilio, pero la
+  cuenta está **"Restricted" del lado de Meta** -- la Business Verification
+  sigue "En revisión" desde hace más de dos semanas, sin ninguna acción
+  pendiente visible del lado nuestro (se revisó el Centro de Seguridad de
+  Meta Business Manager, no hay nada para completar). Se abrió un ticket de
+  soporte a Twilio pidiendo que revisen el estado. Hasta que esto se
+  resuelva, **el número de producción no puede mandar ni un mensaje**
+  (error 63051) -- `TWILIO_WHATSAPP_FROM` en `.env` sigue apuntando al
+  Sandbox a propósito, no cambiarlo hasta que la cuenta deje de estar
+  restringida.
 - **Paso 2 (ya hecho):** ya están creadas 6 Content Templates en la cuenta
   de Twilio (menú principal con y sin la opción de cambio de turno, cuántos
   días corregir, qué corregir, qué día del finde cambiar, con quién) -- sus
   SIDs están en `.env` (`CONTENT_SID_*`). No las usa ningún código todavía.
-  `lib/twilioClient.js` ya tiene `enviarWhatsappInteractivo(numero,
+  `services/twilioClient.js` ya tiene `enviarWhatsappInteractivo(numero,
   contentSid, variables)` lista para mandarlas.
 - **Paso 3 (falta, bloqueado por el Paso 1):** el `<Message>` de TwiML **no
   soporta `ContentSid`** -- solo se puede mandar una Content Template por la
-  API REST de forma asíncrona, no como respuesta directa al webhook. Esto
-  significa que hay que cambiar el mecanismo de respuesta del bot (hoy cada
-  paso del menú simplemente `return`a un texto que se envuelve en TwiML) en
-  los puntos que pasan a usar botones/listas: menú principal, "cuántos días
-  corregir", "qué corregir", "qué día cambiar" y "con quién". No se puede
-  probar en Sandbox (no renderiza Content Templates custom), así que no
-  conviene tocar esto hasta tener el número de producción activo para poder
-  verificar el flujo real antes de que lo use todo el equipo.
+  API REST de forma asíncrona, no como respuesta directa al webhook. No se
+  puede probar en Sandbox (no renderiza Content Templates custom), así que
+  no conviene tocar esto hasta que el número de producción esté activo de
+  verdad.
 
 ## Preguntas resueltas sobre cambios de turno
 
@@ -75,10 +110,10 @@ Twilio.
 **Resuelto.** Al aprobar un pedido de cambio de turno (comando `aprobar
 cambio N` por WhatsApp, o desde el panel via `POST /panel/api/cambio/:id/:accion`
 -- ambos caminos llaman a la misma `resolverUnaSolicitudCambio` en
-`lib/whatsapp.js`), ademas de guardar el intercambio como excepcion puntual
-(tabla `excepciones_turno`), se busca y actualiza (o crea si todavia no
-existia) el evento correspondiente a cada fecha afectada en el Google
-Calendar de turnos de mantenimiento (`actualizarEventoDia`, en
+`controllers/whatsappController.js`), ademas de guardar el intercambio como
+excepcion puntual (tabla `excepciones_turno`), se busca y actualiza (o crea
+si todavia no existia) el evento correspondiente a cada fecha afectada en el
+Google Calendar de turnos de mantenimiento (`actualizarEventoDia`, en
 `generarCalendarioMantenimiento.js`). Es best-effort: si el Calendar API
 falla, el cambio queda igual aprobado en la base (eso es lo que manda), solo
 se loguea el error.
@@ -89,10 +124,10 @@ toca.** Ejemplo: si Alberto cubre el turno de Diego un finde (termina
 laburando sabado y domingo seguidos, en vez de un solo turno), el finde
 siguiente se calcula exactamente igual, como si nada hubiera pasado -- el
 orden de rotacion sigue su curso normal. Esto ya es lo que hace el codigo:
-`turnoDelDia` (la formula base en `lib/turnosMantenimiento.js`) se calcula
-solo a partir de las fechas ancla, nunca lee `excepciones_turno`; unicamente
-`turnoRealDelDia` (usado para mostrar/sincronizar el dia puntual del
-cambio) chequea si hay una excepcion. Si en el futuro alguien quiere
+`turnoDelDia` (la formula base en `services/turnosMantenimiento.js`) se
+calcula solo a partir de las fechas ancla, nunca lee `excepciones_turno`;
+unicamente `turnoRealDelDia` (usado para mostrar/sincronizar el dia puntual
+del cambio) chequea si hay una excepcion. Si en el futuro alguien quiere
 "devolver el favor", se hace con otro pedido de cambio de turno como los
 que ya existen -- no hay compensacion automatica.
 
@@ -145,10 +180,23 @@ Tambien charlado, tampoco construido. La idea:
 **Requisito tecnico previo:** esto necesita saber, de antemano, que dias se
 espera que cada persona trabaje (para no preguntarle a alguien en su dia
 franco). Para el equipo de mantenimiento ya existe esa base
-(`lib/turnosMantenimiento.js`, con la rotacion de turnos y francos). Para el
-resto de los sectores (conserjeria, etc.) todavia no hay un calendario
-esperado equivalente -- hay que definirlo antes de poder activar esto para
-todos, no solo mantenimiento.
+(`services/turnosMantenimiento.js`, con la rotacion de turnos y francos).
+Para conserjeria existe para 5 de los 7 -- Martin Torres, Veronica
+Montenegro, Maria Benitez Morinigo, Yesica Alcaraz y Sebastian Galeano
+tienen su dia franco fijo cargado en `services/turnosConserjeria.js`; Lisa
+Rios y Aaron Garcen quedan afuera a proposito (sin patron de franco
+conocido todavia).
+
+## Deteccion manual de dias sin fichar (ya usada, no automatica)
+
+No es lo mismo que el punto anterior (eso es deteccion automatica por
+WhatsApp, sin construir). Lo que sí existe hoy es un chequeo manual: cruzar
+`turnoRealDelDia`/`turnoConserjeriaDelDia` (el turno que le tocaba a cada
+uno) contra `filaDelDiaPorFecha` (si hay o no un registro ese dia) para
+armar una lista de dias sin ninguna marcacion, excluyendo feriados y el dia
+de hoy. Se corrio a mano para mantenimiento y conserjeria completo. Sirve
+de base para armar un endpoint o comando fijo mas adelante si hace falta
+repetirlo seguido.
 
 ## Panel web de administracion
 
@@ -158,20 +206,26 @@ Disponible en `http://TU_SERVIDOR:3000/panel`. Se loguea con
 menu lateral (boton ☰ arriba a la izquierda) con todas las secciones.
 Desde ahi se puede, sin usar WhatsApp:
 
-- Ver y aprobar/rechazar correcciones de fichaje pendientes.
+- Ver Resumen general (dashboard) con metricas del periodo actual.
+- Ver y aprobar/rechazar correcciones de fichaje pendientes (con el dato
+  actual de esa fecha visible antes de decidir).
 - Ver y aprobar/rechazar pedidos de cambio de turno pendientes.
+- Buscar las fichadas de un empleado por periodo ("Fichadas por empleado").
 - Ver la lista de empleados (sector, numero de WhatsApp registrado).
 - Ver el resumen de horas de cualquier periodo.
 - Registrar y borrar licencias/vacaciones (seccion "Licencias").
-- Ver estadisticas de uso del bot (seccion "Estadisticas").
+- Ver estadisticas de uso del bot, tendencia de horas y ranking de fichaje
+  perfecto (seccion "Estadisticas").
+- Ver la grilla de turnos de mantenimiento y las fichas de conserjeria
+  (seccion "Turnos"), con selector de mes y feriados marcados.
 
 Aprobar/rechazar desde el panel dispara exactamente la misma logica que el
 comando de WhatsApp (recalculo de horas, aviso al empleado, sync del
 Google Calendar en cambios de turno) -- es el mismo codigo, solo cambia el
 canal desde donde se dispara.
 
-La sesion del panel vive en memoria del proceso (dura 12hs); si el server
-reinicia, hay que volver a loguearse.
+La sesion del panel queda guardada en el navegador (localStorage) y
+persiste la pestaña activa entre recargas.
 
 ## Auto-monitoreo del servidor
 
@@ -180,34 +234,49 @@ depende de que el server este sano) que avisa por WhatsApp al admin si el
 proceso deja de estar "online" en pm2, o si empieza a reiniciarse solo en
 loop (`unstable_restarts` de pm2 sube).
 
+## Monitoreo en tiempo real de fichadas (construido, bloqueado)
+
+`services/monitorFichadas.js` + dos cron jobs (`CRON_POLL_FICHADAS`,
+`CRON_RECORDATORIOS`) ya estan armados para avisar por WhatsApp ~2 minutos
+despues de fichar, y mandar recordatorios si alguien se olvida de fichar la
+salida. **No funciona hoy** porque depende de `obtenerEventosAcceso`
+(`services/hikcentral.js`), que esta bloqueado por lo mismo que el pipeline
+mensual (ver seccion de HikCentral arriba) -- tira `ERR_INVALID_URL` cada 2
+minutos en los logs, es un error conocido, no hace falta alertarse por eso.
+Se destraba solo si se resuelve el acceso a HikCentral o se arma el puente
+con el facial standalone.
+
 ## Dias de evento por WhatsApp
 
 Comando de admin: `evento Nombre Apellido DD/MM` (tambien admite rango
 "DD/MM al DD/MM" o fechas separadas por coma). Se guarda en la tabla
-`eventos` y lo usa `motorCalculo.esDiaDeEvento` -- mientras no haya conexion
-con Simple Solutions, esta es la forma de cargarlo sin tocar codigo.
+`eventos` y lo usa `motorCalculo.esDiaDeEvento` -- estar marcado como
+"evento" hace que las horas que superan el contrato normal de ese dia vayan
+a extra 100% con un piso de 8hs (en vez del 50% normal). **Ojo:** esto es
+distinto de "cubrir un evento externo tipo poker" -- ese caso se paga como
+hora extra normal (50%), no lleva la marca de "evento" del sistema. La
+distincion la define el admin caso por caso, no hay regla automatica que
+adivine cual es cual.
 
 ## Estadisticas en el panel
 
-Pestaña nueva en el panel web:
+Pestaña en el panel web:
 
-- **% de fichadas completas por empleado** (periodo actual) -- de datos que
-  ya existian (`filas_diarias`).
-- **Correcciones pedidas por empleado** -- de `solicitudes_correccion`, que
-  ya existia.
+- **Tendencia de horas** por sector, ultimos periodos.
+- **Ranking de pedidos** (correcciones + cambios + cancelaciones) por
+  empleado.
+- **% de fichadas completas por empleado** (periodo actual), con badge de
+  "Perfecto" o "Con faltantes".
+- **Correcciones pedidas por empleado** -- de `solicitudes_correccion`.
 - **Interacciones con el bot** (consultas de horas, correcciones, etc por
-  empleado) y **ultima actividad** -- estos dos son nuevos: se registran en
-  la tabla `mensajes_whatsapp` a partir de ahora. **No hay forma de
-  reconstruir historial de antes de que se agregara esto** -- antes no se
-  guardaba ningun registro de mensajes, solo el paso actual de la
-  conversacion.
+  empleado) y **ultima actividad** -- se registran en la tabla
+  `mensajes_whatsapp`. No hay forma de reconstruir historial de antes de
+  que se agregara esto.
 
-**Sobre las 72hs del Sandbox de Twilio:** se evaluo poder mostrar una cuenta
-regresiva de cuando vence el `join` de cada numero, pero no es posible desde
-nuestro lado -- Twilio intercepta el mensaje "join" antes de que llegue a
-nuestro webhook, asi que el sistema no tiene forma de saber cuando se unio
-cada numero. La unica solucion real sigue siendo salir del Sandbox (ver
-"Preguntas abiertas").
+**Sobre las 72hs del Sandbox de Twilio:** no es posible mostrar cuenta
+regresiva de cuando vence el `join` de cada numero -- Twilio intercepta ese
+mensaje antes de que llegue al webhook. La unica solucion real sigue siendo
+salir del Sandbox (ver arriba).
 
 ## Auto-deploy
 
