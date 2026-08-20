@@ -1,7 +1,7 @@
 require("dotenv").config();
 const db = require("better-sqlite3")("./data/fichero.sqlite");
-const { FERIADOS, getSectorDeEmpleado } = require("./lib/motorCalculo");
-const { enviarEmailGmail } = require("./lib/gmailClient");
+const { FERIADOS, getSectorDeEmpleado } = require("./services/motorCalculo");
+const { enviarEmailGmail } = require("./services/gmailClient");
 
 const PERIODO = "2026-08";
 const RANGO = "20/7 al 20/8";

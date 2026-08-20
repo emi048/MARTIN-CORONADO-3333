@@ -13,12 +13,12 @@ const {
   filaDelDiaPorFecha, filasDelPeriodoDeEmpleado,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   pedidosTotalesPorEmpleado, periodosRecientes,
-} = require("./db");
-const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS } = require("./motorCalculo");
-const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("./turnosMantenimiento");
-const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = require("./turnosConserjeria");
-const { twilioClient } = require("./twilioClient");
-const whatsapp = require("./whatsapp");
+} = require("../services/db");
+const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS } = require("../services/motorCalculo");
+const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
+const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = require("../services/turnosConserjeria");
+const { twilioClient } = require("../services/twilioClient");
+const whatsapp = require("./whatsappController");
 
 const router = express.Router();
 router.use(express.json());

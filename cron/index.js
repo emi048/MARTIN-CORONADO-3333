@@ -1,7 +1,7 @@
 const cron = require("node-cron");
-const { correrPipelineMensual } = require("../lib/pipeline");
-const { revisarFichadasRecientes, revisarPendientesDeSalida } = require("../lib/monitorFichadas");
-const { enviarWhatsapp } = require("../lib/twilioClient");
+const { correrPipelineMensual } = require("../services/pipeline");
+const { revisarFichadasRecientes, revisarPendientesDeSalida } = require("../services/monitorFichadas");
+const { enviarWhatsapp } = require("../services/twilioClient");
 const { generarMes } = require("../generarCalendarioMantenimiento");
 
 function iniciarCron() {

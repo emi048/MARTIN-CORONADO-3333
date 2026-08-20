@@ -2,10 +2,10 @@ require("dotenv").config();
 const path = require("path");
 const express = require("express");
 const { iniciarCron } = require("./cron");
-const whatsappRouter = require("./lib/whatsapp");
-const panelRouter = require("./lib/panel");
-const { correrPipelineMensual } = require("./lib/pipeline");
-const { registrarNumero } = require("./lib/db");
+const whatsappRouter = require("./routes/whatsapp");
+const panelRouter = require("./routes/panel");
+const { correrPipelineMensual } = require("./services/pipeline");
+const { registrarNumero } = require("./services/db");
 
 const app = express();
 app.use(express.json());

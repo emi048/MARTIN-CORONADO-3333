@@ -9,7 +9,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const { enviarWhatsapp } = require("./lib/twilioClient");
+const { enviarWhatsapp } = require("./services/twilioClient");
 
 const ESTADO_PATH = path.join(__dirname, ".monitor-estado.json");
 const NOMBRE_APP = "fichero-automatico";

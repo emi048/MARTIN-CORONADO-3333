@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { correrPipelineMensual } = require("../lib/pipeline");
+const { correrPipelineMensual } = require("../services/pipeline");
 
 correrPipelineMensual()
   .then(({ filas, alertasTotal, nombreArchivo }) => {

@@ -16,14 +16,14 @@ const {
   agregarEvento, registrarMensaje,
   obtenerConversacion, guardarConversacion, limpiarConversacion,
   obtenerFichadaHoy, registrarNumero,
-} = require("./db");
-const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("./motorCalculo");
-const { turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B } = require("./turnosMantenimiento");
+} = require("../services/db");
+const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
+const { turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { actualizarEventoDia } = require("../generarCalendarioMantenimiento");
-const { generarExcel } = require("./generarExcel");
-const { enviarFichero } = require("./mailer");
-const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana } = require("./twilioClient");
-const { respuestaFueraDeMenu, chatConOlivia } = require("./asistente");
+const { generarExcel } = require("../services/generarExcel");
+const { enviarFichero } = require("../services/mailer");
+const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana } = require("../services/twilioClient");
+const { respuestaFueraDeMenu, chatConOlivia } = require("../services/asistente");
 
 const router = express.Router();
 

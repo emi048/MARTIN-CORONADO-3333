@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { registrarNumero } = require("../lib/db");
+const { registrarNumero } = require("../services/db");
 const empleados = require("../data/empleados-whatsapp");
 
 let cargados = 0;

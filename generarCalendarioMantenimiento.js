@@ -2,8 +2,8 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
-const { turnoDelDia, GRUPO_A, GRUPO_B } = require("./lib/turnosMantenimiento");
-const { FERIADOS } = require("./lib/motorCalculo");
+const { turnoDelDia, GRUPO_A, GRUPO_B } = require("./services/turnosMantenimiento");
+const { FERIADOS } = require("./services/motorCalculo");
 
 const NOMBRE_CALENDARIO = "Turnos Mantenimiento — Martín Coronado 3333";
 const TIMEZONE = process.env.TIMEZONE || "America/Argentina/Buenos_Aires";
