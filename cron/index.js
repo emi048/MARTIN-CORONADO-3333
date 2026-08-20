@@ -3,6 +3,7 @@ const { correrPipelineMensual } = require("../lib/pipeline");
 const { revisarFichadasRecientes, revisarPendientesDeSalida } = require("../lib/monitorFichadas");
 const { enviarWhatsapp } = require("../lib/twilioClient");
 const { generarMes } = require("../generarCalendarioMantenimiento");
+const { revisarVencimientos } = require("../lib/tareas");
 
 function iniciarCron() {
   const expresion = process.env.CRON_SCHEDULE || "0 8 21 * *";
@@ -74,6 +75,18 @@ function iniciarCron() {
           console.error("[cron] Encima no se pudo avisar por WhatsApp:", errAviso.message);
         }
       }
+    }
+  }, { timezone });
+
+  // Tareas vencidas (pasaron su plazo sin marcarse "finalizada") -- avisa al
+  // admin una sola vez por tarea.
+  const expresionTareas = process.env.CRON_REVISAR_TAREAS || "*/15 * * * *";
+  console.log(`[cron] Revision de tareas vencidas: "${expresionTareas}" (${timezone})`);
+  cron.schedule(expresionTareas, async () => {
+    try {
+      await revisarVencimientos();
+    } catch (err) {
+      console.error("[cron] Error revisando tareas vencidas:", err);
     }
   }, { timezone });
 }

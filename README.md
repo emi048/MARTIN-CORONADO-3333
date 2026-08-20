@@ -150,6 +150,42 @@ resto de los sectores (conserjeria, etc.) todavia no hay un calendario
 esperado equivalente -- hay que definirlo antes de poder activar esto para
 todos, no solo mantenimiento.
 
+## Tareas del equipo (to-do por WhatsApp)
+
+**Implementado.** Reemplaza la idea original de "un grupo de WhatsApp con el
+bot adentro" -- **Twilio (la API de WhatsApp Business que usa este bot) no
+permite que un numero de negocio participe de un grupo**, asi que en vez de
+eso el bot **difunde cada tarea nueva a cada empleado por su chat privado**
+(igual mecanismo que ya usa para avisar de una correccion aprobada). Desde
+el punto de vista del empleado el resultado es el mismo: le llega un aviso
+de WhatsApp con la tarea nueva y puede consultar la lista y cerrarla sin
+salir del chat con el bot.
+
+- **Cargar una tarea:** desde el panel (`/panel` → seccion "Tareas") --
+  titulo, descripcion opcional, plazo en horas (por defecto pensado para
+  algo como 48hs) y a quien se asigna (un empleado puntual, o "Todo el
+  equipo" para que cualquiera la pueda cerrar). Al crearla, el bot le manda
+  un WhatsApp a cada destinatario.
+- **Ver la lista:** cualquier empleado escribe *"Lista"* (o "Tareas") en
+  cualquier momento, incluso en medio de otro flujo del menu -- muestra las
+  tareas abiertas al equipo mas las asignadas puntualmente a esa persona,
+  con su plazo.
+- **Cerrar una tarea:** el empleado responde *"tarea N finalizada"*. Si
+  manda una foto con esa leyenda como texto del mismo mensaje (WhatsApp
+  permite escribir el caption antes de enviar la foto), la foto queda
+  guardada como evidencia y se le reenvia al admin junto con el aviso.
+- **Vencimiento:** un cron (`CRON_REVISAR_TAREAS`, cada 15 min por defecto)
+  marca como "vencida" toda tarea pendiente que paso su plazo y avisa al
+  admin por WhatsApp una sola vez por tarea. La tarea sigue apareciendo en
+  "Lista" y se puede cerrar igual, aunque ya este vencida.
+- **Informe mensual:** en la misma seccion "Tareas" del panel, filtrando por
+  rango de fechas se ve el resumen (total / hechas / pendientes / vencidas)
+  y el detalle en una tabla, con boton para descargar todo en Excel.
+
+**Requisitos de entorno:** para que la foto de evidencia se le pueda
+reenviar al admin por WhatsApp hacen falta `PUBLIC_BASE_URL` y
+`ADMIN_API_KEY` (mismos que usa el reenvio del Excel de fichaje).
+
 ## Panel web de administracion
 
 Disponible en `http://TU_SERVIDOR:3000/panel`. Se loguea con

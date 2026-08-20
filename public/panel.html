@@ -294,6 +294,7 @@
     <button class="tab-btn" data-tab="horas">⏱️ Horas del período</button>
     <button class="tab-btn" data-tab="fichadas">🔍 Fichadas por empleado</button>
     <button class="tab-btn" data-tab="licencias">🏖️ Licencias</button>
+    <button class="tab-btn" data-tab="tareas">✅ Tareas</button>
     <button class="tab-btn" data-tab="turnos">🔧 Turnos (mantenimiento)</button>
     <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
   </nav>
@@ -435,6 +436,52 @@
       <table>
         <thead><tr><th>Empleado</th><th>Desde</th><th>Hasta</th><th>Tipo</th><th></th></tr></thead>
         <tbody id="tabla-licencias"></tbody>
+      </table>
+    </section>
+
+    <section id="tab-tareas" style="display:none">
+      <h3 style="margin-top:0">➕ Nueva tarea</h3>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="tarea-titulo">Título</label>
+          <input type="text" id="tarea-titulo" placeholder="Ej: Cambiar filtro de la bomba">
+        </div>
+        <div class="form-field">
+          <label for="tarea-plazo">Plazo (horas)</label>
+          <input type="number" id="tarea-plazo" value="48" min="1">
+        </div>
+        <div class="form-field">
+          <label for="tarea-asignado">Asignada a</label>
+          <select id="tarea-asignado"><option value="">Todo el equipo</option></select>
+        </div>
+        <button class="btn btn-accent" id="tarea-crear-btn">Crear y avisar</button>
+      </div>
+      <div class="form-row">
+        <div class="form-field" style="flex:1 1 100%">
+          <label for="tarea-descripcion">Descripción (opcional)</label>
+          <input type="text" id="tarea-descripcion" placeholder="Detalle de la tarea">
+        </div>
+      </div>
+
+      <h3>📋 Informe</h3>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="tareas-desde">Desde</label>
+          <input type="date" id="tareas-desde">
+        </div>
+        <div class="form-field">
+          <label for="tareas-hasta">Hasta</label>
+          <input type="date" id="tareas-hasta">
+        </div>
+        <button class="btn" id="tareas-filtrar-btn">Filtrar</button>
+        <button class="btn btn-accent" id="tareas-excel-btn">⬇️ Descargar Excel</button>
+      </div>
+
+      <div class="stat-grid" id="stat-grid-tareas"></div>
+
+      <table>
+        <thead><tr><th>ID</th><th>Título</th><th>Asignada</th><th>Estado</th><th>Vence</th><th>Completada por</th><th>Foto</th></tr></thead>
+        <tbody id="tabla-tareas"></tbody>
       </table>
     </section>
 
@@ -602,6 +649,7 @@ function activarTab(tab) {
   if (tab === "horas") cargarHoras();
   if (tab === "estadisticas") cargarEstadisticas();
   if (tab === "licencias") cargarLicencias();
+  if (tab === "tareas") cargarTareas();
   if (tab === "fichadas") initFichadasEmpleado();
   if (tab === "turnos") cargarTurnos();
 }
@@ -1229,6 +1277,104 @@ async function eliminarLicenciaUI(id, btn) {
     cargarLicencias();
   } catch (e) { mostrarToast(e.message); btn.disabled = false; }
 }
+
+const ESTADO_TAREA_INFO = {
+  pendiente: { texto: "Pendiente", clase: "" },
+  hecha: { texto: "✅ Hecha", clase: "" },
+  vencida: { texto: "🔴 Vencida", clase: "stat-warn" },
+};
+
+function formatoFechaHoraTareas(iso) {
+  if (!iso) return "-";
+  const [fecha, hora] = iso.slice(0, 16).split("T");
+  return `${fecha.split("-").reverse().join("/")} ${hora}`;
+}
+
+async function cargarTareas() {
+  const grid = document.getElementById("stat-grid-tareas");
+  const tbody = document.getElementById("tabla-tareas");
+  const selectAsignado = document.getElementById("tarea-asignado");
+  grid.innerHTML = '<div class="vacio">Cargando…</div>';
+  tbody.innerHTML = '<tr><td colspan="7" class="vacio">Cargando…</td></tr>';
+  try {
+    const desdeInput = document.getElementById("tareas-desde");
+    const hastaInput = document.getElementById("tareas-hasta");
+    const qs = desdeInput.value && hastaInput.value ? `?desde=${desdeInput.value}&hasta=${hastaInput.value}` : "";
+    const data = await api("/tareas" + qs);
+
+    if (!desdeInput.value) desdeInput.value = data.desde;
+    if (!hastaInput.value) hastaInput.value = data.hasta;
+
+    if (!selectAsignado.dataset.cargado) {
+      selectAsignado.innerHTML = '<option value="">Todo el equipo</option>' +
+        data.empleados.map((e) => `<option value="${e.nombre}">${e.nombre}</option>`).join("");
+      selectAsignado.dataset.cargado = "1";
+    }
+
+    grid.innerHTML = [
+      statTile(data.resumen.total, "Total en el período"),
+      statTile(data.resumen.hechas, "Hechas"),
+      statTile(data.resumen.pendientes, "Pendientes"),
+      statTile(data.resumen.vencidas, "Vencidas", data.resumen.vencidas > 0 ? "stat-warn" : ""),
+    ].join("");
+
+    tbody.innerHTML = data.tareas.length
+      ? data.tareas.map((t) => {
+          const estado = ESTADO_TAREA_INFO[t.estado] || { texto: t.estado, clase: "" };
+          return `
+            <tr>
+              <td>#${t.id}</td>
+              <td>${t.titulo}</td>
+              <td>${t.asignado_a || "Equipo"}</td>
+              <td class="${estado.clase}">${estado.texto}</td>
+              <td>${formatoFechaHoraTareas(t.vence_en)}</td>
+              <td>${t.completado_por || "-"}</td>
+              <td>${t.foto_path ? "📷" : "-"}</td>
+            </tr>
+          `;
+        }).join("")
+      : '<tr><td colspan="7" class="vacio">No hay tareas en este período</td></tr>';
+  } catch (e) { mostrarToast(e.message); }
+}
+
+document.getElementById("tareas-filtrar-btn").addEventListener("click", cargarTareas);
+
+document.getElementById("tarea-crear-btn").addEventListener("click", async () => {
+  const titulo = document.getElementById("tarea-titulo").value.trim();
+  const descripcion = document.getElementById("tarea-descripcion").value.trim();
+  const plazoHoras = document.getElementById("tarea-plazo").value;
+  const asignadoA = document.getElementById("tarea-asignado").value;
+  if (!titulo) { mostrarToast("Falta el título"); return; }
+  try {
+    const data = await api("/tareas", { method: "POST", body: JSON.stringify({ titulo, descripcion, plazoHoras, asignadoA }) });
+    mostrarToast(
+      data.sinNumero && data.sinNumero.length
+        ? `Tarea #${data.id} creada. Sin WhatsApp registrado: ${data.sinNumero.join(", ")}`
+        : `Tarea #${data.id} creada y avisada por WhatsApp`
+    );
+    document.getElementById("tarea-titulo").value = "";
+    document.getElementById("tarea-descripcion").value = "";
+    cargarTareas();
+  } catch (e) { mostrarToast(e.message); }
+});
+
+document.getElementById("tareas-excel-btn").addEventListener("click", async () => {
+  const desde = document.getElementById("tareas-desde").value;
+  const hasta = document.getElementById("tareas-hasta").value;
+  try {
+    const res = await fetch(`${API}/tareas/excel?desde=${desde}&hasta=${hasta}`, { headers: { Authorization: "Bearer " + token } });
+    if (!res.ok) throw new Error("No se pudo generar el Excel");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tareas_${desde}_a_${hasta}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) { mostrarToast(e.message); }
+});
 
 const TURNO_INFO = {
   mañana: { texto: "Mañana", color: "#4f8cff", icono: "🌅" },

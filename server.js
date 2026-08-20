@@ -58,6 +58,20 @@ app.get("/files/:nombre", (req, res) => {
   });
 });
 
+// Sirve las fotos de evidencia que los empleados mandan al cerrar una tarea,
+// para que Twilio pueda reenviarlas al admin como documento de WhatsApp
+// (mismo esquema que /files/:nombre, protegido con ADMIN_API_KEY por query).
+app.get("/files/tareas/:nombre", (req, res) => {
+  if (!process.env.ADMIN_API_KEY || req.query.key !== process.env.ADMIN_API_KEY) {
+    return res.status(401).send("No autorizado");
+  }
+  const nombre = path.basename(req.params.nombre);
+  if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(nombre)) return res.status(400).send("Nombre invalido");
+  res.sendFile(path.join(__dirname, "data", "tareas_fotos", nombre), (err) => {
+    if (err && !res.headersSent) res.status(404).send("No encontrado");
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
