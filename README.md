@@ -19,8 +19,8 @@ a la página HTML → clic en "Generar") por un backend que corre solo en tu VPS
 
 ```
 server.js        -> arranque de la app
-routes/           -> registro de endpoints (panel.js, whatsapp.js)
-controllers/      -> logica de cada endpoint (panelController.js, whatsappController.js)
+routes/           -> registro de endpoints (panel.js, whatsapp.js, app.js)
+controllers/      -> logica de cada endpoint (panelController.js, whatsappController.js, appController.js)
 services/         -> logica de negocio, calculo e integraciones
   db.js               - acceso a la base SQLite
   motorCalculo.js      - calculo de horas (50%/100%, feriados, eventos)
@@ -199,9 +199,49 @@ de hoy. Se corrio a mano para mantenimiento y conserjeria completo. Sirve
 de base para armar un endpoint o comando fijo mas adelante si hace falta
 repetirlo seguido.
 
+## HTTPS
+
+El servidor está detrás de **Caddy** (`/etc/caddy/Caddyfile`, no versionado
+en este repo por ser config de sistema, no de la app) sirviendo todo con
+certificado automático (Let's Encrypt) en `https://martincoronado.duckdns.org`.
+El dominio es un subdominio gratuito de DuckDNS apuntando a la IP del
+droplet. El puerto 3000 ya **no** está abierto al exterior (firewall) --
+todo el tráfico externo pasa sí o sí por Caddy/HTTPS; Caddy le habla al
+proceso de Node por `localhost:3000` puertas adentro.
+
+**Importante:** el webhook de Twilio (`WHEN A MESSAGE COMES IN` en la
+consola de Twilio) tiene que apuntar a
+`https://martincoronado.duckdns.org/whatsapp/webhook` -- si se vuelve a
+levantar el server en otra IP/dominio, hay que actualizarlo ahí también.
+
+## App de empleado
+
+Disponible en `https://martincoronado.duckdns.org/app`. Es una app aparte
+del panel de admin -- login propio (usuario + PIN, no la contraseña del
+panel), pensada para que cada empleado consulte lo suyo desde el celular,
+sin ver datos de nadie más:
+
+- **Mis fichadas:** estado de hoy (en vivo, via `fichadas_estado`) +
+  historial del período actual (`filas_diarias`).
+- **Mi horario:** turno asignado de hoy y horas acumuladas del período.
+
+Es de **solo lectura** a propósito -- no hay forma de auto-marcarse
+presente desde la app (eso seguiría siendo responsabilidad exclusiva del
+admin), justamente para no abrir un hueco de "fichar sin estar en el
+edificio".
+
+El admin gestiona las cuentas desde el panel de siempre, pestaña
+"👥 Empleados" → sección "🔑 Acceso a la app": crea el usuario, genera un
+PIN de 6 dígitos (se muestra una sola vez, nunca se guarda en texto plano)
+y lo comparte con el empleado. El login tiene freno de fuerza bruta:
+bloquea 15 minutos después de 5 intentos fallidos seguidos con ese usuario.
+
+Es instalable como PWA (`public/app/manifest.json` + `sw.js`) ahora que hay
+HTTPS -- desde el navegador del celular, "Agregar a pantalla de inicio".
+
 ## Panel web de administracion
 
-Disponible en `http://TU_SERVIDOR:3000/panel`. Se loguea con
+Disponible en `https://martincoronado.duckdns.org/panel`. Se loguea con
 `ADMIN_PANEL_PASSWORD` del `.env` (contraseña propia del panel, separada de
 `ADMIN_API_KEY` que usan los endpoints `/admin/*`). La navegacion es un
 menu lateral (boton ☰ arriba a la izquierda) con todas las secciones.
@@ -281,12 +321,6 @@ salir del Sandbox (ver arriba).
 
 ## Mejoras de infraestructura pendientes
 
-- **HTTPS / proxy:** hoy el panel corre en HTTP plano, directo en el
-  puerto 3000, sin nginx ni ningun proxy adelante -- la contraseña del
-  panel y la sesion viajan sin cifrar. Pendiente sumar un proxy (nginx) con
-  certificado (Let's Encrypt) para tener HTTPS. No es urgente para el
-  tamaño actual del proyecto, pero es la mejora de seguridad mas importante
-  de las pendientes.
 - **Base de datos separada:** hoy es SQLite, un solo archivo local en el
   mismo servidor (`data/fichero.sqlite`), sin un servidor de base de datos
   aparte. Funciona bien para el volumen actual, pero a futuro (mas
