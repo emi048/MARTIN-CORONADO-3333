@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>FICH-CORONADO</title>
+<link rel="manifest" href="/app/manifest.json">
+<meta name="theme-color" content="#0f1115">
+<style>
+  :root {
+    --bg: #0f1115; --surface: #171a21; --surface2: #1e2229; --border: #2a2f3a;
+    --text: #e6e8eb; --text-muted: #8a919e; --accent: #4f8cff; --accent-hover: #3f78e8;
+    --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh; padding-bottom: 70px;
+  }
+
+  #login-screen {
+    display: flex; align-items: center; justify-content: center; min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, rgba(79,140,255,0.10), transparent 55%), var(--bg);
+    padding: 20px;
+  }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+    border-radius: 14px; padding: 36px 28px; width: 100%; max-width: 340px; text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .login-logo { height: 52px; width: auto; margin-bottom: 16px; opacity: 0.95; }
+  .login-box h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.02em; }
+  .login-box p { color: var(--text-muted); font-size: 13px; margin: 0 0 24px; }
+  .login-box input {
+    width: 100%; padding: 13px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 16px; text-align: center;
+    margin-bottom: 10px; transition: border-color 0.15s;
+  }
+  .login-box input:focus { outline: none; border-color: var(--accent); }
+  .login-box button {
+    width: 100%; margin-top: 8px; padding: 13px; border-radius: 8px; border: none;
+    background: var(--accent); color: white; font-weight: 600; cursor: pointer; font-size: 15px;
+  }
+  .login-box button:hover { background: var(--accent-hover); }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  header {
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; background: var(--bg); z-index: 10;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 700; }
+  header h1 span { display: block; color: var(--text-muted); font-weight: 500; font-size: 12px; margin-top: 2px; }
+  header button {
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+
+  main { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .card-titulo { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; }
+  .fila-hora { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .fila-hora:last-child { border-bottom: none; }
+  .fila-hora .fecha { font-size: 14px; }
+  .fila-hora .fecha .dia-semana { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
+  .fila-hora .horas { font-size: 13px; color: var(--text-muted); text-align: right; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .badge-ok { background: rgba(62,207,142,0.15); color: var(--ok); }
+  .badge-warn { background: rgba(245,166,35,0.15); color: var(--warn); }
+  .badge-muted { background: var(--surface2); color: var(--text-muted); }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { text-align: center; }
+  .stat .num { font-size: 20px; font-weight: 700; }
+  .stat .label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .vacio { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
+
+  nav.tabbar {
+    position: fixed; bottom: 0; left: 0; right: 0; display: flex;
+    background: var(--surface); border-top: 1px solid var(--border); z-index: 10;
+  }
+  nav.tabbar button {
+    flex: 1; background: none; border: none; color: var(--text-muted);
+    padding: 12px 0 10px; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; align-items: center;
+  }
+  nav.tabbar button .icono { font-size: 18px; }
+  nav.tabbar button.activo { color: var(--accent); }
+
+  #app-screen { display: none; }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <img src="/panel/logo-cr.png" class="login-logo" alt="Logo">
+    <h2>FICH-CORONADO</h2>
+    <p>Ingresá con tu usuario y PIN</p>
+    <input type="text" id="login-usuario" placeholder="Usuario" autocomplete="username">
+    <input type="tel" id="login-pin" placeholder="PIN" inputmode="numeric" maxlength="6" autocomplete="current-password">
+    <button onclick="login()">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="app-screen">
+  <header>
+    <h1 id="header-nombre">—<span id="header-periodo"></span></h1>
+    <button onclick="logout()">Salir</button>
+  </header>
+
+  <main>
+    <section id="tab-fichadas">
+      <div class="card">
+        <div class="card-titulo">Hoy</div>
+        <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Fichadas del período</div>
+        <div id="dias-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+    </section>
+
+    <section id="tab-horario" class="oculto">
+      <div class="card">
+        <div class="card-titulo">Turno de hoy</div>
+        <div id="turno-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Horas del período</div>
+        <div id="resumen-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="fichadas" class="activo" onclick="cambiarTab('fichadas')">
+      <span class="icono">🕐</span> Mis fichadas
+    </button>
+    <button data-tab="horario" onclick="cambiarTab('horario')">
+      <span class="icono">📅</span> Mi horario
+    </button>
+  </nav>
+</div>
+
+<script>
+const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+function token() { return localStorage.getItem("app_token"); }
+
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: { ...(opts.headers || {}), "Authorization": "Bearer " + token() },
+  });
+  if (res.status === 401) { cerrarSesionLocal(); throw new Error("Sesión vencida"); }
+  const data = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(data.error || "Error");
+  return data;
+}
+
+async function login() {
+  const usuario = document.getElementById("login-usuario").value.trim();
+  const pin = document.getElementById("login-pin").value.trim();
+  const errorEl = document.getElementById("login-error");
+  errorEl.textContent = "";
+  if (!usuario || !pin) { errorEl.textContent = "Completá usuario y PIN"; return; }
+  try {
+    const res = await fetch("/app/api/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, pin }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) { errorEl.textContent = data.error || "Error al ingresar"; return; }
+    localStorage.setItem("app_token", data.token);
+    localStorage.setItem("app_nombre", data.nombre);
+    mostrarApp();
+  } catch (err) {
+    errorEl.textContent = "No se pudo conectar";
+  }
+}
+
+function cerrarSesionLocal() {
+  localStorage.removeItem("app_token");
+  localStorage.removeItem("app_nombre");
+  document.getElementById("app-screen").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+}
+
+async function logout() {
+  try { await apiFetch("/app/api/logout", { method: "POST" }); } catch {}
+  cerrarSesionLocal();
+}
+
+function mostrarApp() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app-screen").style.display = "block";
+  document.getElementById("header-nombre").textContent = localStorage.getItem("app_nombre") || "";
+  cargarFichadas();
+  cargarHorario();
+}
+
+function cambiarTab(tab) {
+  document.querySelectorAll("nav.tabbar button").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
+  document.getElementById("tab-fichadas").classList.toggle("oculto", tab !== "fichadas");
+  document.getElementById("tab-horario").classList.toggle("oculto", tab !== "horario");
+}
+
+function formatearFecha(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${d}/${m} <span class="dia-semana">${DIAS_SEMANA[dt.getDay()]}</span>`;
+}
+
+async function cargarFichadas() {
+  try {
+    const data = await apiFetch("/app/api/mis-fichadas");
+    document.getElementById("header-periodo").textContent = data.rango ? `${data.rango.desde} al ${data.rango.hasta}` : data.periodo;
+
+    const hoyEl = document.getElementById("hoy-contenido");
+    if (data.hoy && (data.hoy.ingreso_hora || data.hoy.egreso_hora)) {
+      hoyEl.innerHTML = `
+        <div class="fila-hora">
+          <div class="fecha">Ingreso</div>
+          <div class="horas">${data.hoy.ingreso_hora ? `<span class="badge badge-ok">${data.hoy.ingreso_hora}</span>` : `<span class="badge badge-muted">Sin marcar</span>`}</div>
+        </div>
+        <div class="fila-hora">
+          <div class="fecha">Egreso</div>
+          <div class="horas">${data.hoy.egreso_hora ? `<span class="badge badge-ok">${data.hoy.egreso_hora}</span>` : `<span class="badge badge-muted">Sin marcar</span>`}</div>
+        </div>`;
+    } else {
+      hoyEl.innerHTML = `<div class="vacio">Todavía no hay fichadas registradas hoy</div>`;
+    }
+
+    const diasEl = document.getElementById("dias-contenido");
+    const dias = [...(data.dias || [])].sort((a, b) => b.fecha.localeCompare(a.fecha));
+    if (dias.length === 0) {
+      diasEl.innerHTML = `<div class="vacio">Sin datos en este período</div>`;
+    } else {
+      diasEl.innerHTML = dias.map((d) => `
+        <div class="fila-hora">
+          <div class="fecha">${formatearFecha(d.fecha)}</div>
+          <div class="horas">
+            ${d.ingreso || "—"} · ${d.egreso || "—"}
+            ${d.alerta ? `<br><span class="badge badge-warn">${d.alerta}</span>` : ""}
+          </div>
+        </div>`).join("");
+    }
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+  }
+}
+
+async function cargarHorario() {
+  try {
+    const data = await apiFetch("/app/api/mi-horario");
+
+    const turnoEl = document.getElementById("turno-contenido");
+    if (data.turnoHoy) {
+      turnoEl.innerHTML = `
+        <div class="fila-hora">
+          <div class="fecha">${data.turnoHoy.tipo || "—"}</div>
+          <div class="horas">${data.turnoHoy.horario ? `${data.turnoHoy.horario.in} a ${data.turnoHoy.horario.out}` : ""}</div>
+        </div>`;
+    } else {
+      turnoEl.innerHTML = `<div class="vacio">Sin turno asignado para hoy</div>`;
+    }
+
+    const resumenEl = document.getElementById("resumen-contenido");
+    if (data.resumen) {
+      resumenEl.innerHTML = `
+        <div class="stat-grid">
+          <div class="stat"><div class="num">${data.resumen.dias}</div><div class="label">Días</div></div>
+          <div class="stat"><div class="num">${data.resumen.h50}</div><div class="label">Hs 50%</div></div>
+          <div class="stat"><div class="num">${data.resumen.h100}</div><div class="label">Hs 100%</div></div>
+        </div>`;
+    } else {
+      resumenEl.innerHTML = `<div class="vacio">Todavía no hay resumen de este período</div>`;
+    }
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+  }
+}
+
+if (token()) mostrarApp();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/app/sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

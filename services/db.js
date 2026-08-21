@@ -162,6 +162,29 @@ db.exec(`
     creado_en TEXT NOT NULL,
     expira_en TEXT NOT NULL
   );
+
+  -- Login de cada empleado para la app propia (separada del panel de admin).
+  -- nombre tiene que matchear un nombre de SECTORES en motorCalculo.js --
+  -- esta tabla es solo para credenciales/rol, no reemplaza ese roster.
+  CREATE TABLE IF NOT EXISTS empleados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    sector TEXT NOT NULL,
+    usuario TEXT NOT NULL UNIQUE,
+    pin_hash TEXT NOT NULL,
+    activo INTEGER NOT NULL DEFAULT 1,
+    creado_en TEXT NOT NULL
+  );
+
+  -- Sesiones de la app de empleado -- separada a proposito de sesiones_panel
+  -- para que nunca se puedan confundir los dos niveles de acceso (admin vs
+  -- empleado). Mismo esquema deslizante que las del panel.
+  CREATE TABLE IF NOT EXISTS sesiones_app (
+    token TEXT PRIMARY KEY,
+    empleado_id INTEGER NOT NULL,
+    creado_en TEXT NOT NULL,
+    expira_en TEXT NOT NULL
+  );
 `);
 
 // Migracion idempotente: agrega la columna solo si todavia no existe (la
@@ -866,6 +889,65 @@ function eliminarLicencia(id) {
   return { periodos: periodosAfectados };
 }
 
+// ── Login de empleado para la app propia (separado del panel de admin) ──
+
+function crearEmpleadoApp({ nombre, sector, usuario, pinHash }) {
+  const info = db.prepare(`
+    INSERT INTO empleados (nombre, sector, usuario, pin_hash, activo, creado_en)
+    VALUES (?, ?, ?, ?, 1, ?)
+  `).run(nombre, sector, usuario, pinHash, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function listarEmpleadosApp() {
+  return db.prepare(`
+    SELECT id, nombre, sector, usuario, activo, creado_en as creadoEn FROM empleados ORDER BY nombre
+  `).all();
+}
+
+function buscarEmpleadoAppPorUsuario(usuario) {
+  return db.prepare(`SELECT * FROM empleados WHERE usuario = ? AND activo = 1`).get(usuario);
+}
+
+function empleadoAppPorId(id) {
+  return db.prepare(`SELECT * FROM empleados WHERE id = ?`).get(id);
+}
+
+function actualizarPinEmpleadoApp(id, pinHash) {
+  db.prepare(`UPDATE empleados SET pin_hash = ? WHERE id = ?`).run(pinHash, id);
+}
+
+function eliminarEmpleadoApp(id) {
+  db.prepare(`DELETE FROM empleados WHERE id = ?`).run(id);
+}
+
+// ── Sesiones de la app de empleado (separadas de sesiones_panel) ──
+
+function crearSesionApp(token, empleadoId, expiraEnISO) {
+  limpiarSesionesAppVencidas();
+  db.prepare(`INSERT INTO sesiones_app (token, empleado_id, creado_en, expira_en) VALUES (?, ?, ?, ?)`)
+    .run(token, empleadoId, new Date().toISOString(), expiraEnISO);
+}
+
+function renovarSesionApp(token, expiraEnISO) {
+  const info = db.prepare(`UPDATE sesiones_app SET expira_en = ? WHERE token = ? AND expira_en > ?`)
+    .run(expiraEnISO, token, new Date().toISOString());
+  return info.changes > 0;
+}
+
+function empleadoIdDeSesionApp(token) {
+  const row = db.prepare(`SELECT empleado_id FROM sesiones_app WHERE token = ?`).get(token);
+  return row ? row.empleado_id : null;
+}
+
+function eliminarSesionApp(token) {
+  db.prepare(`DELETE FROM sesiones_app WHERE token = ?`).run(token);
+}
+
+function limpiarSesionesAppVencidas() {
+  db.prepare(`DELETE FROM sesiones_app WHERE expira_en <= ?`).run(new Date().toISOString());
+}
+
 module.exports = {
   db,
   guardarResumenMensual, resumenDelPeriodo, rangoFechasDelPeriodo,
@@ -891,4 +973,7 @@ module.exports = {
   crearLicencia, listarLicencias, licenciasActivasEnFecha, licenciasEnRango, eliminarLicencia,
   saludFichajePeriodo,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
+  crearEmpleadoApp, listarEmpleadosApp, buscarEmpleadoAppPorUsuario, empleadoAppPorId,
+  actualizarPinEmpleadoApp, eliminarEmpleadoApp,
+  crearSesionApp, renovarSesionApp, empleadoIdDeSesionApp, eliminarSesionApp, limpiarSesionesAppVencidas,
 };

@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const {
   solicitudesPendientes, solicitudesCambioPendientes, resumenDelPeriodo, rangoFechasDelPeriodo, numeroDeEmpleado,
   registrarNumero, eliminarNumero,
@@ -13,6 +14,7 @@ const {
   filaDelDiaPorFecha, filasDelPeriodoDeEmpleado,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   pedidosTotalesPorEmpleado, periodosRecientes,
+  crearEmpleadoApp, listarEmpleadosApp, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS } = require("../services/motorCalculo");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -303,6 +305,50 @@ router.delete("/api/empleados/whatsapp/:empleado", requerirAuth, (req, res) => {
   const { empleado } = req.params;
   if (!numeroDeEmpleado(empleado)) return res.status(404).json({ ok: false, error: "No tiene número registrado" });
   eliminarNumero(empleado);
+  res.json({ ok: true });
+});
+
+// ── Cuentas de la app de empleado (usuario + PIN) -- gestion exclusiva de admin ──
+
+function generarPin() {
+  return String(Math.floor(100000 + Math.random() * 900000)); // 6 digitos
+}
+
+router.get("/api/empleados-app", requerirAuth, (req, res) => {
+  res.json({ empleados: listarEmpleadosApp() });
+});
+
+// El PIN generado se devuelve en texto plano SOLO en esta respuesta (para
+// que el admin se lo pase al empleado) -- nunca se guarda ni se puede
+// volver a consultar despues, solo su hash.
+router.post("/api/empleados-app", requerirAuth, async (req, res) => {
+  const { empleado, usuario } = req.body || {};
+  if (!empleado || !todosLosEmpleados().includes(empleado)) {
+    return res.status(400).json({ ok: false, error: "Empleado inválido" });
+  }
+  if (!usuario || !/^[a-z0-9_.]{3,30}$/i.test(usuario)) {
+    return res.status(400).json({ ok: false, error: "Usuario inválido (letras, números, punto o guión bajo, 3-30 caracteres)" });
+  }
+  const pin = generarPin();
+  const pinHash = await bcrypt.hash(pin, 10);
+  try {
+    const id = crearEmpleadoApp({ nombre: empleado, sector: getSectorDeEmpleado(empleado), usuario, pinHash });
+    res.json({ ok: true, id, usuario, pin });
+  } catch (err) {
+    const yaExiste = String(err.message || "").includes("UNIQUE");
+    res.status(400).json({ ok: false, error: yaExiste ? "Ese usuario ya existe" : err.message });
+  }
+});
+
+router.post("/api/empleados-app/:id/reset-pin", requerirAuth, async (req, res) => {
+  const pin = generarPin();
+  const pinHash = await bcrypt.hash(pin, 10);
+  actualizarPinEmpleadoApp(Number(req.params.id), pinHash);
+  res.json({ ok: true, pin });
+});
+
+router.delete("/api/empleados-app/:id", requerirAuth, (req, res) => {
+  eliminarEmpleadoApp(Number(req.params.id));
   res.json({ ok: true });
 });
 

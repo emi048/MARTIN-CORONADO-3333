@@ -369,6 +369,24 @@
         <thead><tr><th>Nombre</th><th>Sector</th><th>WhatsApp</th><th></th></tr></thead>
         <tbody id="tabla-empleados"></tbody>
       </table>
+
+      <h3>🔑 Acceso a la app (usuario + PIN)</h3>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="app-empleado">Empleado</label>
+          <select id="app-empleado"></select>
+        </div>
+        <div class="form-field">
+          <label for="app-usuario">Usuario</label>
+          <input type="text" id="app-usuario" placeholder="ej. lbabino">
+        </div>
+        <button class="btn btn-accent" id="app-crear-btn">Crear acceso</button>
+      </div>
+
+      <table>
+        <thead><tr><th>Nombre</th><th>Usuario</th><th></th></tr></thead>
+        <tbody id="tabla-empleados-app"></tbody>
+      </table>
     </section>
 
     <section id="tab-horas" style="display:none">
@@ -598,7 +616,7 @@ function activarTab(tab) {
 
   if (tab === "resumen") cargarResumenGeneral();
   if (tab === "pendientes") cargarPendientes();
-  if (tab === "empleados") cargarEmpleados();
+  if (tab === "empleados") { cargarEmpleados(); cargarEmpleadosApp(); }
   if (tab === "horas") cargarHoras();
   if (tab === "estadisticas") cargarEstadisticas();
   if (tab === "licencias") cargarLicencias();
@@ -804,6 +822,64 @@ async function quitarWhatsappUI(empleado, btn) {
     await api(`/empleados/whatsapp/${encodeURIComponent(empleado)}`, { method: "DELETE" });
     mostrarToast(`Número de ${empleado} quitado`);
     cargarEmpleados();
+  } catch (e) { mostrarToast(e.message); btn.disabled = false; }
+}
+
+// ── Acceso a la app de empleado (usuario + PIN) ──
+
+async function cargarEmpleadosApp() {
+  const tbody = document.getElementById("tabla-empleados-app");
+  const select = document.getElementById("app-empleado");
+  tbody.innerHTML = '<tr><td colspan="3" class="vacio">Cargando…</td></tr>';
+  try {
+    if (!select.dataset.cargado) {
+      const empleados = await api("/empleados");
+      select.innerHTML = empleados.empleados.map((e) => `<option value="${e.nombre}">${e.nombre}</option>`).join("");
+      select.dataset.cargado = "1";
+    }
+    const data = await api("/empleados-app");
+    tbody.innerHTML = data.empleados.length === 0
+      ? '<tr><td colspan="3" class="vacio">Todavía no hay accesos creados</td></tr>'
+      : data.empleados.map((e) => `
+        <tr>
+          <td>${e.nombre}</td>
+          <td>${e.usuario}</td>
+          <td>
+            <button class="btn" onclick="resetearPinUI(${e.id}, '${e.nombre}', this)">Resetear PIN</button>
+            <button class="btn btn-danger" onclick="eliminarAccesoAppUI(${e.id}, '${e.nombre}', this)">Eliminar</button>
+          </td>
+        </tr>
+      `).join("");
+  } catch (e) { mostrarToast(e.message); }
+}
+
+document.getElementById("app-crear-btn").addEventListener("click", async () => {
+  const empleado = document.getElementById("app-empleado").value;
+  const usuario = document.getElementById("app-usuario").value.trim();
+  if (!usuario) { mostrarToast("Ingresá un usuario"); return; }
+  try {
+    const data = await api("/empleados-app", { method: "POST", body: JSON.stringify({ empleado, usuario }) });
+    document.getElementById("app-usuario").value = "";
+    cargarEmpleadosApp();
+    window.prompt(`Acceso creado para ${empleado}. PIN (copialo, no se vuelve a mostrar):`, data.pin);
+  } catch (e) { mostrarToast(e.message); }
+});
+
+async function resetearPinUI(id, nombre, btn) {
+  btn.disabled = true;
+  try {
+    const data = await api(`/empleados-app/${id}/reset-pin`, { method: "POST" });
+    window.prompt(`Nuevo PIN para ${nombre} (copialo, no se vuelve a mostrar):`, data.pin);
+  } catch (e) { mostrarToast(e.message); } finally { btn.disabled = false; }
+}
+
+async function eliminarAccesoAppUI(id, nombre, btn) {
+  if (!confirm(`¿Eliminar el acceso a la app de ${nombre}?`)) return;
+  btn.disabled = true;
+  try {
+    await api(`/empleados-app/${id}`, { method: "DELETE" });
+    mostrarToast(`Acceso de ${nombre} eliminado`);
+    cargarEmpleadosApp();
   } catch (e) { mostrarToast(e.message); btn.disabled = false; }
 }
 
