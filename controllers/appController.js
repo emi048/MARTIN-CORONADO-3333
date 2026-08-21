@@ -6,6 +6,7 @@ const {
   buscarEmpleadoAppPorUsuario, empleadoAppPorId,
   crearSesionApp, renovarSesionApp, eliminarSesionApp, empleadoIdDeSesionApp,
   filasDelPeriodoDeEmpleado, rangoFechasDelPeriodo, obtenerFichadaHoy, resumenDelPeriodo,
+  estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
 } = require("../services/db");
 const { turnoRealDelDia } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -28,11 +29,22 @@ function nuevoVencimiento() {
   return new Date(Date.now() + DURACION_SESION_MS).toISOString();
 }
 
+// Freno de fuerza bruta: el PIN es de solo 6 digitos, sin este limite se
+// podria probar por script. El bloqueo es por usuario (no por IP) y persiste
+// en la base -- sobrevive a un reinicio del server.
 router.post("/api/login", async (req, res) => {
   const { usuario, pin } = req.body || {};
-  const empleado = usuario ? buscarEmpleadoAppPorUsuario(usuario) : null;
+  if (!usuario) return res.status(401).json({ ok: false, error: "Usuario o PIN incorrecto" });
+  if (estaBloqueadoLoginApp(usuario)) {
+    return res.status(429).json({ ok: false, error: "Demasiados intentos fallidos. Probá de nuevo en unos minutos." });
+  }
+  const empleado = buscarEmpleadoAppPorUsuario(usuario);
   const ok = empleado && (await bcrypt.compare(String(pin || ""), empleado.pin_hash));
-  if (!ok) return res.status(401).json({ ok: false, error: "Usuario o PIN incorrecto" });
+  if (!ok) {
+    registrarIntentoFallidoLoginApp(usuario);
+    return res.status(401).json({ ok: false, error: "Usuario o PIN incorrecto" });
+  }
+  limpiarIntentosLoginApp(usuario);
   const token = generarToken();
   crearSesionApp(token, empleado.id, nuevoVencimiento());
   res.json({ ok: true, token, nombre: empleado.nombre });

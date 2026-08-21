@@ -185,6 +185,16 @@ db.exec(`
     creado_en TEXT NOT NULL,
     expira_en TEXT NOT NULL
   );
+
+  -- Freno de fuerza bruta contra el login de la app de empleado (PIN de 6
+  -- digitos, sin este freno se podria probar por script). Persistido para
+  -- que el bloqueo sobreviva a un reinicio del server (pasa seguido por el
+  -- auto-deploy), igual criterio que las sesiones.
+  CREATE TABLE IF NOT EXISTS intentos_login_app (
+    usuario TEXT PRIMARY KEY,
+    intentos INTEGER NOT NULL DEFAULT 0,
+    bloqueado_hasta TEXT
+  );
 `);
 
 // Migracion idempotente: agrega la columna solo si todavia no existe (la
@@ -948,6 +958,33 @@ function limpiarSesionesAppVencidas() {
   db.prepare(`DELETE FROM sesiones_app WHERE expira_en <= ?`).run(new Date().toISOString());
 }
 
+// ── Freno de fuerza bruta del login de la app de empleado ──
+
+const MAX_INTENTOS_LOGIN_APP = 5;
+const BLOQUEO_LOGIN_APP_MS = 15 * 60 * 1000;
+
+function estaBloqueadoLoginApp(usuario) {
+  const row = db.prepare(`SELECT bloqueado_hasta FROM intentos_login_app WHERE usuario = ?`).get(usuario);
+  return !!(row && row.bloqueado_hasta && row.bloqueado_hasta > new Date().toISOString());
+}
+
+// Se llama en cada intento fallido -- a partir del intento MAX_INTENTOS_LOGIN_APP
+// bloquea ese usuario por BLOQUEO_LOGIN_APP_MS (sigue contando intentos
+// mientras este bloqueado, asi que insistir no acorta la espera).
+function registrarIntentoFallidoLoginApp(usuario) {
+  const row = db.prepare(`SELECT intentos FROM intentos_login_app WHERE usuario = ?`).get(usuario);
+  const intentos = (row ? row.intentos : 0) + 1;
+  const bloqueadoHasta = intentos >= MAX_INTENTOS_LOGIN_APP ? new Date(Date.now() + BLOQUEO_LOGIN_APP_MS).toISOString() : null;
+  db.prepare(`
+    INSERT INTO intentos_login_app (usuario, intentos, bloqueado_hasta) VALUES (?, ?, ?)
+    ON CONFLICT(usuario) DO UPDATE SET intentos = excluded.intentos, bloqueado_hasta = excluded.bloqueado_hasta
+  `).run(usuario, intentos, bloqueadoHasta);
+}
+
+function limpiarIntentosLoginApp(usuario) {
+  db.prepare(`DELETE FROM intentos_login_app WHERE usuario = ?`).run(usuario);
+}
+
 module.exports = {
   db,
   guardarResumenMensual, resumenDelPeriodo, rangoFechasDelPeriodo,
@@ -976,4 +1013,5 @@ module.exports = {
   crearEmpleadoApp, listarEmpleadosApp, buscarEmpleadoAppPorUsuario, empleadoAppPorId,
   actualizarPinEmpleadoApp, eliminarEmpleadoApp,
   crearSesionApp, renovarSesionApp, empleadoIdDeSesionApp, eliminarSesionApp, limpiarSesionesAppVencidas,
+  estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
 };
