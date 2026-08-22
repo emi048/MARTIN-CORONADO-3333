@@ -1070,6 +1070,12 @@ function medidorCircular(porcentaje, label, sublabel, tendencia) {
   `;
 }
 
+function formatoDuracionMin(minutos) {
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, "0")}min` : `${m}min`;
+}
+
 function formatoUptime(segundos) {
   const h = Math.floor(segundos / 3600);
   const d = Math.floor(h / 24);
@@ -1252,7 +1258,7 @@ async function buscarFichadasEmpleado() {
           <td></td>
         </tr>`;
       }
-      const obsTardanza = d.llegadaTarde ? `🟡 Llegó ${d.minutosTarde} min tarde (tocaba ${d.horarioEsperado}hs)` : "";
+      const obsTardanza = d.llegadaTarde ? `🟡 Llegó ${formatoDuracionMin(d.minutosTarde)} tarde (tocaba ${d.horarioEsperado}hs)` : "";
       const obsResto = d.licencia_tipo ? `🏖️ ${d.licencia_tipo}` : (d.alerta || "");
       const obs = [obsTardanza, obsResto].filter(Boolean).join(" · ");
       const ingresoTxt = d.ingreso
