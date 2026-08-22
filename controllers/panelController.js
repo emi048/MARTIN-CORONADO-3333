@@ -362,7 +362,35 @@ router.get("/api/dias", requerirAuth, (req, res) => {
   }
   const hoy = new Date();
   const periodo = req.query.periodo || `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
-  res.json({ periodo, rango: rangoFechasDelPeriodo(periodo), dias: filasDelPeriodoDeEmpleado(empleado, periodo) });
+  const rango = rangoFechasDelPeriodo(periodo);
+  const dias = filasDelPeriodoDeEmpleado(empleado, periodo);
+
+  // Dias en que le tocaba trabajar (segun la formula de su equipo) pero no
+  // hay ninguna fila cargada -- se mandan aparte como "ausencias" para que
+  // el front los resalte sin confundirlos con un fichaje incompleto (eso ya
+  // lo indica la alerta de la fila). Solo se puede calcular para los
+  // equipos con formula de turno conocida (mantenimiento y conserjeria);
+  // gente sin horario fijo (ej. Lisa Rios, Aaron Garcen) no tiene con que
+  // comparar, asi que no se le marca nada.
+  const ausencias = [];
+  if (rango) {
+    const esMantenimiento = GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado);
+    const esConserjeria = Object.prototype.hasOwnProperty.call(EQUIPO_CONSERJERIA, empleado);
+    if (esMantenimiento || esConserjeria) {
+      const fechasConFila = new Set(dias.map((d) => d.fecha));
+      const desde = new Date(rango.desde + "T00:00:00");
+      const hasta = new Date(rango.hasta + "T00:00:00");
+      for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
+        const iso = fechaISO(f);
+        if (fechasConFila.has(iso)) continue;
+        const turno = esMantenimiento ? turnoRealDelDia(empleado, f) : turnoConserjeriaDelDia(empleado, f);
+        const esDiaLibre = turno && (turno.tipo === "franco" || turno.tipo === "descanso");
+        if (turno && !esDiaLibre) ausencias.push({ fecha: iso, turno: turno.tipo });
+      }
+    }
+  }
+
+  res.json({ periodo, rango, dias, ausencias });
 });
 
 // Calendario de turnos del equipo de mantenimiento, un mes completo -- usa
