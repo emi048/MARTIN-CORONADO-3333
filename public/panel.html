@@ -1252,10 +1252,15 @@ async function buscarFichadasEmpleado() {
           <td></td>
         </tr>`;
       }
-      const obs = d.licencia_tipo ? `🏖️ ${d.licencia_tipo}` : (d.alerta || "");
+      const obsTardanza = d.llegadaTarde ? `🟡 Llegó ${d.minutosTarde} min tarde (tocaba ${d.horarioEsperado}hs)` : "";
+      const obsResto = d.licencia_tipo ? `🏖️ ${d.licencia_tipo}` : (d.alerta || "");
+      const obs = [obsTardanza, obsResto].filter(Boolean).join(" · ");
+      const ingresoTxt = d.ingreso
+        ? (d.llegadaTarde ? `<span style="color:var(--warn);font-weight:700">${d.ingreso}</span>` : d.ingreso)
+        : '<span style="color:var(--danger)">sin dato</span>';
       return `<tr>
         <td>${fecha}</td><td>${d.turno || "-"}</td>
-        <td>${d.ingreso || '<span style="color:var(--danger)">sin dato</span>'}</td>
+        <td>${ingresoTxt}</td>
         <td>${d.egreso || '<span style="color:var(--danger)">sin dato</span>'}</td>
         <td>${d.total_hs}</td><td>${d.h50}</td><td>${d.h100}</td><td>${obs}</td>
       </tr>`;

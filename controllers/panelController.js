@@ -363,7 +363,11 @@ router.get("/api/dias", requerirAuth, (req, res) => {
   const hoy = new Date();
   const periodo = req.query.periodo || `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
   const rango = rangoFechasDelPeriodo(periodo);
-  const dias = filasDelPeriodoDeEmpleado(empleado, periodo);
+  const diasCrudos = filasDelPeriodoDeEmpleado(empleado, periodo);
+
+  const esMantenimiento = GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado);
+  const esConserjeria = Object.prototype.hasOwnProperty.call(EQUIPO_CONSERJERIA, empleado);
+  const turnoEsperadoDelDia = (fecha) => (esMantenimiento ? turnoRealDelDia(empleado, fecha) : turnoConserjeriaDelDia(empleado, fecha));
 
   // Dias en que le tocaba trabajar (segun la formula de su equipo) pero no
   // hay ninguna fila cargada -- se mandan aparte como "ausencias" para que
@@ -373,22 +377,41 @@ router.get("/api/dias", requerirAuth, (req, res) => {
   // gente sin horario fijo (ej. Lisa Rios, Aaron Garcen) no tiene con que
   // comparar, asi que no se le marca nada.
   const ausencias = [];
-  if (rango) {
-    const esMantenimiento = GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado);
-    const esConserjeria = Object.prototype.hasOwnProperty.call(EQUIPO_CONSERJERIA, empleado);
-    if (esMantenimiento || esConserjeria) {
-      const fechasConFila = new Set(dias.map((d) => d.fecha));
-      const desde = new Date(rango.desde + "T00:00:00");
-      const hasta = new Date(rango.hasta + "T00:00:00");
-      for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
-        const iso = fechaISO(f);
-        if (fechasConFila.has(iso)) continue;
-        const turno = esMantenimiento ? turnoRealDelDia(empleado, f) : turnoConserjeriaDelDia(empleado, f);
-        const esDiaLibre = turno && (turno.tipo === "franco" || turno.tipo === "descanso");
-        if (turno && !esDiaLibre) ausencias.push({ fecha: iso, turno: turno.tipo });
-      }
+  if (rango && (esMantenimiento || esConserjeria)) {
+    const fechasConFila = new Set(diasCrudos.map((d) => d.fecha));
+    const desde = new Date(rango.desde + "T00:00:00");
+    const hasta = new Date(rango.hasta + "T00:00:00");
+    for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
+      const iso = fechaISO(f);
+      if (fechasConFila.has(iso)) continue;
+      const turno = turnoEsperadoDelDia(f);
+      const esDiaLibre = turno && (turno.tipo === "franco" || turno.tipo === "descanso");
+      if (turno && !esDiaLibre) ausencias.push({ fecha: iso, turno: turno.tipo });
     }
   }
+
+  // Llegadas tarde: entrada mas de 30 min despues del horario de inicio del
+  // turno que le tocaba ese dia especifico (turnoRealDelDia/turnoConserjeriaDelDia
+  // ya tienen en cuenta cambios de turno aprobados). Mismo alcance que las
+  // ausencias: solo mantenimiento y conserjeria, que son los unicos con un
+  // horario de entrada esperado conocido.
+  const TOLERANCIA_TARDE_MIN = 30;
+  const minutosDesdeMedianoche = (horaStr) => {
+    if (!horaStr) return null;
+    const [h, m] = horaStr.split(":").map(Number);
+    return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+  };
+  const dias = (esMantenimiento || esConserjeria)
+    ? diasCrudos.map((d) => {
+      if (!d.ingreso) return d;
+      const [y, m, day] = d.fecha.split("-").map(Number);
+      const turno = turnoEsperadoDelDia(new Date(y, m - 1, day));
+      const minEsperado = turno && turno.horario ? minutosDesdeMedianoche(turno.horario.in) : null;
+      const minReal = minutosDesdeMedianoche(d.ingreso);
+      if (minEsperado == null || minReal == null || minReal <= minEsperado + TOLERANCIA_TARDE_MIN) return d;
+      return { ...d, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
+    })
+    : diasCrudos;
 
   res.json({ periodo, rango, dias, ausencias });
 });
