@@ -19,7 +19,7 @@ const GRUPO_A = ["Diego Lastra", "Victor Cartaman"];
 const GRUPO_B = ["Alberto Reynoso", "Angel Cabrera"];
 const ORDEN_FRANCOS = ["Angel Cabrera", "Alberto Reynoso", "Victor Cartaman", "Diego Lastra"];
 
-const HORARIO_MAÑANA = { in: "06:00", out: "14:00" };
+const HORARIO_MAÑANA = { in: "07:00", out: "15:00" };
 const HORARIO_TARDE = { in: "13:00", out: "21:00" };
 const HORARIO_SAB_CORTO = { in: "08:00", out: "12:00" };
 const HORARIO_SAB_LARGO = { in: "09:00", out: "17:00" };
