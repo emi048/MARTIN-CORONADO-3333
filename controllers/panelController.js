@@ -412,15 +412,31 @@ router.get("/api/dias", requerirAuth, (req, res) => {
     const [h, m] = horaStr.split(":").map(Number);
     return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
   };
+  // El campo "turno" de la fila (filas_diarias) se completa por deteccion
+  // automatica a partir del horario de entrada/salida (motorCalculo.js,
+  // detectarTurno) y puede confundirse (ej: alguien entra 07:00 y queda
+  // marcado "tarde"). Para mantenimiento/conserjeria hay una fuente mas
+  // confiable: la formula de rotacion sincronizada con Google Calendar
+  // (turnoRealDelDia/turnoConserjeriaDelDia), que ya usamos para ausencias
+  // y llegadas tarde -- se pisa el turno mostrado con esa, sin tocar las
+  // horas ya calculadas (total_hs/h50/h100 siguen siendo las que ya estaban).
+  const ETIQUETA_TURNO = {
+    mañana: "Mañana", tarde: "Tarde", sabado_corto: "Sábado corto", sabado_largo: "Sábado largo",
+    domingo: "Domingo", franco: "Franco", descanso: "Descanso",
+  };
   const dias = (esMantenimiento || esConserjeria)
     ? diasCrudos.map((d) => {
-      if (!d.ingreso) return d;
       const [y, m, day] = d.fecha.split("-").map(Number);
       const turno = turnoEsperadoDelDia(new Date(y, m - 1, day));
+      const turnoCorregido = turno ? (ETIQUETA_TURNO[turno.tipo] || turno.tipo) : d.turno;
+
+      if (!d.ingreso) return { ...d, turno: turnoCorregido };
       const minEsperado = turno && turno.horario ? minutosDesdeMedianoche(turno.horario.in) : null;
       const minReal = minutosDesdeMedianoche(d.ingreso);
-      if (minEsperado == null || minReal == null || minReal <= minEsperado + TOLERANCIA_TARDE_MIN) return d;
-      return { ...d, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
+      if (minEsperado == null || minReal == null || minReal <= minEsperado + TOLERANCIA_TARDE_MIN) {
+        return { ...d, turno: turnoCorregido };
+      }
+      return { ...d, turno: turnoCorregido, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
     })
     : diasCrudos;
 
