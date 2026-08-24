@@ -335,19 +335,22 @@ function procesarRegistros(registros, rotacionInicialMañana = "A") {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Compensacion de sabado (mantenimiento): el sabado tiene una base de 4hs
-// de contrato que hay que cubrir trabajando de mas de lunes a viernes esa
-// misma semana (44hs en vez de las 40hs normales). Si no se cubre, cuando
-// llega el sabado las horas que faltan (hasta 4hs) NO cuentan como extra
-// -- esto es un REPORTE aparte, no toca calcularHoras ni los h50/h100 ya
-// guardados en filas_diarias, solo compara lo trabajado contra la regla
-// para saber a quien descontarle. Solo aplica a los 4 rotativos con
-// horario fijo conocido (GRUPO_A/GRUPO_B en turnosMantenimiento.js) --
-// Emiliano Badaracco y Leonel Babino quedan afuera, mismo criterio que ya
-// se usa para ausencias/llegadas tarde en el panel.
-const { GRUPO_A, GRUPO_B } = require("./turnosMantenimiento");
+// Compensacion de sabado: el sabado tiene una base de 4hs de contrato que
+// hay que cubrir trabajando de mas de lunes a viernes esa misma semana (el
+// contrato normal de la semana + 4hs, en vez de solo el contrato normal).
+// Si no se cubre, cuando llega el sabado las horas que faltan (hasta 4hs)
+// NO cuentan como extra -- esto es un REPORTE aparte, no toca calcularHoras
+// ni los h50/h100 ya guardados en filas_diarias, solo compara lo trabajado
+// contra la regla para saber a quien descontarle.
+//
+// Aplica a los 4 rotativos + Emiliano/Leonel (mantenimiento, horario fijo
+// via FIJOS_MANTENIMIENTO) y a Lisa Rios (conserjeria) -- el resto de
+// conserjeria no entra en esta regla. El contrato diario normal (lo que se
+// suma antes de agregar las 4hs del sabado) depende de cada persona: 8hs
+// parejo para mantenimiento, o lo que diga TURNOS_FIJOS_CONSERJERIA para
+// Lisa (9hs lunes a jueves, 8hs el viernes).
+const { GRUPO_A, GRUPO_B, FIJOS_MANTENIMIENTO } = require("./turnosMantenimiento");
 
-const OBJETIVO_SEMANAL_CON_SABADO = 44; // 40 (lun-vie) + 4 (sabado)
 const TOPE_DEFICIT_HS = 4; // el sabado solo tiene 4hs de base, no se puede deber mas que eso
 
 function lunesDeLaSemana(fecha) {
@@ -359,22 +362,35 @@ function lunesDeLaSemana(fecha) {
   return d;
 }
 
-// Cuenta los feriados lunes-a-viernes de la semana que empieza en `lunes`
-// (Date) -- recorre los 5 dias del calendario, no los que tengan fila
-// cargada (un feriado tipicamente NO tiene fila, porque nadie va a
-// trabajar, asi que contar solo filas existentes lo pasaba por alto).
-function feriadosDeLaSemana(lunes) {
-  let cantidad = 0;
+// Contrato normal de UN dia lunes-viernes para un empleado dentro del
+// alcance de esta regla (ver arriba). diaSemana: 1=lunes .. 5=viernes.
+function contratoDiarioLunesAViernes(empleado, diaSemana) {
+  const cfgConserjeria = TURNOS_FIJOS_CONSERJERIA[empleado];
+  if (cfgConserjeria) {
+    return diaSemana === 5 && cfgConserjeria.horasViernes !== undefined
+      ? cfgConserjeria.horasViernes
+      : cfgConserjeria.horasDia;
+  }
+  return 8; // mantenimiento (rotativo o fijo), parejo lunes a viernes
+}
+
+// Objetivo semanal (lunes a viernes + 4hs del sabado) para un empleado,
+// restando el contrato del dia por cada feriado que caiga esa semana --
+// recorre los 5 dias del calendario, no los que tengan fila cargada (un
+// feriado tipicamente NO tiene fila, porque nadie va a trabajar, asi que
+// contar solo filas existentes lo pasaba por alto).
+function objetivoDeLaSemana(empleado, lunes) {
+  let objetivo = TOPE_DEFICIT_HS;
   for (let i = 0; i < 5; i++) {
     const d = new Date(lunes);
     d.setDate(d.getDate() + i);
-    if (FERIADOS.has(dateKey(d))) cantidad++;
+    if (!FERIADOS.has(dateKey(d))) objetivo += contratoDiarioLunesAViernes(empleado, i + 1);
   }
-  return cantidad;
+  return objetivo;
 }
 
 function calcularDeficitSabadoSemanal(filas) {
-  const equipo = new Set([...GRUPO_A, ...GRUPO_B]);
+  const equipo = new Set([...GRUPO_A, ...GRUPO_B, ...Object.keys(FIJOS_MANTENIMIENTO), "Lisa Rios"]);
   const porSemana = {}; // clave: "Empleado|YYYY-MM-DD del lunes"
 
   for (const f of filas) {
@@ -393,7 +409,7 @@ function calcularDeficitSabadoSemanal(filas) {
 
   return Object.values(porSemana)
     .map((s) => {
-      const objetivo = OBJETIVO_SEMANAL_CON_SABADO - feriadosDeLaSemana(s.lunes) * 8;
+      const objetivo = objetivoDeLaSemana(s.empleado, s.lunes);
       const deficit = Math.min(TOPE_DEFICIT_HS, Math.max(0, objetivo - s.horasTrabajadas));
       return { empleado: s.empleado, semanaLunes: s.semanaLunes, horasTrabajadas: Math.round(s.horasTrabajadas * 100) / 100, objetivo, deficit };
     })

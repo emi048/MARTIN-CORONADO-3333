@@ -25,6 +25,15 @@ const HORARIO_SAB_CORTO = { in: "08:00", out: "12:00" };
 const HORARIO_SAB_LARGO = { in: "09:00", out: "17:00" };
 const HORARIO_DOM = { in: "09:00", out: "17:00" };
 
+// Emiliano y Leonel no rotan (no forman parte de GRUPO_A/GRUPO_B) -- tienen
+// un horario fijo propio, siempre el mismo lunes a viernes. Franco fijo los
+// domingos. horarioSabado en null significa que no tiene sabado asignado
+// (cubre las 4hs de contrato del sabado trabajando de mas lunes a viernes).
+const FIJOS_MANTENIMIENTO = {
+  "Emiliano Badaracco": { horario: { in: "09:00", out: "17:00" }, horarioSabado: { in: "09:00", out: "13:00" } },
+  "Leonel Babino":      { horario: { in: "09:00", out: "17:00" }, horarioSabado: null },
+};
+
 function diffDias(a, b) {
   const aMedianoche = new Date(a.getFullYear(), a.getMonth(), a.getDate());
   const bMedianoche = new Date(b.getFullYear(), b.getMonth(), b.getDate());
@@ -36,7 +45,8 @@ function mod(n, m) {
 }
 
 function esDelEquipo(empleado) {
-  return GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado);
+  return GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado)
+    || Object.prototype.hasOwnProperty.call(FIJOS_MANTENIMIENTO, empleado);
 }
 
 // Semana (lunes 00:00) a la que pertenece una fecha cualquiera.
@@ -80,7 +90,14 @@ function rolesDelFinde(fecha) {
 // Devuelve el turno de un empleado del equipo de mantenimiento en una fecha:
 // { tipo: "mañana"|"tarde"|"sabado_corto"|"sabado_largo"|"domingo"|"franco", horario: {in,out}|null }
 function turnoDelDia(empleado, fecha) {
-  if (!esDelEquipo(empleado)) return null;
+  const fijo = FIJOS_MANTENIMIENTO[empleado];
+  if (fijo) {
+    const dowFijo = fecha.getDay();
+    if (dowFijo === 0) return { tipo: "franco", horario: null };
+    if (dowFijo === 6) return fijo.horarioSabado ? { tipo: "sabado_fijo", horario: fijo.horarioSabado } : { tipo: "franco", horario: null };
+    return { tipo: "fijo", horario: fijo.horario };
+  }
+  if (!GRUPO_A.includes(empleado) && !GRUPO_B.includes(empleado)) return null;
   const dow = fecha.getDay(); // 0=domingo..6=sabado
 
   if (dow >= 1 && dow <= 5) {
@@ -117,4 +134,4 @@ function turnoRealDelDia(empleado, fecha) {
   return turnoDelDia(empleado, fecha);
 }
 
-module.exports = { turnoDelDia, turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B, ORDEN_FRANCOS };
+module.exports = { turnoDelDia, turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B, ORDEN_FRANCOS, FIJOS_MANTENIMIENTO };

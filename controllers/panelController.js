@@ -15,9 +15,10 @@ const {
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   pedidosTotalesPorEmpleado, periodosRecientes,
   crearEmpleadoApp, listarEmpleadosApp, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
+  esEventoRegistrado,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
-const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
+const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = require("../services/turnosConserjeria");
 const { twilioClient } = require("../services/twilioClient");
 const whatsapp = require("./whatsappController");
@@ -365,9 +366,23 @@ router.get("/api/dias", requerirAuth, (req, res) => {
   const rango = rangoFechasDelPeriodo(periodo);
   const diasCrudos = filasDelPeriodoDeEmpleado(empleado, periodo);
 
-  const esMantenimiento = GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado);
+  const esMantenimiento = esDelEquipoMantenimiento(empleado);
   const esConserjeria = Object.prototype.hasOwnProperty.call(EQUIPO_CONSERJERIA, empleado);
-  const turnoEsperadoDelDia = (fecha) => (esMantenimiento ? turnoRealDelDia(empleado, fecha) : turnoConserjeriaDelDia(empleado, fecha));
+  // Martin Torres: el dia siguiente a un evento/poker entra a las 9 en vez
+  // de las 7 (se queda hasta tarde la noche anterior) -- no se lo marca
+  // como llegada tarde, se corre el horario esperado ese dia puntual. Solo
+  // el aplica esta excepcion, nadie mas.
+  const turnoEsperadoDelDia = (fecha) => {
+    const turno = esMantenimiento ? turnoRealDelDia(empleado, fecha) : turnoConserjeriaDelDia(empleado, fecha);
+    if (empleado === "Martin Torres" && turno && turno.horario) {
+      const ayerDeFecha = new Date(fecha);
+      ayerDeFecha.setDate(ayerDeFecha.getDate() - 1);
+      if (esEventoRegistrado(empleado, fechaISO(ayerDeFecha))) {
+        return { ...turno, horario: { ...turno.horario, in: "09:00" } };
+      }
+    }
+    return turno;
+  };
 
   // Dias en que le tocaba trabajar (segun la formula de su equipo) pero no
   // hay ninguna fila cargada -- se mandan aparte como "ausencias" para que
@@ -440,10 +455,10 @@ router.get("/api/dias", requerirAuth, (req, res) => {
     })
     : diasCrudos;
 
-  // Solo para los 4 rotativos de mantenimiento con horario conocido: quien
-  // no cubrio, de lunes a viernes, las 4hs de contrato del sabado (ver
+  // Mantenimiento con horario conocido + Lisa Rios: quien no cubrio, de
+  // lunes a viernes, las 4hs de contrato del sabado (ver
   // calcularDeficitSabadoSemanal en motorCalculo.js para la regla completa).
-  const deficitSabado = esMantenimiento
+  const deficitSabado = (esMantenimiento || empleado === "Lisa Rios")
     ? calcularDeficitSabadoSemanal(diasCrudos.map((d) => ({ empleado: d.empleado, fecha: d.fecha, totalHs: d.total_hs })))
     : [];
 
