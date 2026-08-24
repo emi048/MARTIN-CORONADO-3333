@@ -18,7 +18,7 @@ const HORARIO_SAB_LISA = { in: "13:00", out: "22:00" };
 const EQUIPO = {
   "Martin Torres":          { turno: "mañana", horario: HORARIO_MAÑANA, francoSemanal: 0 },
   "Veronica Montenegro":    { turno: "mañana", horario: HORARIO_MAÑANA, francoSemanal: 0, horarioSabado: HORARIO_SAB_VERONICA },
-  "Maria Benitez Morinigo": { turno: "tarde",  horario: HORARIO_TARDE,  francoSemanal: 0 },
+  "Maria Benitez Morinigo": { turno: "tarde",  horario: HORARIO_TARDE,  francoSemanal: 6 },
   "Yesica Alcaraz":         { turno: "tarde",  horario: HORARIO_TARDE,  francoSemanal: 0 },
   "Sebastian Galeano":      { turno: "tarde",  horario: HORARIO_TARDE,  francoSemanal: 6 },
   "Lisa Rios":              { turno: "mañana", horario: HORARIO_MAÑANA, francoSemanal: 0, horarioSabado: HORARIO_SAB_LISA },

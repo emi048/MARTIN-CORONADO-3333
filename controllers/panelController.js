@@ -415,6 +415,7 @@ router.get("/api/dias", requerirAuth, (req, res) => {
     for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
       const iso = fechaISO(f);
       if (fechasConFila.has(iso)) continue;
+      if (FERIADOS.has(iso)) continue; // feriado: no se espera que venga, no es ausencia
       const turno = turnoEsperadoDelDia(f);
       const esDiaLibre = turno && (turno.tipo === "franco" || turno.tipo === "descanso");
       if (!turno || esDiaLibre) continue;
