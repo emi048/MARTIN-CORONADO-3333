@@ -384,13 +384,25 @@ router.get("/api/dias", requerirAuth, (req, res) => {
     return turno;
   };
 
+  // Mantenimiento con horario conocido + Lisa Rios: quien no cubrio, de
+  // lunes a viernes, las 4hs de contrato del sabado (ver
+  // calcularDeficitSabadoSemanal en motorCalculo.js para la regla completa).
+  // Se calcula antes que las ausencias para poder distinguir, en el sabado
+  // que falta la fila, si fue compensado durante la semana (deficit=0 esa
+  // semana) o si realmente falto sin cubrir.
+  const enReglaSabado = esMantenimiento || empleado === "Lisa Rios";
+  const deficitSabado = enReglaSabado
+    ? calcularDeficitSabadoSemanal(diasCrudos.map((d) => ({ empleado: d.empleado, fecha: d.fecha, totalHs: d.total_hs })))
+    : [];
+  const semanasConDeficit = new Set(deficitSabado.map((d) => d.semanaLunes));
+
   // Dias en que le tocaba trabajar (segun la formula de su equipo) pero no
   // hay ninguna fila cargada -- se mandan aparte como "ausencias" para que
   // el front los resalte sin confundirlos con un fichaje incompleto (eso ya
   // lo indica la alerta de la fila). Solo se puede calcular para los
   // equipos con formula de turno conocida (mantenimiento y conserjeria);
-  // gente sin horario fijo (ej. Lisa Rios, Aaron Garcen) no tiene con que
-  // comparar, asi que no se le marca nada.
+  // gente sin horario fijo (ej. Aaron Garcen) no tiene con que comparar,
+  // asi que no se le marca nada.
   const ausencias = [];
   if (rango && (esMantenimiento || esConserjeria)) {
     const fechasConFila = new Set(diasCrudos.map((d) => d.fecha));
@@ -412,7 +424,20 @@ router.get("/api/dias", requerirAuth, (req, res) => {
       if (fechasConFila.has(iso)) continue;
       const turno = turnoEsperadoDelDia(f);
       const esDiaLibre = turno && (turno.tipo === "franco" || turno.tipo === "descanso");
-      if (turno && !esDiaLibre) ausencias.push({ fecha: iso, turno: turno.tipo });
+      if (!turno || esDiaLibre) continue;
+
+      // Sabado sin fichada, pero esa semana ya cubrio las 4hs de contrato
+      // trabajando de mas lunes a viernes -- no es una falta real, se
+      // marca compensado en vez de ausente.
+      if (f.getDay() === 6 && enReglaSabado) {
+        const lunesDeEstaSemana = new Date(f);
+        lunesDeEstaSemana.setDate(lunesDeEstaSemana.getDate() - 5);
+        if (!semanasConDeficit.has(fechaISO(lunesDeEstaSemana))) {
+          ausencias.push({ fecha: iso, turno: turno.tipo, compensado: true });
+          continue;
+        }
+      }
+      ausencias.push({ fecha: iso, turno: turno.tipo });
     }
   }
 
@@ -454,13 +479,6 @@ router.get("/api/dias", requerirAuth, (req, res) => {
       return { ...d, turno: turnoCorregido, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
     })
     : diasCrudos;
-
-  // Mantenimiento con horario conocido + Lisa Rios: quien no cubrio, de
-  // lunes a viernes, las 4hs de contrato del sabado (ver
-  // calcularDeficitSabadoSemanal en motorCalculo.js para la regla completa).
-  const deficitSabado = (esMantenimiento || empleado === "Lisa Rios")
-    ? calcularDeficitSabadoSemanal(diasCrudos.map((d) => ({ empleado: d.empleado, fecha: d.fecha, totalHs: d.total_hs })))
-    : [];
 
   res.json({ periodo, rango, dias, ausencias, deficitSabado });
 });

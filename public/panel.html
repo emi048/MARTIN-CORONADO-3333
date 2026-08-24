@@ -1252,12 +1252,19 @@ async function buscarFichadasEmpleado() {
     // ordenados por fecha, para que se vea todo el período de corrido.
     const filas = [
       ...data.dias.map((d) => ({ ...d, ausente: false })),
-      ...(data.ausencias || []).map((a) => ({ fecha: a.fecha, turno: a.turno, ausente: true })),
+      ...(data.ausencias || []).map((a) => ({ fecha: a.fecha, turno: a.turno, ausente: true, compensado: !!a.compensado })),
     ].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
     if (filas.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="vacio">Sin fichadas para este período</td></tr>'; return; }
     tbody.innerHTML = filas.map((d) => {
       const fecha = d.fecha.split("-").reverse().join("/");
+      if (d.ausente && d.compensado) {
+        return `<tr style="background:rgba(62,207,142,0.08)">
+          <td>${fecha}</td><td>${d.turno || "-"}</td>
+          <td colspan="5" style="color:var(--ok);font-weight:700">✅ SÁBADO COMPENSADO DURANTE LA SEMANA</td>
+          <td></td>
+        </tr>`;
+      }
       if (d.ausente) {
         return `<tr style="background:rgba(229,72,77,0.08)">
           <td>${fecha}</td><td>${d.turno || "-"}</td>
