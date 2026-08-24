@@ -407,18 +407,11 @@ router.get("/api/dias", requerirAuth, (req, res) => {
   if (rango && (esMantenimiento || esConserjeria)) {
     const fechasConFila = new Set(diasCrudos.map((d) => d.fecha));
     const desde = new Date(rango.desde + "T00:00:00");
-    // rango.hasta es la ULTIMA fecha con datos cargados (ver rangoFechasDelPeriodo),
-    // no necesariamente el ultimo dia real del periodo -- si el Excel todavia
-    // no se importo para ayer/hoy, esos dias quedarian afuera del chequeo de
-    // ausencias aunque ya deberian contar. Para el periodo actual (el unico
-    // en el que esto puede pasar) se extiende el chequeo hasta ayer; en
-    // periodos viejos/cerrados no se toca, ahi rango.hasta ya es definitivo.
-    const esPeriodoActual = periodo === `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
-    const ayer = new Date(hoy);
-    ayer.setHours(0, 0, 0, 0);
-    ayer.setDate(ayer.getDate() - 1);
-    const hastaCargada = new Date(rango.hasta + "T00:00:00");
-    const hasta = esPeriodoActual && ayer > hastaCargada ? ayer : hastaCargada;
+    // El chequeo de ausencias llega solo hasta rango.hasta (la ULTIMA fecha
+    // con datos cargados, ver rangoFechasDelPeriodo) -- no se extiende mas
+    // alla aunque haya pasado mas tiempo real, para no marcar como ausente
+    // dias de los que todavia no se cargo ningun excel.
+    const hasta = new Date(rango.hasta + "T00:00:00");
     for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
       const iso = fechaISO(f);
       if (fechasConFila.has(iso)) continue;
