@@ -334,8 +334,75 @@ function procesarRegistros(registros, rotacionInicialMañana = "A") {
   return { filas, resumen, alertasTotal };
 }
 
+// ─────────────────────────────────────────────────────────────
+// Compensacion de sabado (mantenimiento): el sabado tiene una base de 4hs
+// de contrato que hay que cubrir trabajando de mas de lunes a viernes esa
+// misma semana (44hs en vez de las 40hs normales). Si no se cubre, cuando
+// llega el sabado las horas que faltan (hasta 4hs) NO cuentan como extra
+// -- esto es un REPORTE aparte, no toca calcularHoras ni los h50/h100 ya
+// guardados en filas_diarias, solo compara lo trabajado contra la regla
+// para saber a quien descontarle. Solo aplica a los 4 rotativos con
+// horario fijo conocido (GRUPO_A/GRUPO_B en turnosMantenimiento.js) --
+// Emiliano Badaracco y Leonel Babino quedan afuera, mismo criterio que ya
+// se usa para ausencias/llegadas tarde en el panel.
+const { GRUPO_A, GRUPO_B } = require("./turnosMantenimiento");
+
+const OBJETIVO_SEMANAL_CON_SABADO = 44; // 40 (lun-vie) + 4 (sabado)
+const TOPE_DEFICIT_HS = 4; // el sabado solo tiene 4hs de base, no se puede deber mas que eso
+
+function lunesDeLaSemana(fecha) {
+  const d = new Date(fecha);
+  const diaSemana = d.getDay();
+  const offset = diaSemana === 0 ? -6 : 1 - diaSemana; // domingo cuenta como fin de la semana anterior
+  d.setDate(d.getDate() + offset);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Cuenta los feriados lunes-a-viernes de la semana que empieza en `lunes`
+// (Date) -- recorre los 5 dias del calendario, no los que tengan fila
+// cargada (un feriado tipicamente NO tiene fila, porque nadie va a
+// trabajar, asi que contar solo filas existentes lo pasaba por alto).
+function feriadosDeLaSemana(lunes) {
+  let cantidad = 0;
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(lunes);
+    d.setDate(d.getDate() + i);
+    if (FERIADOS.has(dateKey(d))) cantidad++;
+  }
+  return cantidad;
+}
+
+function calcularDeficitSabadoSemanal(filas) {
+  const equipo = new Set([...GRUPO_A, ...GRUPO_B]);
+  const porSemana = {}; // clave: "Empleado|YYYY-MM-DD del lunes"
+
+  for (const f of filas) {
+    if (!equipo.has(f.empleado)) continue;
+    const [y, m, d] = f.fecha.split("-").map(Number);
+    const fecha = new Date(y, m - 1, d);
+    const diaSemana = fecha.getDay();
+    if (diaSemana === 0 || diaSemana === 6) continue; // solo lunes(1) a viernes(5)
+
+    const lunes = lunesDeLaSemana(fecha);
+    const claveLunes = dateKey(lunes);
+    const clave = `${f.empleado}|${claveLunes}`;
+    if (!porSemana[clave]) porSemana[clave] = { empleado: f.empleado, semanaLunes: claveLunes, lunes, horasTrabajadas: 0 };
+    porSemana[clave].horasTrabajadas += f.totalHs;
+  }
+
+  return Object.values(porSemana)
+    .map((s) => {
+      const objetivo = OBJETIVO_SEMANAL_CON_SABADO - feriadosDeLaSemana(s.lunes) * 8;
+      const deficit = Math.min(TOPE_DEFICIT_HS, Math.max(0, objetivo - s.horasTrabajadas));
+      return { empleado: s.empleado, semanaLunes: s.semanaLunes, horasTrabajadas: Math.round(s.horasTrabajadas * 100) / 100, objetivo, deficit };
+    })
+    .filter((s) => s.deficit > 0)
+    .sort((a, b) => a.empleado.localeCompare(b.empleado) || a.semanaLunes.localeCompare(b.semanaLunes));
+}
+
 module.exports = {
   normalizarNombre, getSectorDeEmpleado, todosLosEmpleados, dateKey, getISOWeek,
   calcularHoras, detectarTurno, procesarRegistros, SECTORES, FERIADOS, TURNOS_FIJOS_CONSERJERIA,
-  esDiaDeEvento,
+  esDiaDeEvento, calcularDeficitSabadoSemanal,
 };

@@ -417,6 +417,13 @@
         <thead><tr><th>Fecha</th><th>Turno</th><th>Ingreso</th><th>Egreso</th><th>Hs.</th><th>50%</th><th>100%</th><th>Observación</th></tr></thead>
         <tbody id="tabla-fichadas-empleado"><tr><td colspan="8" class="vacio">Elegí un empleado y buscá</td></tr></tbody>
       </table>
+      <div id="bloque-deficit-sabado" style="display:none;margin-top:16px">
+        <h3 style="margin-bottom:8px">⚠️ Sábados sin cubrir</h3>
+        <table>
+          <thead><tr><th>Semana (lunes)</th><th>Hs. trabajadas lun-vie</th><th>Objetivo</th><th>Hs. a descontar</th></tr></thead>
+          <tbody id="tabla-deficit-sabado"></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="tab-licencias" style="display:none">
@@ -1271,6 +1278,21 @@ async function buscarFichadasEmpleado() {
         <td>${d.total_hs}</td><td>${d.h50}</td><td>${d.h100}</td><td>${obs}</td>
       </tr>`;
     }).join("");
+
+    const bloqueDeficit = document.getElementById("bloque-deficit-sabado");
+    const deficits = data.deficitSabado || [];
+    if (deficits.length === 0) {
+      bloqueDeficit.style.display = "none";
+    } else {
+      bloqueDeficit.style.display = "block";
+      document.getElementById("tabla-deficit-sabado").innerHTML = deficits.map((s) => `
+        <tr>
+          <td>${s.semanaLunes.split("-").reverse().join("/")}</td>
+          <td>${s.horasTrabajadas}</td>
+          <td>${s.objetivo}</td>
+          <td style="color:var(--warn);font-weight:700">${s.deficit}h</td>
+        </tr>`).join("");
+    }
   } catch (e) { mostrarToast(e.message); }
 }
 

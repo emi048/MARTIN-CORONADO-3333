@@ -1,5 +1,5 @@
 const XLSX = require("xlsx");
-const { getSectorDeEmpleado } = require("./motorCalculo");
+const { getSectorDeEmpleado, calcularDeficitSabadoSemanal } = require("./motorCalculo");
 
 function generarExcel(filas, resumen) {
   const wb = XLSX.utils.book_new();
@@ -117,6 +117,33 @@ function generarExcel(filas, resumen) {
   ws2["!cols"] = [18, 28, 16, 20, 18, 18].map(w => ({ wch: w }));
   ws2["!freeze"] = { xSplit: 0, ySplit: 1 };
   XLSX.utils.book_append_sheet(wb, ws2, "Resumen por Sector");
+
+  // Mantenimiento: quien no cubrio, trabajando de mas de lunes a viernes,
+  // las 4hs de contrato del sabado -- ver calcularDeficitSabadoSemanal en
+  // motorCalculo.js para el detalle de la regla. Solo se arma si hay algo
+  // que reportar (nadie con deficit -> no se agrega la hoja).
+  const deficits = calcularDeficitSabadoSemanal(filasMantenimiento);
+  if (deficits.length > 0) {
+    const ws3Data = [
+      ["Empleado", "Semana (lunes)", "Hs. trabajadas lun-vie", "Objetivo", "Hs. a descontar"].map(h => ({ v: h, s: sH })),
+    ];
+    deficits.forEach((d, idx) => {
+      const bg = idx % 2 === 0 ? C_BL : C_ALT;
+      const c = (v, bold) => ({ v, s: { ...sB, fill: { fgColor: { rgb: bg } }, font: { ...sB.font, bold: !!bold } } });
+      ws3Data.push([
+        c(d.empleado, true), c(d.semanaLunes), c(d.horasTrabajadas), c(d.objetivo), c(d.deficit, true),
+      ]);
+    });
+    const totalDeficit = Math.round(deficits.reduce((a, d) => a + d.deficit, 0) * 100) / 100;
+    ws3Data.push([
+      { v: "TOTAL A DESCONTAR", s: sH }, { v: "", s: sH }, { v: "", s: sH }, { v: "", s: sH },
+      { v: totalDeficit, s: sH },
+    ]);
+    const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+    ws3["!cols"] = [28, 16, 20, 12, 16].map(w => ({ wch: w }));
+    ws3["!freeze"] = { xSplit: 0, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, ws3, "Incumplimiento Sábado");
+  }
 
   return XLSX.write(wb, { bookType: "xlsx", type: "buffer", cellStyles: true });
 }

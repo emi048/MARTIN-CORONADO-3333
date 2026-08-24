@@ -16,7 +16,7 @@ const {
   pedidosTotalesPorEmpleado, periodosRecientes,
   crearEmpleadoApp, listarEmpleadosApp, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
 } = require("../services/db");
-const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS } = require("../services/motorCalculo");
+const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = require("../services/turnosConserjeria");
 const { twilioClient } = require("../services/twilioClient");
@@ -440,7 +440,14 @@ router.get("/api/dias", requerirAuth, (req, res) => {
     })
     : diasCrudos;
 
-  res.json({ periodo, rango, dias, ausencias });
+  // Solo para los 4 rotativos de mantenimiento con horario conocido: quien
+  // no cubrio, de lunes a viernes, las 4hs de contrato del sabado (ver
+  // calcularDeficitSabadoSemanal en motorCalculo.js para la regla completa).
+  const deficitSabado = esMantenimiento
+    ? calcularDeficitSabadoSemanal(diasCrudos.map((d) => ({ empleado: d.empleado, fecha: d.fecha, totalHs: d.total_hs })))
+    : [];
+
+  res.json({ periodo, rango, dias, ausencias, deficitSabado });
 });
 
 // Calendario de turnos del equipo de mantenimiento, un mes completo -- usa
