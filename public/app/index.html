@@ -324,6 +324,13 @@
   .modal-error { color: var(--danger); font-size: 13px; min-height: 16px; }
   .modal-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
 
+  .solicitud-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+  .solicitud-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .solicitud-tipo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; }
+  .solicitud-detalle { font-size: 13.5px; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
+  .solicitud-comentario { font-size: 12.5px; color: var(--text-muted); font-style: italic; margin-bottom: 4px; }
+  .solicitud-fechas { font-size: 11.5px; color: var(--text-muted); }
+
   #app-screen { display: none; }
   .oculto { display: none !important; }
 </style>
@@ -923,15 +930,53 @@ async function enviarCambio() {
   }
 }
 
+function formatearFechaHora(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm} ${hh}:${mi}`;
+}
+
+// Detalle en texto de exactamente que se pidio -- una correccion puede
+// tocar ingreso, egreso, o los dos; y un cambio de turno se lee distinto
+// segun si el que esta mirando es quien lo pidio (empleado_a) o el
+// compañero del otro lado (empleado_b), que no lo inicio pero tambien le
+// mueve el dia.
+function detalleSolicitudCorreccion(s) {
+  const partes = [];
+  if (s.ingreso_propuesto) partes.push(`ingreso propuesto ${s.ingreso_propuesto}`);
+  if (s.egreso_propuesto) partes.push(`egreso propuesto ${s.egreso_propuesto}`);
+  return `${formatearFecha(s.fecha)} — ${partes.join(" · ") || "sin horario propuesto"}`;
+}
+
+function detalleSolicitudCambio(s, miNombre) {
+  const fA = formatearFecha(s.fecha_a);
+  const fB = formatearFecha(s.fecha_b);
+  if (s.empleado_a === miNombre) {
+    return `Pediste ceder tu turno del ${fA} por el de ${s.empleado_b} del ${fB}`;
+  }
+  return `${s.empleado_a} pidió cambiar su turno del ${fA} por el tuyo del ${fB}`;
+}
+
 async function cargarSolicitudes() {
   const el = document.getElementById("solicitudes-contenido");
   el.innerHTML = `<div class="vacio">Cargando…</div>`;
+  const miNombre = localStorage.getItem("app_nombre") || "";
   try {
     const data = await apiFetch("/app/api/mis-solicitudes");
     const items = [
-      ...(data.correcciones || []).map((s) => ({ tipo: "Corrección", detalle: formatearFecha(s.fecha), estado: s.estado, orden: s.creado_en })),
-      ...(data.cambios || []).map((s) => ({ tipo: "Cambio de turno", detalle: `${formatearFecha(s.fecha_a)} ↔ ${formatearFecha(s.fecha_b)}`, estado: s.estado, orden: s.creado_en })),
-    ].sort((a, b) => b.orden.localeCompare(a.orden));
+      ...(data.correcciones || []).map((s) => ({
+        tipo: "Corrección", detalle: detalleSolicitudCorreccion(s), comentario: s.mensaje_original || "",
+        estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
+      })),
+      ...(data.cambios || []).map((s) => ({
+        tipo: "Cambio de turno", detalle: detalleSolicitudCambio(s, miNombre), comentario: "",
+        estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
+      })),
+    ].sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
 
     if (items.length === 0) {
       el.innerHTML = `<div class="vacio">Todavía no hiciste ningún pedido</div>`;
@@ -942,9 +987,20 @@ async function cargarSolicitudes() {
       if (s.estado === "pendiente") badge = `<span class="badge badge-warn">Pendiente</span>`;
       if (s.estado === "aprobada") badge = `<span class="badge badge-ok">Aprobada</span>`;
       if (s.estado === "rechazada") badge = `<span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Rechazada</span>`;
-      return `<div class="fila-hora">
-        <div class="fecha">${s.tipo}<br><span class="dia-semana">${s.detalle}</span></div>
-        <div class="horas">${badge}</div>
+
+      const comentario = s.comentario ? `<div class="solicitud-comentario">“${escapeHtml(s.comentario)}”</div>` : "";
+      const fechas = s.resueltoEn
+        ? `Pedido el ${formatearFechaHora(s.creadoEn)} · Resuelto el ${formatearFechaHora(s.resueltoEn)}`
+        : `Pedido el ${formatearFechaHora(s.creadoEn)}`;
+
+      return `<div class="solicitud-item">
+        <div class="solicitud-top">
+          <span class="solicitud-tipo">${s.tipo}</span>
+          ${badge}
+        </div>
+        <div class="solicitud-detalle">${s.detalle}</div>
+        ${comentario}
+        <div class="solicitud-fechas">${fechas}</div>
       </div>`;
     }).join("");
   } catch (err) {

@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v12"; // v12: tarjeta de recorrido diario mas identificable + boton de volver fuera de Inicio
+const CACHE = "fich-coronado-v13"; // v13: mis solicitudes mas detallado (que se pidio, cuando, cuando se resolvio)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
