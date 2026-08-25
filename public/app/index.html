@@ -188,6 +188,50 @@
   }
   .config-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
 
+  .acciones-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .accion-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 4px; color: var(--text); font-size: 11.5px; font-weight: 600; text-align: center;
+    cursor: pointer; font-family: var(--font-body); transition: background 0.15s, border-color 0.15s;
+  }
+  .accion-btn svg { width: 20px; height: 20px; color: var(--accent-2); }
+  .accion-btn:hover { background: rgba(124,108,240,0.10); border-color: rgba(124,108,240,0.35); }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: var(--overlay-bg);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 70;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.abierto { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px 18px 0 0;
+    width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;
+    padding: 20px 18px 28px; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .modal-overlay.abierto .modal-box { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-header h3 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; }
+  .modal-cerrar {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; flex-shrink: 0;
+  }
+  .modal-form { display: flex; flex-direction: column; gap: 10px; }
+  .modal-form label { font-size: 12px; color: var(--text-muted); margin-bottom: -4px; }
+  .modal-form input, .modal-form select, .modal-form textarea {
+    padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 15px; font-family: inherit;
+  }
+  .modal-form input:focus, .modal-form select:focus, .modal-form textarea:focus { outline: none; border-color: var(--accent); }
+  .modal-form textarea { resize: vertical; min-height: 60px; }
+  .modal-form button {
+    padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; margin-top: 4px;
+  }
+  .modal-error { color: var(--danger); font-size: 13px; min-height: 16px; }
+  .modal-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
+
   #app-screen { display: none; }
   .oculto { display: none !important; }
 </style>
@@ -280,6 +324,24 @@
         <div class="card-titulo">Hoy</div>
         <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
       </div>
+
+      <div class="card">
+        <div class="card-titulo">Trámites</div>
+        <div class="acciones-grid">
+          <button class="accion-btn" onclick="abrirModal('correccion')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Corregir horas
+          </button>
+          <button class="accion-btn oculto" id="btn-cambio-turno" onclick="abrirModal('cambio')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Cambio de turno
+          </button>
+          <button class="accion-btn" onclick="abrirModal('solicitudes')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Mis solicitudes
+          </button>
+        </div>
+      </div>
     </section>
 
     <section id="tab-fichadas" class="oculto">
@@ -313,6 +375,47 @@
       </div>
     </section>
   </main>
+
+  <div class="modal-overlay" id="modal-overlay" onclick="cerrarModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div id="modal-correccion" class="modal-contenido oculto">
+        <div class="modal-header"><h3>Corregir horas</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-form">
+          <label>Fecha</label>
+          <input type="date" id="corr-fecha">
+          <label>Ingreso correcto (opcional)</label>
+          <input type="time" id="corr-ingreso">
+          <label>Egreso correcto (opcional)</label>
+          <input type="time" id="corr-egreso">
+          <label>Comentario (opcional)</label>
+          <textarea id="corr-mensaje" placeholder="Contale al admin qué pasó ese día"></textarea>
+          <button onclick="enviarCorreccion()">Enviar pedido</button>
+          <div class="modal-error" id="corr-error"></div>
+          <div class="modal-ok" id="corr-ok"></div>
+        </div>
+      </div>
+
+      <div id="modal-cambio" class="modal-contenido oculto">
+        <div class="modal-header"><h3>Cambio de turno</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="modal-form">
+          <label>Tu turno que cedés</label>
+          <input type="date" id="camb-fecha-a">
+          <label>Compañero</label>
+          <select id="camb-companero"></select>
+          <label>Turno del compañero que tomás</label>
+          <input type="date" id="camb-fecha-b">
+          <button onclick="enviarCambio()">Enviar pedido</button>
+          <div class="modal-error" id="camb-error"></div>
+          <div class="modal-ok" id="camb-ok"></div>
+        </div>
+      </div>
+
+      <div id="modal-solicitudes" class="modal-contenido oculto">
+        <div class="modal-header"><h3>Mis solicitudes</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div id="solicitudes-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -450,6 +553,7 @@ function mostrarApp() {
   cargarHoy();
   cargarHorario();
   cargarFichadas();
+  cargarCompaneros();
 }
 
 function abrirSidebar() {
@@ -505,6 +609,108 @@ async function cargarHoy() {
     }
   } catch (err) {
     if (err.message === "Sesión vencida") return;
+  }
+}
+
+// Compañeros validos para pedir cambio de turno -- viene vacio si el
+// empleado no es del equipo rotativo de mantenimiento, en cuyo caso el
+// boton de "Cambio de turno" queda oculto (esa feature no le aplica).
+let COMPANEROS = [];
+async function cargarCompaneros() {
+  try {
+    const data = await apiFetch("/app/api/companeros");
+    COMPANEROS = data.companeros || [];
+    document.getElementById("btn-cambio-turno").classList.toggle("oculto", COMPANEROS.length === 0);
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+  }
+}
+
+function abrirModal(tipo) {
+  document.querySelectorAll(".modal-contenido").forEach((m) => m.classList.add("oculto"));
+  document.getElementById("modal-" + tipo).classList.remove("oculto");
+  document.getElementById("modal-overlay").classList.add("abierto");
+  if (tipo === "correccion" && !document.getElementById("corr-fecha").value) {
+    document.getElementById("corr-fecha").value = fechaISO(new Date());
+  }
+  if (tipo === "cambio") {
+    document.getElementById("camb-companero").innerHTML = COMPANEROS.map((c) => `<option value="${c}">${c}</option>`).join("");
+  }
+  if (tipo === "solicitudes") cargarSolicitudes();
+}
+
+function cerrarModal() {
+  document.getElementById("modal-overlay").classList.remove("abierto");
+}
+
+async function enviarCorreccion() {
+  const fecha = document.getElementById("corr-fecha").value;
+  const ingreso = document.getElementById("corr-ingreso").value;
+  const egreso = document.getElementById("corr-egreso").value;
+  const mensaje = document.getElementById("corr-mensaje").value;
+  const errorEl = document.getElementById("corr-error");
+  const okEl = document.getElementById("corr-ok");
+  errorEl.textContent = ""; okEl.textContent = "";
+  try {
+    await apiFetch("/app/api/solicitar-correccion", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fecha, ingreso, egreso, mensaje }),
+    });
+    okEl.textContent = "Listo, el pedido quedó pendiente de aprobación.";
+    document.getElementById("corr-ingreso").value = "";
+    document.getElementById("corr-egreso").value = "";
+    document.getElementById("corr-mensaje").value = "";
+  } catch (err) {
+    errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
+  }
+}
+
+async function enviarCambio() {
+  const fechaA = document.getElementById("camb-fecha-a").value;
+  const empleadoB = document.getElementById("camb-companero").value;
+  const fechaB = document.getElementById("camb-fecha-b").value;
+  const errorEl = document.getElementById("camb-error");
+  const okEl = document.getElementById("camb-ok");
+  errorEl.textContent = ""; okEl.textContent = "";
+  if (!empleadoB) { errorEl.textContent = "Elegí un compañero"; return; }
+  try {
+    await apiFetch("/app/api/solicitar-cambio", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fechaA, empleadoB, fechaB }),
+    });
+    okEl.textContent = "Listo, el pedido quedó pendiente de aprobación.";
+  } catch (err) {
+    errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
+  }
+}
+
+async function cargarSolicitudes() {
+  const el = document.getElementById("solicitudes-contenido");
+  el.innerHTML = `<div class="vacio">Cargando…</div>`;
+  try {
+    const data = await apiFetch("/app/api/mis-solicitudes");
+    const items = [
+      ...(data.correcciones || []).map((s) => ({ tipo: "Corrección", detalle: formatearFecha(s.fecha), estado: s.estado, orden: s.creado_en })),
+      ...(data.cambios || []).map((s) => ({ tipo: "Cambio de turno", detalle: `${formatearFecha(s.fecha_a)} ↔ ${formatearFecha(s.fecha_b)}`, estado: s.estado, orden: s.creado_en })),
+    ].sort((a, b) => b.orden.localeCompare(a.orden));
+
+    if (items.length === 0) {
+      el.innerHTML = `<div class="vacio">Todavía no hiciste ningún pedido</div>`;
+      return;
+    }
+    el.innerHTML = items.map((s) => {
+      let badge = `<span class="badge badge-muted">${s.estado}</span>`;
+      if (s.estado === "pendiente") badge = `<span class="badge badge-warn">Pendiente</span>`;
+      if (s.estado === "aprobada") badge = `<span class="badge badge-ok">Aprobada</span>`;
+      if (s.estado === "rechazada") badge = `<span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Rechazada</span>`;
+      return `<div class="fila-hora">
+        <div class="fecha">${s.tipo}<br><span class="dia-semana">${s.detalle}</span></div>
+        <div class="horas">${badge}</div>
+      </div>`;
+    }).join("");
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+    el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
   }
 }
 

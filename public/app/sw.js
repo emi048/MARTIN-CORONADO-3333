@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v6"; // v6: header tipo topbar (titulo+subtitulo, tema claro/oscuro, notificaciones, avatar)
+const CACHE = "fich-coronado-v7"; // v7: tramites en Inicio (corregir horas, cambio de turno, mis solicitudes)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
