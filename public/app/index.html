@@ -191,6 +191,25 @@
   .card-clickable { cursor: pointer; transition: background 0.15s, border-color 0.15s; }
   .card-clickable:hover { border-color: rgba(124,108,240,0.35); background: rgba(124,108,240,0.10); }
 
+  /* Tarjeta de Recorrido diario en Inicio -- se la distingue a proposito de
+     las demas tarjetas (fondo mas saturado, icono en badge, texto de
+     llamado a la accion) porque si no se ve igual a una tarjeta
+     informativa cualquiera y no queda claro que hay que tocarla. */
+  .recorrido-card-inicio {
+    background: linear-gradient(135deg, rgba(124,108,240,0.22), rgba(79,140,255,0.13) 65%) !important;
+    border: 1px solid rgba(124,108,240,0.4) !important;
+  }
+  .recorrido-card-inicio:hover { background: linear-gradient(135deg, rgba(124,108,240,0.30), rgba(79,140,255,0.20) 65%) !important; }
+  .recorrido-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .recorrido-card-fecha { color: var(--text-muted); font-size: 12px; }
+  .recorrido-card-icono-wrap {
+    width: 38px; height: 38px; border-radius: 10px; background: rgba(124,108,240,0.28);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .recorrido-card-icono-wrap svg { width: 20px; height: 20px; color: var(--accent-2); }
+  .recorrido-card-cta { display: flex; align-items: center; gap: 4px; color: var(--accent-2); font-size: 12.5px; font-weight: 700; margin-top: 14px; }
+  .recorrido-card-cta svg { width: 14px; height: 14px; }
+
   /* Recorrido diario -- PROTOTIPO visual, sin logica real de escaneo todavia
      (eso queda para mas adelante). El timer si es real: cuenta desde que se
      toca LISTO. "Simular escaneo" avanza el contador a mano en vez de leer
@@ -365,8 +384,11 @@
   </nav>
 
   <header>
-    <button class="hamburger-btn" onclick="abrirSidebar()">
+    <button class="hamburger-btn" id="header-hamburger-btn" onclick="abrirSidebar()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button class="hamburger-btn oculto" id="header-back-btn" onclick="cambiarTab('inicio')" aria-label="Volver a Inicio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div class="header-titulo">
       <h1 id="header-titulo-txt">Inicio</h1>
@@ -398,9 +420,20 @@
         <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
       </div>
 
-      <div class="card card-clickable" onclick="abrirRecorrido()">
-        <div class="card-titulo">Recorrido diario</div>
-        <div class="vacio">Todavía no iniciaste el recorrido de hoy</div>
+      <div class="card card-clickable recorrido-card-inicio" onclick="abrirRecorrido()">
+        <div class="recorrido-card-top">
+          <div>
+            <div class="card-titulo" style="margin-bottom:2px">Recorrido diario</div>
+            <div class="recorrido-card-fecha" id="recorrido-card-fecha">—</div>
+          </div>
+          <div class="recorrido-card-icono-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3"/><path d="M14 20h3"/><path d="M20 20h.01"/></svg>
+          </div>
+        </div>
+        <div class="recorrido-card-cta">
+          Tocá para iniciar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
       </div>
 
       <div class="barra-lista">
@@ -689,6 +722,7 @@ function mostrarApp() {
   const nombreCompleto = localStorage.getItem("app_nombre") || "";
   document.getElementById("saludo-nombre-usuario").textContent = nombreCompleto.split(" ")[0] || nombreCompleto;
   document.getElementById("avatar-btn").textContent = inicialesDeNombre(nombreCompleto);
+  document.getElementById("recorrido-card-fecha").textContent = fechaLargaDeHoy();
   document.getElementById("fichadas-periodo").value = periodoActual();
   cargarHoy();
   cargarHorario();
@@ -720,6 +754,14 @@ function cambiarTab(tab) {
   const [titulo, subtitulo] = TITULOS_TAB[tab] || ["", ""];
   document.getElementById("header-titulo-txt").textContent = titulo;
   document.getElementById("header-subtitulo-txt").textContent = subtitulo;
+  // Fuera de Inicio, el boton de arriba a la izquierda pasa a ser una
+  // flecha para volver -- sin esto, si entraste a "Mis fichadas" o
+  // "Configuracion" desde una barra de Inicio (no desde el menu lateral),
+  // el gesto de "atras" del navegador te saca de la app entera en vez de
+  // volver a Inicio (la app es de una sola pagina, no hay historial real
+  // entre pestañas).
+  document.getElementById("header-hamburger-btn").classList.toggle("oculto", tab !== "inicio");
+  document.getElementById("header-back-btn").classList.toggle("oculto", tab === "inicio");
   cerrarSidebar();
 }
 
