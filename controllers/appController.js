@@ -5,12 +5,13 @@ const bcrypt = require("bcryptjs");
 const {
   buscarEmpleadoAppPorUsuario, empleadoAppPorId,
   crearSesionApp, renovarSesionApp, eliminarSesionApp, empleadoIdDeSesionApp,
-  filasDelPeriodoDeEmpleado, rangoFechasDelPeriodo, obtenerFichadaHoy, resumenDelPeriodo,
+  obtenerFichadaHoy, resumenDelPeriodo,
   estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
   cambiarPasswordEmpleadoApp,
 } = require("../services/db");
 const { turnoRealDelDia } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
+const { calcularAsistencia } = require("../services/asistencia");
 
 const router = express.Router();
 router.use(express.json());
@@ -92,16 +93,18 @@ function fechaISO(d) {
 }
 
 // Fichadas propias del dia (estado en vivo, via HikCentral) + historial del
-// periodo (filas_diarias, el mismo dato que ya arma el pipeline mensual).
+// periodo con ausencias/llegadas tarde/deficit de sabado (mismo calculo que
+// usa el panel de admin, ver services/asistencia.js) + resumen de horas.
 router.get("/api/mis-fichadas", requerirAuthEmpleado, (req, res) => {
   const { nombre } = req.empleadoApp;
   const hoy = new Date();
   const periodo = req.query.periodo || `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+  const asistencia = calcularAsistencia(nombre, periodo);
+  const resumen = resumenDelPeriodo(periodo).find((r) => r.empleado === nombre) || null;
   res.json({
-    periodo,
-    rango: rangoFechasDelPeriodo(periodo),
+    ...asistencia,
     hoy: obtenerFichadaHoy(nombre, fechaISO(hoy)) || null,
-    dias: filasDelPeriodoDeEmpleado(nombre, periodo),
+    resumen,
   });
 });
 

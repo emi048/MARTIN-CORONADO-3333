@@ -104,6 +104,29 @@
   .stat .label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
   .vacio { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
+  .periodo-selector { display: flex; gap: 8px; margin-bottom: 6px; }
+  .periodo-selector input[type="month"] {
+    flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 14px;
+  }
+  .periodo-selector button {
+    padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white;
+  }
+  .rango-real { color: var(--text-muted); font-size: 12px; margin: 0 0 14px 2px; }
+
+  .config-form { display: flex; flex-direction: column; gap: 10px; }
+  .config-form input {
+    padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: rgba(10,12,18,0.4); color: var(--text); font-size: 15px;
+  }
+  .config-form input:focus { outline: none; border-color: var(--accent); }
+  .config-form button {
+    padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white;
+  }
+  .config-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
+
   nav.tabbar {
     position: fixed; bottom: 0; left: 0; right: 0; display: flex;
     background: linear-gradient(0deg, rgba(10,12,18,0.95), rgba(10,12,18,0.85));
@@ -111,10 +134,10 @@
   }
   nav.tabbar button {
     flex: 1; background: none; border: none; color: var(--text-muted);
-    padding: 12px 0 10px; font-size: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; align-items: center;
+    padding: 14px 0; font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    cursor: pointer;
   }
-  nav.tabbar button .icono { font-size: 18px; }
-  nav.tabbar button.activo { color: var(--accent); }
+  nav.tabbar button.activo { color: var(--accent-2); }
 
   #app-screen { display: none; }
   .oculto { display: none !important; }
@@ -151,47 +174,60 @@
   <header>
     <div class="header-left">
       <img src="/panel/logo-cr.png" alt="CR" class="header-logo">
-      <h1>MARTÍN CORONADO 3333<span id="header-periodo"></span></h1>
+      <h1>MARTÍN CORONADO 3333</h1>
     </div>
     <button onclick="logout()">Salir</button>
   </header>
 
   <main>
-    <div class="saludo-box">
-      <div class="saludo-nombre">Hola, <span id="saludo-nombre-usuario">—</span></div>
-      <div class="saludo-turno" id="saludo-turno">Cargando tu turno de hoy…</div>
-    </div>
+    <section id="tab-inicio">
+      <div class="saludo-box">
+        <div class="saludo-nombre">Hola, <span id="saludo-nombre-usuario">—</span></div>
+        <div class="saludo-turno" id="saludo-turno">Cargando tu turno de hoy…</div>
+      </div>
 
-    <section id="tab-fichadas">
       <div class="card">
         <div class="card-titulo">Hoy</div>
         <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
       </div>
+    </section>
+
+    <section id="tab-fichadas" class="oculto">
+      <div class="periodo-selector">
+        <input type="month" id="fichadas-periodo">
+        <button onclick="cargarFichadas()">Ver</button>
+      </div>
+      <div class="rango-real" id="fichadas-rango"></div>
+
       <div class="card">
-        <div class="card-titulo">Fichadas del período</div>
+        <div class="card-titulo">Resumen del período</div>
+        <div id="resumen-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Fichadas y ausencias</div>
         <div id="dias-contenido"><div class="vacio">Cargando…</div></div>
       </div>
     </section>
 
-    <section id="tab-horario" class="oculto">
+    <section id="tab-config" class="oculto">
       <div class="card">
-        <div class="card-titulo">Turno de hoy</div>
-        <div id="turno-contenido"><div class="vacio">Cargando…</div></div>
-      </div>
-      <div class="card">
-        <div class="card-titulo">Horas del período</div>
-        <div id="resumen-contenido"><div class="vacio">Cargando…</div></div>
+        <div class="card-titulo">Cambiar contraseña</div>
+        <div class="config-form">
+          <input type="password" id="config-pass-actual" placeholder="Contraseña actual" autocomplete="current-password">
+          <input type="password" id="config-pass-nueva" placeholder="Contraseña nueva (mínimo 6 caracteres)" autocomplete="new-password">
+          <input type="password" id="config-pass-confirmar" placeholder="Repetí la contraseña nueva" autocomplete="new-password">
+          <button onclick="guardarPasswordDesdeConfig()">Guardar</button>
+          <div class="login-error" id="config-pass-error"></div>
+          <div class="config-ok" id="config-pass-ok"></div>
+        </div>
       </div>
     </section>
   </main>
 
   <nav class="tabbar">
-    <button data-tab="fichadas" class="activo" onclick="cambiarTab('fichadas')">
-      <span class="icono">🕐</span> Mis fichadas
-    </button>
-    <button data-tab="horario" onclick="cambiarTab('horario')">
-      <span class="icono">📅</span> Mi horario
-    </button>
+    <button data-tab="inicio" class="activo" onclick="cambiarTab('inicio')">Inicio</button>
+    <button data-tab="fichadas" onclick="cambiarTab('fichadas')">Mis fichadas</button>
+    <button data-tab="config" onclick="cambiarTab('config')">Configuración</button>
   </nav>
 </div>
 
@@ -278,19 +314,27 @@ async function logout() {
   cerrarSesionLocal();
 }
 
+function periodoActual() {
+  const hoy = new Date();
+  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function mostrarApp() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app-screen").style.display = "block";
   const nombreCompleto = localStorage.getItem("app_nombre") || "";
   document.getElementById("saludo-nombre-usuario").textContent = nombreCompleto.split(" ")[0] || nombreCompleto;
-  cargarFichadas();
+  document.getElementById("fichadas-periodo").value = periodoActual();
+  cargarHoy();
   cargarHorario();
+  cargarFichadas();
 }
 
 function cambiarTab(tab) {
   document.querySelectorAll("nav.tabbar button").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
+  document.getElementById("tab-inicio").classList.toggle("oculto", tab !== "inicio");
   document.getElementById("tab-fichadas").classList.toggle("oculto", tab !== "fichadas");
-  document.getElementById("tab-horario").classList.toggle("oculto", tab !== "horario");
+  document.getElementById("tab-config").classList.toggle("oculto", tab !== "config");
 }
 
 function formatearFecha(iso) {
@@ -299,11 +343,10 @@ function formatearFecha(iso) {
   return `${d}/${m} <span class="dia-semana">${DIAS_SEMANA[dt.getDay()]}</span>`;
 }
 
-async function cargarFichadas() {
+// Tarjeta "Hoy" en Inicio -- estado en vivo de la fichada de hoy.
+async function cargarHoy() {
   try {
-    const data = await apiFetch("/app/api/mis-fichadas");
-    document.getElementById("header-periodo").textContent = data.rango ? `${data.rango.desde} al ${data.rango.hasta}` : data.periodo;
-
+    const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
     const hoyEl = document.getElementById("hoy-contenido");
     if (data.hoy && (data.hoy.ingreso_hora || data.hoy.egreso_hora)) {
       hoyEl.innerHTML = `
@@ -318,49 +361,20 @@ async function cargarFichadas() {
     } else {
       hoyEl.innerHTML = `<div class="vacio">Todavía no hay fichadas registradas hoy</div>`;
     }
-
-    const diasEl = document.getElementById("dias-contenido");
-    const dias = [...(data.dias || [])].sort((a, b) => b.fecha.localeCompare(a.fecha));
-    if (dias.length === 0) {
-      diasEl.innerHTML = `<div class="vacio">Sin datos en este período</div>`;
-    } else {
-      diasEl.innerHTML = dias.map((d) => `
-        <div class="fila-hora">
-          <div class="fecha">${formatearFecha(d.fecha)}</div>
-          <div class="horas">
-            ${d.ingreso || "—"} · ${d.egreso || "—"}
-            ${d.alerta ? `<br><span class="badge badge-warn">${d.alerta}</span>` : ""}
-          </div>
-        </div>`).join("");
-    }
   } catch (err) {
     if (err.message === "Sesión vencida") return;
   }
 }
 
-async function cargarHorario() {
+// Pestaña "Mis fichadas" -- historial del período elegido, con ausencias
+// intercaladas (mismo criterio que usa el panel de admin) y el resumen de
+// horas extra.
+async function cargarFichadas() {
+  const periodo = document.getElementById("fichadas-periodo").value || periodoActual();
   try {
-    const data = await apiFetch("/app/api/mi-horario");
+    const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodo);
 
-    const saludoTurnoEl = document.getElementById("saludo-turno");
-    if (data.turnoHoy && data.turnoHoy.horario) {
-      saludoTurnoEl.innerHTML = `Hoy tenés turno de <strong>${data.turnoHoy.horario.in} a ${data.turnoHoy.horario.out}hs</strong> — ${fechaLargaDeHoy()}`;
-    } else if (data.turnoHoy && (data.turnoHoy.tipo === "franco" || data.turnoHoy.tipo === "descanso")) {
-      saludoTurnoEl.innerHTML = `Hoy es tu <strong>franco</strong> — ${fechaLargaDeHoy()}`;
-    } else {
-      saludoTurnoEl.innerHTML = `Sin turno asignado para hoy — ${fechaLargaDeHoy()}`;
-    }
-
-    const turnoEl = document.getElementById("turno-contenido");
-    if (data.turnoHoy) {
-      turnoEl.innerHTML = `
-        <div class="fila-hora">
-          <div class="fecha">${data.turnoHoy.tipo || "—"}</div>
-          <div class="horas">${data.turnoHoy.horario ? `${data.turnoHoy.horario.in} a ${data.turnoHoy.horario.out}` : ""}</div>
-        </div>`;
-    } else {
-      turnoEl.innerHTML = `<div class="vacio">Sin turno asignado para hoy</div>`;
-    }
+    document.getElementById("fichadas-rango").textContent = data.rango ? `Período real: ${data.rango.desde} al ${data.rango.hasta}` : "";
 
     const resumenEl = document.getElementById("resumen-contenido");
     if (data.resumen) {
@@ -372,6 +386,77 @@ async function cargarHorario() {
         </div>`;
     } else {
       resumenEl.innerHTML = `<div class="vacio">Todavía no hay resumen de este período</div>`;
+    }
+
+    const diasEl = document.getElementById("dias-contenido");
+    const filas = [
+      ...(data.dias || []).map((d) => ({ ...d, ausente: false })),
+      ...(data.ausencias || []).map((a) => ({ fecha: a.fecha, turno: a.turno, ausente: true, compensado: !!a.compensado })),
+    ].sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+    if (filas.length === 0) {
+      diasEl.innerHTML = `<div class="vacio">Sin datos en este período</div>`;
+    } else {
+      diasEl.innerHTML = filas.map((d) => {
+        if (d.ausente && d.compensado) {
+          return `<div class="fila-hora">
+            <div class="fecha">${formatearFecha(d.fecha)}</div>
+            <div class="horas"><span class="badge badge-ok">Sábado compensado</span></div>
+          </div>`;
+        }
+        if (d.ausente) {
+          return `<div class="fila-hora">
+            <div class="fecha">${formatearFecha(d.fecha)}</div>
+            <div class="horas"><span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Ausente</span></div>
+          </div>`;
+        }
+        const tarde = d.llegadaTarde ? `<br><span class="badge badge-warn">Llegó ${d.minutosTarde >= 60 ? Math.floor(d.minutosTarde/60) + "h " + (d.minutosTarde%60) + "min" : d.minutosTarde + "min"} tarde</span>` : "";
+        const alerta = d.alerta ? `<br><span class="badge badge-warn">${d.alerta}</span>` : "";
+        return `<div class="fila-hora">
+          <div class="fecha">${formatearFecha(d.fecha)}</div>
+          <div class="horas">${d.ingreso || "—"} · ${d.egreso || "—"}${tarde}${alerta}</div>
+        </div>`;
+      }).join("");
+    }
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+  }
+}
+
+async function guardarPasswordDesdeConfig() {
+  const passwordActual = document.getElementById("config-pass-actual").value;
+  const passwordNueva = document.getElementById("config-pass-nueva").value;
+  const passwordConfirmar = document.getElementById("config-pass-confirmar").value;
+  const errorEl = document.getElementById("config-pass-error");
+  const okEl = document.getElementById("config-pass-ok");
+  errorEl.textContent = ""; okEl.textContent = "";
+  if (!passwordActual || !passwordNueva) { errorEl.textContent = "Completá los tres campos"; return; }
+  if (passwordNueva.length < 6) { errorEl.textContent = "La contraseña nueva tiene que tener al menos 6 caracteres"; return; }
+  if (passwordNueva !== passwordConfirmar) { errorEl.textContent = "Las dos contraseñas nuevas no coinciden"; return; }
+  try {
+    await apiFetch("/app/api/cambiar-password", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passwordActual, passwordNueva }),
+    });
+    document.getElementById("config-pass-actual").value = "";
+    document.getElementById("config-pass-nueva").value = "";
+    document.getElementById("config-pass-confirmar").value = "";
+    okEl.textContent = "Contraseña actualizada.";
+  } catch (err) {
+    errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
+  }
+}
+
+async function cargarHorario() {
+  try {
+    const data = await apiFetch("/app/api/mi-horario");
+    const saludoTurnoEl = document.getElementById("saludo-turno");
+    if (data.turnoHoy && data.turnoHoy.horario) {
+      saludoTurnoEl.innerHTML = `Hoy tenés turno de <strong>${data.turnoHoy.horario.in} a ${data.turnoHoy.horario.out}hs</strong> — ${fechaLargaDeHoy()}`;
+    } else if (data.turnoHoy && (data.turnoHoy.tipo === "franco" || data.turnoHoy.tipo === "descanso")) {
+      saludoTurnoEl.innerHTML = `Hoy es tu <strong>franco</strong> — ${fechaLargaDeHoy()}`;
+    } else {
+      saludoTurnoEl.innerHTML = `Sin turno asignado para hoy — ${fechaLargaDeHoy()}`;
     }
   } catch (err) {
     if (err.message === "Sesión vencida") return;
