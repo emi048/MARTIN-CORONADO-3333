@@ -413,7 +413,17 @@ router.get("/api/dias", requerirAuth, (req, res) => {
     // con datos cargados, ver rangoFechasDelPeriodo) -- no se extiende mas
     // alla aunque haya pasado mas tiempo real, para no marcar como ausente
     // dias de los que todavia no se cargo ningun excel.
-    const hasta = new Date(rango.hasta + "T00:00:00");
+    //
+    // CIERRE MANUAL DEL CICLO 2026-08: el admin definio que este fichero
+    // cierra el 20/8 (el rango real es 21/7 al 20/8) -- si a alguien le
+    // entra un dato suelto de una fecha posterior (ej: una correccion
+    // cargada de mas), rango.hasta se corre solo para TODO el periodo
+    // (es un MAX global, no por empleado) y arrastra falsas ausencias para
+    // el resto. Se tapa con este techo hasta que arranque el proximo ciclo
+    // -- borrar este bloque cuando eso pase.
+    const CIERRE_CICLO_2026_08 = new Date("2026-08-20T00:00:00");
+    let hasta = new Date(rango.hasta + "T00:00:00");
+    if (periodo === "2026-08" && hasta > CIERRE_CICLO_2026_08) hasta = CIERRE_CICLO_2026_08;
     for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
       const iso = fechaISO(f);
       if (fechasConFila.has(iso)) continue;
