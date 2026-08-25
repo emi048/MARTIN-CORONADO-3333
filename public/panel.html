@@ -219,6 +219,9 @@
 
   .turnos-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .turnos-grid { grid-template-columns: 1fr; } }
+  .horas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; margin-bottom: 16px; }
+  @media (max-width: 900px) { .horas-grid { grid-template-columns: 1fr; } }
+  .fila-subtotal td { font-weight: 800; border-top: 2px solid var(--accent); background: rgba(124,108,240,0.08); }
   .turnos-card { background: linear-gradient(150deg, rgba(124,108,240,0.06), var(--surface) 55%); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
   .turnos-card h3 { font-family: var(--font-display); font-weight: 500; margin: 0 0 12px; }
   .turnos-tabla-wrap {
@@ -446,10 +449,24 @@
         Período: <input type="month" id="periodo-input" class="periodo-input">
         <span id="rango-horas" class="card-sub" style="margin-left:8px"></span>
       </div>
-      <div class="tabla-scroll"><table>
-        <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
-        <tbody id="tabla-horas"></tbody>
-      </table></div>
+      <div class="horas-grid">
+        <div class="turnos-card">
+          <h3>🔧 Mantenimiento</h3>
+          <div class="tabla-scroll"><table>
+            <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
+            <tbody id="tabla-horas-mantenimiento"></tbody>
+          </table></div>
+        </div>
+        <div class="turnos-card">
+          <h3>🛎️ Conserjería</h3>
+          <div class="tabla-scroll"><table>
+            <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
+            <tbody id="tabla-horas-conserjeria"></tbody>
+          </table></div>
+        </div>
+      </div>
+      <h3>Σ Total general (mantenimiento + conserjería)</h3>
+      <div class="stat-grid" id="horas-total-general"></div>
     </section>
 
     <section id="tab-fichadas" style="display:none">
@@ -965,16 +982,19 @@ function periodoActual() {
 
 document.getElementById("periodo-input").addEventListener("change", cargarHoras);
 
-async function cargarHoras() {
-  const input = document.getElementById("periodo-input");
-  if (!input.value) input.value = periodoActual();
-  const tbody = document.getElementById("tabla-horas");
-  tbody.innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
-  try {
-    const data = await api("/resumen?periodo=" + input.value);
-    document.getElementById("rango-horas").textContent = formatoRango(data.rango);
-    if (data.resumen.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="vacio">Sin datos para este período</td></tr>'; return; }
-    tbody.innerHTML = data.resumen.map((r) => `
+// Suma dias/horas de una lista de filas del resumen -- se usa tanto para el
+// subtotal de cada sector como para el total general (mantenimiento + conserjeria).
+function sumarResumen(filas) {
+  return filas.reduce((acc, r) => ({
+    dias: acc.dias + r.dias, totalHs: acc.totalHs + r.totalHs, h50: acc.h50 + r.h50, h100: acc.h100 + r.h100,
+  }), { dias: 0, totalHs: 0, h50: 0, h100: 0 });
+}
+
+function renderTablaHoras(tbodyId, filas) {
+  const tbody = document.getElementById(tbodyId);
+  if (filas.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="vacio">Sin datos para este período</td></tr>'; return; }
+  const sub = sumarResumen(filas);
+  tbody.innerHTML = filas.map((r) => `
       <tr>
         <td>${r.empleado}</td>
         <td>${r.dias}</td>
@@ -982,7 +1002,40 @@ async function cargarHoras() {
         <td>${r.h50}</td>
         <td>${r.h100}</td>
       </tr>
-    `).join("");
+    `).join("") + `
+      <tr class="fila-subtotal">
+        <td>Subtotal</td>
+        <td>${sub.dias}</td>
+        <td>${Math.round(sub.totalHs * 100) / 100}</td>
+        <td>${Math.round(sub.h50 * 100) / 100}</td>
+        <td>${Math.round(sub.h100 * 100) / 100}</td>
+      </tr>
+    `;
+}
+
+async function cargarHoras() {
+  const input = document.getElementById("periodo-input");
+  if (!input.value) input.value = periodoActual();
+  const contTotal = document.getElementById("horas-total-general");
+  document.getElementById("tabla-horas-mantenimiento").innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
+  document.getElementById("tabla-horas-conserjeria").innerHTML = '<tr><td colspan="5" class="vacio">Cargando…</td></tr>';
+  contTotal.innerHTML = '<div class="vacio">Cargando…</div>';
+  try {
+    const data = await api("/resumen?periodo=" + input.value);
+    document.getElementById("rango-horas").textContent = formatoRango(data.rango);
+
+    const mantenimiento = data.resumen.filter((r) => r.sector === "mantenimiento");
+    const conserjeria = data.resumen.filter((r) => r.sector === "conserjeria");
+    renderTablaHoras("tabla-horas-mantenimiento", mantenimiento);
+    renderTablaHoras("tabla-horas-conserjeria", conserjeria);
+
+    const total = sumarResumen(data.resumen);
+    contTotal.innerHTML = [
+      statTile(total.dias, "Días trabajados (suma de todos)"),
+      statTile(Math.round(total.totalHs * 100) / 100, "Horas totales"),
+      statTile(Math.round(total.h50 * 100) / 100, "Extra 50%"),
+      statTile(Math.round(total.h100 * 100) / 100, "Extra 100%"),
+    ].join("");
   } catch (e) { mostrarToast(e.message); }
 }
 

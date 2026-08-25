@@ -539,7 +539,11 @@ router.get("/api/historial", requerirAuth, (req, res) => {
 router.get("/api/resumen", requerirAuth, (req, res) => {
   const hoy = new Date();
   const periodo = req.query.periodo || `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
-  res.json({ periodo, rango: rangoFechasDelPeriodo(periodo), resumen: resumenDelPeriodo(periodo) });
+  // Se suma el sector aca (resumen_mensual no lo tiene) para que el front
+  // pueda separar la tabla en mantenimiento/conserjeria sin tener que pedir
+  // /api/empleados aparte solo para cruzarlo.
+  const resumen = resumenDelPeriodo(periodo).map((r) => ({ ...r, sector: getSectorDeEmpleado(r.empleado) }));
+  res.json({ periodo, rango: rangoFechasDelPeriodo(periodo), resumen });
 });
 
 router.get("/api/estadisticas", requerirAuth, (req, res) => {
