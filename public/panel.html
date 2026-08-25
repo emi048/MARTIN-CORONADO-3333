@@ -31,9 +31,9 @@
   }
   h3 { font-family: var(--font-display); font-weight: 500; font-size: 15px; letter-spacing: 0.01em; }
   header {
-    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    padding: 18px 24px; border-bottom: 1px solid rgba(36,42,59,var(--header-fade, 1));
     display: flex; justify-content: space-between; align-items: center; gap: 14px;
-    background: linear-gradient(180deg, rgba(10,12,18,0.82), rgba(10,12,18,0.68));
+    background: linear-gradient(180deg, rgba(10,12,18,calc(0.82 * var(--header-fade, 1))), rgba(10,12,18,calc(0.68 * var(--header-fade, 1))));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     position: sticky; top: 0; z-index: 30;
   }
@@ -1527,6 +1527,25 @@ async function cargarTurnos() {
 }
 
 document.getElementById("turnos-mes").addEventListener("change", cargarTurnos);
+
+// La barra de arriba (header) se va desvaneciendo a medida que se scrollea
+// hacia abajo -- sigue fija (sticky) asi el menu y "Cerrar sesion" siguen
+// alcanzables, pero el fondo se transparenta (--header-fade, usado en el
+// CSS del header) para que no tape la foto de fondo con un bloque solido.
+// Nunca llega a 0 del todo (piso 0.08) para que el texto/botones sigan
+// teniendo un minimo de contraste incluso muy scrolleado.
+let headerFadeTicking = false;
+function actualizarHeaderFade() {
+  const factor = Math.max(0.08, 1 - window.scrollY / 320);
+  document.documentElement.style.setProperty("--header-fade", factor.toFixed(2));
+  headerFadeTicking = false;
+}
+window.addEventListener("scroll", () => {
+  if (headerFadeTicking) return;
+  headerFadeTicking = true;
+  requestAnimationFrame(actualizarHeaderFade);
+}, { passive: true });
+actualizarHeaderFade();
 
 if (token) mostrarApp(); else document.getElementById("login-screen").style.display = "flex";
 </script>
