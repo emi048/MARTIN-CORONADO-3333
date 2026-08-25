@@ -714,6 +714,15 @@ function cerrarSidebar() {
 hamburguesaBtn.addEventListener("click", abrirSidebar);
 sidebarOverlayEl.addEventListener("click", cerrarSidebar);
 
+// En desktop (con mouse), pasar el cursor por el boton ya despliega el
+// sidebar solo, sin hacer click -- se cierra al sacar el cursor del
+// sidebar (no del boton, asi da tiempo a mover el mouse de uno a otro sin
+// que se cierre de golpe). En celular/tactil esto no dispara nunca
+// (mouseenter/mouseleave no existen ahi), asi que el click de siempre
+// sigue funcionando igual.
+hamburguesaBtn.addEventListener("mouseenter", abrirSidebar);
+sidebarEl.addEventListener("mouseleave", cerrarSidebar);
+
 // Centraliza el cambio de pestaña (se usa tanto al hacer click como al
 // restaurar la ultima pestaña vista despues de un F5) y la guarda en
 // localStorage para que un refresh no te mande siempre a Resumen.
