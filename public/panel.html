@@ -287,6 +287,15 @@
   .chart-legend .item { display: flex; align-items: center; gap: 6px; }
   .chart-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
 
+  /* Contenedor con scroll horizontal para las tablas comunes -- sin esto,
+     en celular una tabla ancha (muchas columnas, ej Fichadas por empleado)
+     se desborda y corta texto en vez de dejar hacer swipe para verla entera. */
+  .tabla-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabla-scroll::-webkit-scrollbar { height: 8px; }
+  .tabla-scroll::-webkit-scrollbar-track { background: transparent; }
+  .tabla-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; border: 2px solid var(--surface); background-clip: padding-box; }
+  .tabla-scroll table { margin-bottom: 0; min-width: 560px; width: 100%; }
+
   table {
     width: 100%; border-collapse: collapse; font-size: 13px;
     background: linear-gradient(150deg, rgba(124,108,240,0.05), var(--surface) 40%);
@@ -408,10 +417,10 @@
         <button class="btn btn-accent" id="emp-guardar-btn">Guardar</button>
       </div>
 
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Nombre</th><th>Sector</th><th>WhatsApp</th><th></th></tr></thead>
         <tbody id="tabla-empleados"></tbody>
-      </table>
+      </table></div>
 
       <h3>🔑 Acceso a la app (usuario + PIN)</h3>
       <div class="form-row">
@@ -426,10 +435,10 @@
         <button class="btn btn-accent" id="app-crear-btn">Crear acceso</button>
       </div>
 
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Nombre</th><th>Usuario</th><th></th></tr></thead>
         <tbody id="tabla-empleados-app"></tbody>
-      </table>
+      </table></div>
     </section>
 
     <section id="tab-horas" style="display:none">
@@ -437,10 +446,10 @@
         Período: <input type="month" id="periodo-input" class="periodo-input">
         <span id="rango-horas" class="card-sub" style="margin-left:8px"></span>
       </div>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Días</th><th>Horas totales</th><th>Extra 50%</th><th>Extra 100%</th></tr></thead>
         <tbody id="tabla-horas"></tbody>
-      </table>
+      </table></div>
     </section>
 
     <section id="tab-fichadas" style="display:none">
@@ -456,16 +465,16 @@
         <button class="btn btn-accent" id="fich-buscar-btn">Buscar</button>
         <span id="rango-fichadas" class="card-sub"></span>
       </div>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Fecha</th><th>Turno</th><th>Ingreso</th><th>Egreso</th><th>Hs.</th><th>50%</th><th>100%</th><th>Observación</th></tr></thead>
         <tbody id="tabla-fichadas-empleado"><tr><td colspan="8" class="vacio">Elegí un empleado y buscá</td></tr></tbody>
-      </table>
+      </table></div>
       <div id="bloque-deficit-sabado" style="display:none;margin-top:16px">
         <h3 style="margin-bottom:8px">⚠️ Sábados sin cubrir</h3>
-        <table>
+        <div class="tabla-scroll"><table>
           <thead><tr><th>Semana (lunes)</th><th>Hs. trabajadas lun-vie</th><th>Objetivo</th><th>Hs. a descontar</th></tr></thead>
           <tbody id="tabla-deficit-sabado"></tbody>
-        </table>
+        </table></div>
       </div>
     </section>
 
@@ -500,10 +509,10 @@
       </div>
 
       <h3>📋 Todas las licencias</h3>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Desde</th><th>Hasta</th><th>Tipo</th><th></th></tr></thead>
         <tbody id="tabla-licencias"></tbody>
-      </table>
+      </table></div>
     </section>
 
     <section id="tab-turnos" style="display:none">
@@ -541,34 +550,34 @@
       <div id="chart-tendencia" class="card"></div>
 
       <h3>✅ Fichaje perfecto vs con problemas <span id="rango-estadisticas" class="card-sub"></span></h3>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Días completos</th><th>Días totales</th><th>%</th><th></th></tr></thead>
         <tbody id="tabla-fichadas"></tbody>
-      </table>
+      </table></div>
 
       <h3>🏆 Ranking de pedidos (correcciones + cambios + cancelaciones)</h3>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Total de pedidos</th></tr></thead>
         <tbody id="tabla-pedidos-totales"></tbody>
-      </table>
+      </table></div>
 
       <h3>✏️ Correcciones pedidas por empleado</h3>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Cantidad</th></tr></thead>
         <tbody id="tabla-correcciones"></tbody>
-      </table>
+      </table></div>
 
       <h3>💬 Interacciones con el bot</h3>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Total</th><th>Consultó horas</th><th>Pidió corrección</th><th>¿Fiché hoy?</th><th>Mis solicitudes</th><th>Cambio turno</th></tr></thead>
         <tbody id="tabla-interacciones"></tbody>
-      </table>
+      </table></div>
 
       <h3>🕐 Última actividad</h3>
-      <table>
+      <div class="tabla-scroll"><table>
         <thead><tr><th>Empleado</th><th>Número</th><th>Última vez</th></tr></thead>
         <tbody id="tabla-actividad"></tbody>
-      </table>
+      </table></div>
     </section>
 
   </main>
