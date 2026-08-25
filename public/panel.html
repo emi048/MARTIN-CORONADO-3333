@@ -4,28 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MARTÍN CORONADO 3333</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1115; --surface: #171a21; --surface2: #1e2229; --border: #2a2f3a;
-    --text: #e6e8eb; --text-muted: #8a919e; --accent: #4f8cff; --accent-hover: #3f78e8;
+    --bg: #0a0c12; --surface: #12151f; --surface2: #171b28; --border: #242a3b;
+    --text: #eef0f6; --text-muted: #8b90a8; --accent: #7c6cf0; --accent-hover: #6c5ce0; --accent-2: #4f8cff;
     --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
     --serie1: #4f8cff; --serie2: #ff9f5a;
+    --font-display: 'Unbounded', sans-serif; --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    min-height: 100vh;
+    font-family: var(--font-body);
+    min-height: 100vh; font-variant-numeric: tabular-nums;
+    background-image: radial-gradient(ellipse 900px 600px at 100% 0%, rgba(124,108,240,0.14), transparent 60%),
+                       radial-gradient(ellipse 700px 500px at 0% 100%, rgba(79,140,255,0.08), transparent 60%),
+                       linear-gradient(180deg, rgba(10,12,18,0.42), rgba(10,12,18,0.62) 40%, var(--bg) 85%),
+                       url('/panel/edificio-hero.jpg');
+    background-attachment: fixed, fixed, fixed, fixed;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
+    background-size: auto, auto, cover, cover;
+    background-position: 100% 0%, 0% 100%, center, center 35%;
   }
+  h3 { font-family: var(--font-display); font-weight: 500; font-size: 15px; letter-spacing: 0.01em; }
   header {
     padding: 18px 24px; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center; gap: 14px;
+    background: linear-gradient(180deg, rgba(10,12,18,0.82), rgba(10,12,18,0.68));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    position: sticky; top: 0; z-index: 30;
   }
   header .header-left { display: flex; align-items: center; gap: 14px; }
-  header h1 { font-size: 19px; margin: 0; font-weight: 700; letter-spacing: 0.02em; }
-  header h1 span { color: var(--text-muted); font-weight: 500; }
-  header button { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-  header button:hover { color: var(--text); border-color: var(--text-muted); }
+  header h1 { font-family: var(--font-display); font-size: 16px; margin: 0; font-weight: 700; letter-spacing: 0.01em; }
+  header h1 span { color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 13px; }
+  header button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+  header button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface2)); }
 
   #hamburguesa-btn {
     background: none; border: 1px solid var(--border); color: var(--text);
@@ -68,28 +84,35 @@
 
   #login-screen {
     display: flex; align-items: center; justify-content: center; min-height: 100vh;
-    background: radial-gradient(circle at 50% 0%, rgba(79,140,255,0.10), transparent 55%), var(--bg);
+    position: relative; overflow: hidden;
+    background-image:
+      linear-gradient(180deg, rgba(10,12,18,0.12) 0%, rgba(10,12,18,0.42) 65%, var(--bg) 100%),
+      linear-gradient(90deg, rgba(10,12,18,0.28), rgba(10,12,18,0.05)),
+      url('/panel/edificio-hero.jpg');
+    background-size: cover, cover, cover;
+    background-position: center, center, center 35%;
   }
   .login-box {
-    background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
-    border-radius: 14px; padding: 40px 36px; width: 340px; text-align: center;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    background: linear-gradient(165deg, rgba(23,27,44,0.72), rgba(18,21,31,0.72));
+    border: 1px solid rgba(124,108,240,0.35); border-top: 1px solid rgba(124,108,240,0.35);
+    border-radius: 18px; padding: 40px 36px; width: 340px; text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
   .login-logo { height: 56px; width: auto; margin-bottom: 18px; opacity: 0.95; }
-  .login-box h2 { margin: 0 0 4px; font-size: 19px; letter-spacing: 0.02em; }
+  .login-box h2 { font-family: var(--font-display); margin: 0 0 6px; font-size: 17px; letter-spacing: 0.01em; font-weight: 700; }
   .login-box p { color: var(--text-muted); font-size: 13px; margin: 0 0 26px; }
   .login-box input {
     width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text); font-size: 14px; text-align: center;
+    background: rgba(10,12,18,0.5); color: var(--text); font-size: 14px; text-align: center;
     transition: border-color 0.15s;
   }
   .login-box input:focus { outline: none; border-color: var(--accent); }
   .login-box button {
     width: 100%; margin-top: 14px; padding: 12px; border-radius: 8px; border: none;
-    background: var(--accent); color: white; font-weight: 600; cursor: pointer; font-size: 14px;
-    transition: background 0.15s;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; font-weight: 700; cursor: pointer; font-size: 14px;
+    transition: filter 0.15s, transform 0.15s; box-shadow: 0 6px 20px rgba(124,108,240,0.35);
   }
-  .login-box button:hover { background: var(--accent-hover); }
+  .login-box button:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
 
   nav { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
@@ -100,32 +123,34 @@
   nav button.activo { color: var(--text); border-bottom-color: var(--accent); }
 
   .card {
-    background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--card-accent, var(--accent));
-    border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    transition: transform 0.12s, box-shadow 0.12s;
+    background: linear-gradient(140deg, color-mix(in srgb, var(--card-accent, var(--accent)) 14%, var(--surface)), var(--surface) 60%);
+    border: 1px solid var(--border); border-left: 3px solid var(--card-accent, var(--accent));
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
   }
-  .card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.28); }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); border-left-color: var(--card-accent, var(--accent)); }
   .card-content { display: flex; align-items: center; gap: 12px; }
   .card-icono { font-size: 20px; flex-shrink: 0; }
   .card-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .card-titulo { font-weight: 600; font-size: 14px; }
   .card-sub { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
   .card-acciones { display: flex; gap: 8px; flex-shrink: 0; }
-  .btn { border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: filter 0.12s, transform 0.12s; }
-  .btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
-  .btn-ok { background: var(--ok); color: #06231a; }
-  .btn-danger { background: var(--danger); color: white; }
-  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn { border: none; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: filter 0.12s, transform 0.12s, box-shadow 0.12s; font-family: var(--font-body); }
+  .btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-ok { background: linear-gradient(135deg, #4fe0a3, var(--ok)); color: #06231a; box-shadow: 0 4px 14px rgba(62,207,142,0.25); }
+  .btn-danger { background: linear-gradient(135deg, #f16469, var(--danger)); color: white; box-shadow: 0 4px 14px rgba(229,72,77,0.25); }
+  .btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
 
   .vacio { color: var(--text-muted); font-size: 14px; padding: 20px 0; text-align: center; }
-  .stat-nota { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+  .stat-nota { background: linear-gradient(150deg, rgba(124,108,240,0.06), var(--surface) 60%); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
 
   .seccion-pendiente {
-    background: var(--surface); border: 1px solid var(--border);
-    border-left: 4px solid var(--accent-seccion, var(--accent));
-    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+    background: linear-gradient(150deg, color-mix(in srgb, var(--accent-seccion, var(--accent)) 10%, var(--surface)), var(--surface) 65%);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-seccion, var(--accent));
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 18px;
   }
-  .seccion-pendiente h3 { margin: 0 0 14px 0; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+  .seccion-pendiente h3 { font-family: var(--font-display); margin: 0 0 14px 0; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
   .badge-count {
     background: var(--accent-seccion, var(--accent)); color: #06070a; font-size: 12px; font-weight: 800;
     border-radius: 100px; padding: 2px 10px; min-width: 22px; text-align: center;
@@ -148,8 +173,9 @@
 
   .medidores-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0; }
   .medidor {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    background: linear-gradient(150deg, rgba(124,108,240,0.08), var(--surface) 60%);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.25);
     display: flex; flex-direction: column; align-items: center; text-align: center;
     flex: 1; min-width: 150px;
   }
@@ -174,7 +200,7 @@
   .badge-turno.destacado { font-weight: 800; font-size: 13px; }
 
   .conserjeria-grid { display: flex; flex-direction: column; gap: 10px; }
-  .conserjeria-ficha { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
+  .conserjeria-ficha { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: linear-gradient(150deg, rgba(124,108,240,0.07), var(--surface2) 65%); }
   .conserjeria-ficha .avatar { width: 38px; height: 38px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
   .conserjeria-ficha .info { flex: 1; min-width: 0; }
   .conserjeria-ficha .nombre { font-weight: 700; font-size: 14px; }
@@ -185,8 +211,8 @@
 
   .turnos-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .turnos-grid { grid-template-columns: 1fr; } }
-  .turnos-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
-  .turnos-card h3 { margin: 0 0 12px; }
+  .turnos-card { background: linear-gradient(150deg, rgba(124,108,240,0.06), var(--surface) 55%); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+  .turnos-card h3 { font-family: var(--font-display); font-weight: 500; margin: 0 0 12px; }
   .turnos-tabla-wrap {
     max-height: 560px; overflow: auto; border-radius: 8px; border: 1px solid var(--border);
     scrollbar-width: thin; scrollbar-color: var(--border) transparent;
@@ -210,17 +236,20 @@
   .turno-hoy-titulo { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 10px; }
   .turno-hoy-grid { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
   .turno-hoy-card {
-    flex: 1; min-width: 220px; border-radius: 14px; padding: 20px;
+    flex: 1; min-width: 220px; border-radius: 16px; padding: 20px;
     display: flex; flex-direction: column; gap: 14px;
     border: 1px solid var(--border);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.15s;
   }
+  .turno-hoy-card:hover { transform: translateY(-2px); }
   .turno-hoy-cabecera { display: flex; align-items: center; gap: 12px; }
   .turno-hoy-icono {
     font-size: 26px; width: 48px; height: 48px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .turno-hoy-nombre { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; }
+  .turno-hoy-nombre { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.25; }
   .turno-hoy-horario { font-size: 12px; color: var(--text-muted); font-weight: 600; }
   .turno-hoy-personas { display: flex; flex-wrap: wrap; gap: 8px; }
   .turno-hoy-chip {
@@ -233,12 +262,17 @@
     font-size: 12px; font-weight: 800; color: #06070a; flex-shrink: 0;
   }
   .stat-tile {
-    background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
-    border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    background: linear-gradient(150deg, rgba(124,108,240,0.10), var(--surface) 65%);
+    border: 1px solid var(--border); border-top: 3px solid var(--accent);
+    border-radius: 12px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.25);
   }
   .stat-tile.stat-ok { border-top-color: var(--ok); }
   .stat-tile.stat-warn { border-top-color: var(--warn); }
-  .stat-tile .stat-valor { font-size: 30px; font-weight: 700; line-height: 1.1; }
+  .stat-tile .stat-valor {
+    font-family: var(--font-display); font-size: 32px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em;
+    background: linear-gradient(90deg, var(--text), color-mix(in srgb, var(--accent) 55%, var(--text)));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
   .stat-tile .stat-label { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
 
   .chart-legend { display: flex; gap: 18px; margin-bottom: 10px; font-size: 13px; color: var(--text-muted); }
@@ -247,8 +281,9 @@
 
   table {
     width: 100%; border-collapse: collapse; font-size: 13px;
-    background: var(--surface); border: 1px solid var(--border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18); margin-bottom: 12px;
+    background: linear-gradient(150deg, rgba(124,108,240,0.05), var(--surface) 40%);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25); margin-bottom: 12px;
   }
   th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
   th {
@@ -256,8 +291,8 @@
     letter-spacing: 0.05em; background: var(--surface2); border-bottom: 1px solid var(--border);
   }
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
-  tbody tr:hover { background: rgba(79,140,255,0.07); }
+  tbody tr:nth-child(even) { background: rgba(124,108,240,0.03); }
+  tbody tr:hover { background: rgba(124,108,240,0.10); }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
   .badge-si { background: rgba(62,207,142,0.15); color: var(--ok); }
   .badge-no { background: rgba(229,72,77,0.15); color: var(--danger); }
@@ -277,7 +312,7 @@
   <div class="login-box">
     <img src="/panel/logo-cr.png" alt="CR" class="login-logo">
     <h2>MARTÍN CORONADO 3333</h2>
-    <p>Panel de administración — Fichero automático</p>
+    <p>Panel de administración</p>
     <input type="password" id="login-password" placeholder="Contraseña de admin" autofocus>
     <button id="login-btn">Entrar</button>
     <div class="login-error" id="login-error"></div>
