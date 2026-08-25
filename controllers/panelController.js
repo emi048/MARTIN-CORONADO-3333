@@ -9,7 +9,7 @@ const {
   crearSesionPanel, renovarSesionPanel, eliminarSesionPanel,
   estadisticasInteracciones, primerMensajeRegistrado, correccionesPorEmpleado,
   ultimaActividadPorEmpleado, fichadasCompletasPorEmpleado, saludFichajePeriodo,
-  crearLicencia, listarLicencias, licenciasActivasEnFecha, licenciasEnRango, eliminarLicencia,
+  crearLicencia, listarLicencias, licenciasActivasEnFecha, eliminarLicencia,
   solicitudesCancelacionPendientes,
   filaDelDiaPorFecha, filasDelPeriodoDeEmpleado,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
@@ -95,11 +95,11 @@ function fechaISO(d) {
 // Proximos 7 dias (incluye hoy) con francos de mantenimiento (via la formula
 // + excepciones ya aprobadas) y licencias activas en ese rango -- para la
 // tarjeta "proximos dias libres" del dashboard.
+// Las licencias no se incluyen aca -- ya tienen su propia tarjeta "De
+// licencia hoy" arriba, mostrarlas tambien aca era redundante (alguien de
+// licencia hoy volvia a aparecer en "proximos dias libres").
 function proximosDiasLibres() {
   const hoy = new Date();
-  const dentroDe6Dias = new Date(hoy);
-  dentroDe6Dias.setDate(dentroDe6Dias.getDate() + 6);
-
   const equipoMantenimiento = [...GRUPO_A, ...GRUPO_B];
   const francos = [];
   for (let i = 0; i < 7; i++) {
@@ -112,11 +112,7 @@ function proximosDiasLibres() {
     }
   }
 
-  const licencias = licenciasEnRango(fechaISO(hoy), fechaISO(dentroDe6Dias)).map((l) => ({
-    empleado: l.empleado, fecha: l.fechaDesde > fechaISO(hoy) ? l.fechaDesde : fechaISO(hoy), tipo: l.tipo,
-  }));
-
-  return [...francos, ...licencias].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  return francos.sort((a, b) => a.fecha.localeCompare(b.fecha));
 }
 
 router.get("/api/resumen-general", requerirAuth, async (req, res) => {
