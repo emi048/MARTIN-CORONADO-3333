@@ -9,6 +9,7 @@ const {
   estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
   cambiarPasswordEmpleadoApp,
   numeroDeEmpleado, crearSolicitud, solicitudesDeEmpleado, crearSolicitudCambio, solicitudesCambioDeEmpleado,
+  filaDelDiaPorFecha,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -194,9 +195,25 @@ router.post("/api/solicitar-cambio", requerirAuthEmpleado, (req, res) => {
 // tener que preguntarle al admin.
 router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
   const { nombre } = req.empleadoApp;
+  // "antes": como estaba ese dia antes de esta correccion, para que el
+  // empleado vea el cambio completo (no solo lo que propuso). Si ya se
+  // aprobo, el dato real quedo pisado en filas_diarias -- ahi se usa el
+  // snapshot que se guardo en el momento de aplicarla. Si todavia esta
+  // pendiente o fue rechazada, filas_diarias sigue siendo el "antes" (no se
+  // aplico nada), asi que se consulta tal cual esta hoy.
+  const correcciones = solicitudesDeEmpleado(nombre, 20).map((s) => {
+    let antes = null;
+    if (s.estado === "aprobada") {
+      if (s.snapshot_existia !== 0) antes = { ingreso: s.snapshot_ingreso, egreso: s.snapshot_egreso };
+    } else {
+      const filaActual = filaDelDiaPorFecha(nombre, s.fecha);
+      if (filaActual) antes = { ingreso: filaActual.ingreso, egreso: filaActual.egreso };
+    }
+    return { ...s, antes };
+  });
   res.json({
     ok: true,
-    correcciones: solicitudesDeEmpleado(nombre, 20),
+    correcciones,
     cambios: solicitudesCambioDeEmpleado(nombre, 20),
   });
 });

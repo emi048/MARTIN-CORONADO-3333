@@ -325,11 +325,23 @@
   .modal-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
 
   .solicitud-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
-  .solicitud-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .solicitud-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .solicitud-top-izq { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .solicitud-tipo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; }
+  .solicitud-resumen-fecha { font-size: 13.5px; color: var(--text); font-weight: 600; }
+  .solicitud-top-der { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .solicitud-toggle-btn {
+    display: flex; align-items: center; gap: 4px; background: none; border: none; color: var(--accent-2);
+    font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 2px;
+  }
+  .solicitud-toggle-btn svg { width: 13px; height: 13px; transition: transform 0.2s; }
+  .solicitud-toggle-btn.abierto svg { transform: rotate(90deg); }
+  .solicitud-detalle-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
   .solicitud-detalle { font-size: 13.5px; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
-  .solicitud-comentario { font-size: 12.5px; color: var(--text-muted); font-style: italic; margin-bottom: 4px; }
-  .solicitud-fechas { font-size: 11.5px; color: var(--text-muted); }
+  .solicitud-cambio-linea { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
+  .solicitud-cambio-label { color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
+  .solicitud-comentario { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+  .solicitud-fechas { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
 
   #app-screen { display: none; }
   .oculto { display: none !important; }
@@ -940,16 +952,25 @@ function formatearFechaHora(iso) {
   return `${dd}/${mm} ${hh}:${mi}`;
 }
 
-// Detalle en texto de exactamente que se pidio -- una correccion puede
-// tocar ingreso, egreso, o los dos; y un cambio de turno se lee distinto
-// segun si el que esta mirando es quien lo pidio (empleado_a) o el
-// compañero del otro lado (empleado_b), que no lo inicio pero tambien le
-// mueve el dia.
+// Texto corto de un horario -- para el resumen colapsado y para las lineas
+// de "antes"/"pediste" del detalle expandido.
+function formatearHorarioCorto(ingreso, egreso) {
+  const i = ingreso && ingreso !== "—" ? ingreso : "sin ingreso";
+  const e = egreso && egreso !== "—" ? egreso : "sin egreso";
+  return `${i} · ${e}`;
+}
+
+// "Antes" viene del server (services/db.js -- snapshot si ya se aprobo,
+// filas_diarias actual si todavia no). "Pediste" se arma acá: el horario
+// que se propuso para el lado que se toco, completado con el que ya tenia
+// para el lado que no se toco -- asi se ve el dia completo que quedaria,
+// no solo el campo suelto que se corrigio.
 function detalleSolicitudCorreccion(s) {
-  const partes = [];
-  if (s.ingreso_propuesto) partes.push(`ingreso propuesto ${s.ingreso_propuesto}`);
-  if (s.egreso_propuesto) partes.push(`egreso propuesto ${s.egreso_propuesto}`);
-  return `${formatearFecha(s.fecha)} — ${partes.join(" · ") || "sin horario propuesto"}`;
+  const antesTxt = s.antes ? formatearHorarioCorto(s.antes.ingreso, s.antes.egreso) : "sin fichada ese día";
+  const pedisteIngreso = s.ingreso_propuesto || (s.antes ? s.antes.ingreso : null);
+  const pedisteEgreso = s.egreso_propuesto || (s.antes ? s.antes.egreso : null);
+  const pedisteTxt = formatearHorarioCorto(pedisteIngreso, pedisteEgreso);
+  return { antesTxt, pedisteTxt };
 }
 
 function detalleSolicitudCambio(s, miNombre) {
@@ -961,6 +982,19 @@ function detalleSolicitudCambio(s, miNombre) {
   return `${s.empleado_a} pidió cambiar su turno del ${fA} por el tuyo del ${fB}`;
 }
 
+function badgeEstadoSolicitud(estado) {
+  if (estado === "pendiente") return `<span class="badge badge-warn">Pendiente</span>`;
+  if (estado === "aprobada") return `<span class="badge badge-ok">Aprobada</span>`;
+  if (estado === "rechazada") return `<span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Rechazada</span>`;
+  return `<span class="badge badge-muted">${estado}</span>`;
+}
+
+function toggleDetalleSolicitud(boton) {
+  const panel = boton.closest(".solicitud-top").nextElementSibling;
+  panel.classList.toggle("oculto");
+  boton.classList.toggle("abierto", !panel.classList.contains("oculto"));
+}
+
 async function cargarSolicitudes() {
   const el = document.getElementById("solicitudes-contenido");
   el.innerHTML = `<div class="vacio">Cargando…</div>`;
@@ -968,12 +1002,16 @@ async function cargarSolicitudes() {
   try {
     const data = await apiFetch("/app/api/mis-solicitudes");
     const items = [
-      ...(data.correcciones || []).map((s) => ({
-        tipo: "Corrección", detalle: detalleSolicitudCorreccion(s), comentario: s.mensaje_original || "",
-        estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
-      })),
+      ...(data.correcciones || []).map((s) => {
+        const { antesTxt, pedisteTxt } = detalleSolicitudCorreccion(s);
+        return {
+          tipo: "Corrección", resumenFecha: formatearFecha(s.fecha), antesTxt, pedisteTxt,
+          comentario: s.mensaje_original || "", estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
+        };
+      }),
       ...(data.cambios || []).map((s) => ({
-        tipo: "Cambio de turno", detalle: detalleSolicitudCambio(s, miNombre), comentario: "",
+        tipo: "Cambio de turno", resumenFecha: `${formatearFecha(s.fecha_a)} ↔ ${formatearFecha(s.fecha_b)}`,
+        detalleCambio: detalleSolicitudCambio(s, miNombre), comentario: "",
         estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
       })),
     ].sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
@@ -983,24 +1021,35 @@ async function cargarSolicitudes() {
       return;
     }
     el.innerHTML = items.map((s) => {
-      let badge = `<span class="badge badge-muted">${s.estado}</span>`;
-      if (s.estado === "pendiente") badge = `<span class="badge badge-warn">Pendiente</span>`;
-      if (s.estado === "aprobada") badge = `<span class="badge badge-ok">Aprobada</span>`;
-      if (s.estado === "rechazada") badge = `<span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Rechazada</span>`;
-
-      const comentario = s.comentario ? `<div class="solicitud-comentario">“${escapeHtml(s.comentario)}”</div>` : "";
+      const comentario = s.comentario ? `<div class="solicitud-comentario">Comentario: ${escapeHtml(s.comentario)}</div>` : "";
       const fechas = s.resueltoEn
         ? `Pedido el ${formatearFechaHora(s.creadoEn)} · Resuelto el ${formatearFechaHora(s.resueltoEn)}`
         : `Pedido el ${formatearFechaHora(s.creadoEn)}`;
 
+      const cuerpoDetalle = s.tipo === "Corrección"
+        ? `<div class="solicitud-cambio-linea"><span class="solicitud-cambio-label">Antes</span><span>${s.antesTxt}</span></div>
+           <div class="solicitud-cambio-linea"><span class="solicitud-cambio-label">Pediste</span><span>${s.pedisteTxt}</span></div>`
+        : `<div class="solicitud-detalle">${s.detalleCambio}</div>`;
+
       return `<div class="solicitud-item">
         <div class="solicitud-top">
-          <span class="solicitud-tipo">${s.tipo}</span>
-          ${badge}
+          <div class="solicitud-top-izq">
+            <span class="solicitud-tipo">${s.tipo}</span>
+            <span class="solicitud-resumen-fecha">${s.resumenFecha}</span>
+          </div>
+          <div class="solicitud-top-der">
+            ${badgeEstadoSolicitud(s.estado)}
+            <button class="solicitud-toggle-btn" onclick="toggleDetalleSolicitud(this)">
+              Más detalles
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
         </div>
-        <div class="solicitud-detalle">${s.detalle}</div>
-        ${comentario}
-        <div class="solicitud-fechas">${fechas}</div>
+        <div class="solicitud-detalle-panel oculto">
+          ${cuerpoDetalle}
+          ${comentario}
+          <div class="solicitud-fechas">${fechas}</div>
+        </div>
       </div>`;
     }).join("");
   } catch (err) {

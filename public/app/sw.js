@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v13"; // v13: mis solicitudes mas detallado (que se pidio, cuando, cuando se resolvio)
+const CACHE = "fich-coronado-v15"; // v15: fix toggle de mas detalles en mis solicitudes
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
