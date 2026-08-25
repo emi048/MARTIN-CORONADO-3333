@@ -188,15 +188,27 @@
   }
   .config-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
 
-  .acciones-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .accion-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
-    padding: 14px 4px; color: var(--text); font-size: 11.5px; font-weight: 600; text-align: center;
-    cursor: pointer; font-family: var(--font-body); transition: background 0.15s, border-color 0.15s;
+  .barra-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .barra-accion {
+    display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
+    background: linear-gradient(150deg, rgba(124,108,240,0.08), var(--surface) 60%);
+    border: 1px solid var(--border); cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
-  .accion-btn svg { width: 20px; height: 20px; color: var(--accent-2); }
-  .accion-btn:hover { background: rgba(124,108,240,0.10); border-color: rgba(124,108,240,0.35); }
+  .barra-accion:hover { background: rgba(124,108,240,0.10); border-color: rgba(124,108,240,0.35); }
+  .barra-accion svg:first-child { width: 19px; height: 19px; color: var(--accent-2); flex-shrink: 0; }
+  .barra-label { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+  .barra-chevron { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+
+  .corr-problemas { margin-bottom: 14px; }
+  .corr-problemas-titulo { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 600; }
+  .corr-problema-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 10px 12px; background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25);
+    border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 12.5px;
+  }
+  .corr-problema-item:hover { background: rgba(245,166,35,0.14); }
+  .corr-problema-item .motivo { color: var(--warn); font-size: 12px; text-align: right; }
 
   .modal-overlay {
     position: fixed; inset: 0; background: var(--overlay-bg);
@@ -325,21 +337,26 @@
         <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
       </div>
 
-      <div class="card">
-        <div class="card-titulo">Trámites</div>
-        <div class="acciones-grid">
-          <button class="accion-btn" onclick="abrirModal('correccion')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Corregir horas
-          </button>
-          <button class="accion-btn oculto" id="btn-cambio-turno" onclick="abrirModal('cambio')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-            Cambio de turno
-          </button>
-          <button class="accion-btn" onclick="abrirModal('solicitudes')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            Mis solicitudes
-          </button>
+      <div class="barra-lista">
+        <div class="barra-accion" onclick="abrirModal('correccion')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span class="barra-label">Corregir horas</span>
+          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="barra-accion" onclick="cambiarTab('fichadas')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="barra-label">Consultar mis horas</span>
+          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="barra-accion oculto" id="btn-cambio-turno" onclick="abrirModal('cambio')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <span class="barra-label">Cambio de turno</span>
+          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="barra-accion" onclick="abrirModal('solicitudes')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span class="barra-label">Mis solicitudes</span>
+          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
     </section>
@@ -380,6 +397,7 @@
     <div class="modal-box" onclick="event.stopPropagation()">
       <div id="modal-correccion" class="modal-contenido oculto">
         <div class="modal-header"><h3>Corregir horas</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div id="corr-problemas" class="corr-problemas"></div>
         <div class="modal-form">
           <label>Fecha</label>
           <input type="date" id="corr-fecha">
@@ -589,6 +607,11 @@ function formatearFecha(iso) {
   return `${d}/${m} <span class="dia-semana">${DIAS_SEMANA[dt.getDay()]}</span>`;
 }
 
+function formatearHoras(n) {
+  const v = Math.round(n * 100) / 100;
+  return (Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)) + "hs";
+}
+
 // Tarjeta "Hoy" en Inicio -- estado en vivo de la fichada de hoy.
 async function cargarHoy() {
   try {
@@ -630,13 +653,52 @@ function abrirModal(tipo) {
   document.querySelectorAll(".modal-contenido").forEach((m) => m.classList.add("oculto"));
   document.getElementById("modal-" + tipo).classList.remove("oculto");
   document.getElementById("modal-overlay").classList.add("abierto");
-  if (tipo === "correccion" && !document.getElementById("corr-fecha").value) {
-    document.getElementById("corr-fecha").value = fechaISO(new Date());
+  if (tipo === "correccion") {
+    if (!document.getElementById("corr-fecha").value) document.getElementById("corr-fecha").value = fechaISO(new Date());
+    cargarProblemasCorreccion();
   }
   if (tipo === "cambio") {
     document.getElementById("camb-companero").innerHTML = COMPANEROS.map((c) => `<option value="${c}">${c}</option>`).join("");
   }
   if (tipo === "solicitudes") cargarSolicitudes();
+}
+
+// Antes de que el empleado tenga que adivinar una fecha, le mostramos los
+// dias del periodo actual que ya sabemos que tienen algo mal: sin fila
+// (ausencia real, sin contar sabados compensados) o con una alerta del
+// motor de calculo (ej. "solo 1 registro, sin egreso"). Tocar un dia
+// precarga la fecha (y el horario que ya haya, si falta solo un lado) en
+// el formulario de abajo.
+async function cargarProblemasCorreccion() {
+  const el = document.getElementById("corr-problemas");
+  el.innerHTML = `<div class="vacio">Buscando días con algo pendiente…</div>`;
+  try {
+    const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
+    const problemas = [
+      ...(data.ausencias || []).filter((a) => !a.compensado).map((a) => ({ fecha: a.fecha, motivo: "Ausente / sin fichada", ingreso: "", egreso: "" })),
+      ...(data.dias || []).filter((d) => d.alerta).map((d) => ({ fecha: d.fecha, motivo: d.alerta, ingreso: d.ingreso || "", egreso: d.egreso || "" })),
+    ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    if (problemas.length === 0) {
+      el.innerHTML = "";
+      return;
+    }
+    el.innerHTML = `<div class="corr-problemas-titulo">Días con algo pendiente este período</div>` +
+      problemas.map((p) => `
+        <div class="corr-problema-item" onclick="usarProblemaEnFormulario('${p.fecha}','${p.ingreso}','${p.egreso}')">
+          <span class="fecha">${formatearFecha(p.fecha)}</span>
+          <span class="motivo">${p.motivo}</span>
+        </div>
+      `).join("");
+  } catch (err) {
+    el.innerHTML = "";
+  }
+}
+
+function usarProblemaEnFormulario(fecha, ingreso, egreso) {
+  document.getElementById("corr-fecha").value = fecha;
+  document.getElementById("corr-ingreso").value = ingreso || "";
+  document.getElementById("corr-egreso").value = egreso || "";
 }
 
 function cerrarModal() {
@@ -760,9 +822,14 @@ async function cargarFichadas() {
         }
         const tarde = d.llegadaTarde ? `<br><span class="badge badge-warn">Llegó ${d.minutosTarde >= 60 ? Math.floor(d.minutosTarde/60) + "h " + (d.minutosTarde%60) + "min" : d.minutosTarde + "min"} tarde</span>` : "";
         const alerta = d.alerta ? `<br><span class="badge badge-warn">${d.alerta}</span>` : "";
+        const detalleHoras = [];
+        if (d.total_hs) detalleHoras.push(`${formatearHoras(d.total_hs)} total`);
+        if (d.h50 > 0) detalleHoras.push(`${formatearHoras(d.h50)} al 50%`);
+        if (d.h100 > 0) detalleHoras.push(`${formatearHoras(d.h100)} al 100%`);
+        const horasTxt = detalleHoras.length ? `<br><span class="dia-semana">${detalleHoras.join(" · ")}</span>` : "";
         return `<div class="fila-hora">
           <div class="fecha">${formatearFecha(d.fecha)}</div>
-          <div class="horas">${d.ingreso || "—"} · ${d.egreso || "—"}${tarde}${alerta}</div>
+          <div class="horas">${d.ingreso || "—"} · ${d.egreso || "—"}${horasTxt}${tarde}${alerta}</div>
         </div>`;
       }).join("");
     }
