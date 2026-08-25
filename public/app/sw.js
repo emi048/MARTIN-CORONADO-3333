@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v15"; // v15: fix toggle de mas detalles en mis solicitudes
+const CACHE = "fich-coronado-v16"; // v16: corregir horas y mis solicitudes pasan a ser pestañas del sidebar, sin comentario redundante
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

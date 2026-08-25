@@ -340,7 +340,6 @@
   .solicitud-detalle { font-size: 13.5px; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
   .solicitud-cambio-linea { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
   .solicitud-cambio-label { color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
-  .solicitud-comentario { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
   .solicitud-fechas { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
 
   #app-screen { display: none; }
@@ -389,6 +388,14 @@
     <div class="sidebar-item" data-tab="fichadas" onclick="cambiarTab('fichadas')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Mis fichadas
+    </div>
+    <div class="sidebar-item" data-tab="corregir" onclick="cambiarTab('corregir')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Corregir horas
+    </div>
+    <div class="sidebar-item" data-tab="solicitudes" onclick="cambiarTab('solicitudes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Mis solicitudes
     </div>
     <div class="sidebar-item" data-tab="config" onclick="cambiarTab('config')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -456,7 +463,7 @@
       </div>
 
       <div class="barra-lista">
-        <div class="barra-accion" onclick="abrirModal('correccion')">
+        <div class="barra-accion" onclick="cambiarTab('corregir')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           <span class="barra-label">Corregir horas</span>
           <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -471,7 +478,7 @@
           <span class="barra-label">Cambio de turno</span>
           <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
-        <div class="barra-accion" onclick="abrirModal('solicitudes')">
+        <div class="barra-accion" onclick="cambiarTab('solicitudes')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span class="barra-label">Mis solicitudes</span>
           <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -496,6 +503,36 @@
       </div>
     </section>
 
+    <section id="tab-corregir" class="oculto">
+      <div class="card">
+        <div class="card-titulo">Días con algo pendiente</div>
+        <div id="corr-problemas" class="corr-problemas"></div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Corregir un día puntual</div>
+        <div class="modal-form">
+          <label>Fecha</label>
+          <input type="date" id="corr-fecha">
+          <label>Ingreso correcto (opcional)</label>
+          <input type="time" id="corr-ingreso">
+          <label>Egreso correcto (opcional)</label>
+          <input type="time" id="corr-egreso">
+          <label>Comentario (opcional)</label>
+          <textarea id="corr-mensaje" placeholder="Contale al admin qué pasó ese día"></textarea>
+          <button onclick="enviarCorreccion()">Enviar pedido</button>
+          <div class="modal-error" id="corr-error"></div>
+          <div class="modal-ok" id="corr-ok"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-solicitudes" class="oculto">
+      <div class="card">
+        <div class="card-titulo">Mis solicitudes</div>
+        <div id="solicitudes-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+    </section>
+
     <section id="tab-config" class="oculto">
       <div class="card">
         <div class="card-titulo">Cambiar contraseña</div>
@@ -513,24 +550,6 @@
 
   <div class="modal-overlay" id="modal-overlay" onclick="cerrarModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
-      <div id="modal-correccion" class="modal-contenido oculto">
-        <div class="modal-header"><h3>Corregir horas</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
-        <div id="corr-problemas" class="corr-problemas"></div>
-        <div class="modal-form">
-          <label>Fecha</label>
-          <input type="date" id="corr-fecha">
-          <label>Ingreso correcto (opcional)</label>
-          <input type="time" id="corr-ingreso">
-          <label>Egreso correcto (opcional)</label>
-          <input type="time" id="corr-egreso">
-          <label>Comentario (opcional)</label>
-          <textarea id="corr-mensaje" placeholder="Contale al admin qué pasó ese día"></textarea>
-          <button onclick="enviarCorreccion()">Enviar pedido</button>
-          <div class="modal-error" id="corr-error"></div>
-          <div class="modal-ok" id="corr-ok"></div>
-        </div>
-      </div>
-
       <div id="modal-cambio" class="modal-contenido oculto">
         <div class="modal-header"><h3>Cambio de turno</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
         <div class="modal-form">
@@ -544,11 +563,6 @@
           <div class="modal-error" id="camb-error"></div>
           <div class="modal-ok" id="camb-ok"></div>
         </div>
-      </div>
-
-      <div id="modal-solicitudes" class="modal-contenido oculto">
-        <div class="modal-header"><h3>Mis solicitudes</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
-        <div id="solicitudes-contenido"><div class="vacio">Cargando…</div></div>
       </div>
     </div>
   </div>
@@ -735,6 +749,10 @@ function periodoActual() {
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function fechaISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function mostrarApp() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app-screen").style.display = "block";
@@ -762,6 +780,8 @@ function cerrarSidebar() {
 const TITULOS_TAB = {
   inicio: ["Inicio", "Tu turno y fichada de hoy"],
   fichadas: ["Mis fichadas", "Historial del período"],
+  corregir: ["Corregir horas", "Días con algo pendiente"],
+  solicitudes: ["Mis solicitudes", "Estado de tus pedidos"],
   config: ["Configuración", "Tu cuenta"],
 };
 
@@ -769,6 +789,8 @@ function cambiarTab(tab) {
   document.querySelectorAll(".sidebar-item[data-tab]").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
   document.getElementById("tab-inicio").classList.toggle("oculto", tab !== "inicio");
   document.getElementById("tab-fichadas").classList.toggle("oculto", tab !== "fichadas");
+  document.getElementById("tab-corregir").classList.toggle("oculto", tab !== "corregir");
+  document.getElementById("tab-solicitudes").classList.toggle("oculto", tab !== "solicitudes");
   document.getElementById("tab-config").classList.toggle("oculto", tab !== "config");
   const [titulo, subtitulo] = TITULOS_TAB[tab] || ["", ""];
   document.getElementById("header-titulo-txt").textContent = titulo;
@@ -781,6 +803,11 @@ function cambiarTab(tab) {
   // entre pestañas).
   document.getElementById("header-hamburger-btn").classList.toggle("oculto", tab !== "inicio");
   document.getElementById("header-back-btn").classList.toggle("oculto", tab === "inicio");
+  if (tab === "corregir") {
+    if (!document.getElementById("corr-fecha").value) document.getElementById("corr-fecha").value = fechaISO(new Date());
+    cargarProblemasCorreccion();
+  }
+  if (tab === "solicitudes") cargarSolicitudes();
   cerrarSidebar();
 }
 
@@ -832,18 +859,16 @@ async function cargarCompaneros() {
   }
 }
 
+// Unico modal que queda (Corregir horas y Mis solicitudes pasaron a ser
+// pestañas propias, ver cambiarTab). Cambio de turno sigue siendo modal
+// porque es una feature chica, solo para el equipo rotativo.
 function abrirModal(tipo) {
   document.querySelectorAll(".modal-contenido").forEach((m) => m.classList.add("oculto"));
   document.getElementById("modal-" + tipo).classList.remove("oculto");
   document.getElementById("modal-overlay").classList.add("abierto");
-  if (tipo === "correccion") {
-    if (!document.getElementById("corr-fecha").value) document.getElementById("corr-fecha").value = fechaISO(new Date());
-    cargarProblemasCorreccion();
-  }
   if (tipo === "cambio") {
     document.getElementById("camb-companero").innerHTML = COMPANEROS.map((c) => `<option value="${c}">${c}</option>`).join("");
   }
-  if (tipo === "solicitudes") cargarSolicitudes();
 }
 
 // Antes de que el empleado tenga que adivinar una fecha, le mostramos los
@@ -1006,12 +1031,12 @@ async function cargarSolicitudes() {
         const { antesTxt, pedisteTxt } = detalleSolicitudCorreccion(s);
         return {
           tipo: "Corrección", resumenFecha: formatearFecha(s.fecha), antesTxt, pedisteTxt,
-          comentario: s.mensaje_original || "", estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
+          estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
         };
       }),
       ...(data.cambios || []).map((s) => ({
         tipo: "Cambio de turno", resumenFecha: `${formatearFecha(s.fecha_a)} ↔ ${formatearFecha(s.fecha_b)}`,
-        detalleCambio: detalleSolicitudCambio(s, miNombre), comentario: "",
+        detalleCambio: detalleSolicitudCambio(s, miNombre),
         estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
       })),
     ].sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
@@ -1021,7 +1046,6 @@ async function cargarSolicitudes() {
       return;
     }
     el.innerHTML = items.map((s) => {
-      const comentario = s.comentario ? `<div class="solicitud-comentario">Comentario: ${escapeHtml(s.comentario)}</div>` : "";
       const fechas = s.resueltoEn
         ? `Pedido el ${formatearFechaHora(s.creadoEn)} · Resuelto el ${formatearFechaHora(s.resueltoEn)}`
         : `Pedido el ${formatearFechaHora(s.creadoEn)}`;
@@ -1047,7 +1071,6 @@ async function cargarSolicitudes() {
         </div>
         <div class="solicitud-detalle-panel oculto">
           ${cuerpoDetalle}
-          ${comentario}
           <div class="solicitud-fechas">${fechas}</div>
         </div>
       </div>`;
