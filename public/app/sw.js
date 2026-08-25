@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v3"; // v3: rediseno visual (Unbounded/Inter, vidrio/gradiente, foto de fondo en login)
+const CACHE = "fich-coronado-v4"; // v4: 3 pestañas (Inicio/Mis fichadas/Configuracion), saludo con turno de hoy
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
