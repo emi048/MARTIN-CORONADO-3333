@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v5"; // v5: sidebar deslizable (hamburguesa) en vez de barra inferior
+const CACHE = "fich-coronado-v6"; // v6: header tipo topbar (titulo+subtitulo, tema claro/oscuro, notificaciones, avatar)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

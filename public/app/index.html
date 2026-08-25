@@ -14,20 +14,32 @@
     --bg: #0a0c12; --surface: #12151f; --surface2: #171b28; --border: #242a3b;
     --text: #eef0f6; --text-muted: #8b90a8; --accent: #7c6cf0; --accent-hover: #6c5ce0; --accent-2: #4f8cff;
     --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
+    --header-bg-1: rgba(10,12,18,0.92); --header-bg-2: rgba(10,12,18,0.82);
+    --overlay-bg: rgba(0,0,0,0.55); --sidebar-bg-1: #10131d; --sidebar-bg-2: #0a0c12;
     --font-display: 'Unbounded', sans-serif; --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  /* Modo claro: solo afecta la app ya logueada -- las pantallas de login
+     quedan siempre oscuras (usan colores fijos, no estas variables) porque
+     tienen la foto del edificio de fondo. */
+  body.tema-claro {
+    --bg: #f4f5fa; --surface: #ffffff; --surface2: #edeff7; --border: #dfe2ee;
+    --text: #14161f; --text-muted: #6b7086;
+    --header-bg-1: rgba(255,255,255,0.92); --header-bg-2: rgba(255,255,255,0.82);
+    --overlay-bg: rgba(20,22,31,0.35); --sidebar-bg-1: #ffffff; --sidebar-bg-2: #f4f5fa;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: var(--font-body);
     min-height: 100vh; font-variant-numeric: tabular-nums;
+    transition: background 0.2s, color 0.2s;
   }
 
   #login-screen, #cambiar-password-screen {
     display: flex; align-items: center; justify-content: center; min-height: 100vh;
     position: relative; overflow: hidden;
     background-image:
-      linear-gradient(180deg, rgba(10,12,18,0.12) 0%, rgba(10,12,18,0.55) 65%, var(--bg) 100%),
+      linear-gradient(180deg, rgba(10,12,18,0.12) 0%, rgba(10,12,18,0.55) 65%, #0a0c12 100%),
       linear-gradient(90deg, rgba(10,12,18,0.28), rgba(10,12,18,0.05)),
       url('/panel/edificio-hero.jpg');
     background-size: cover, cover, cover;
@@ -61,7 +73,7 @@
     padding: 14px 18px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 12px;
     position: sticky; top: 0; z-index: 10;
-    background: linear-gradient(180deg, rgba(10,12,18,0.92), rgba(10,12,18,0.82));
+    background: linear-gradient(180deg, var(--header-bg-1), var(--header-bg-2));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   }
   .hamburger-btn {
@@ -70,19 +82,38 @@
     cursor: pointer; flex-shrink: 0; padding: 0;
   }
   .hamburger-btn svg { width: 19px; height: 19px; }
-  header .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-logo { height: 30px; width: auto; opacity: 0.95; flex-shrink: 0; }
-  header h1 { font-family: var(--font-display); font-size: 13.5px; margin: 0; font-weight: 700; line-height: 1.3; }
-  header h1 span { display: block; color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 12px; margin-top: 2px; }
+  .header-titulo { flex: 1; min-width: 0; }
+  .header-titulo h1 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-titulo span { display: block; color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .header-icon-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; position: relative; flex-shrink: 0;
+  }
+  .header-icon-btn svg { width: 17px; height: 17px; }
+  .avatar-btn {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .notif-wrap { position: relative; }
+  .notif-panel {
+    position: absolute; top: 46px; right: 0; width: 210px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.35); z-index: 60;
+  }
+  .notif-panel .notif-vacio { color: var(--text-muted); font-size: 12.5px; text-align: center; }
 
   .sidebar-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    position: fixed; inset: 0; background: var(--overlay-bg);
     opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 40;
   }
   .sidebar-overlay.abierto { opacity: 1; pointer-events: auto; }
   .sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; width: 250px;
-    background: linear-gradient(180deg, #10131d, #0a0c12);
+    background: linear-gradient(180deg, var(--sidebar-bg-1), var(--sidebar-bg-2));
     border-right: 1px solid var(--border);
     transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
     z-index: 50; display: flex; flex-direction: column; padding: 20px 14px;
@@ -111,10 +142,6 @@
   .saludo-nombre { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
   .saludo-turno { color: var(--text-muted); font-size: 13.5px; margin-top: 6px; }
   .saludo-turno strong { color: var(--text); font-weight: 600; }
-  header button {
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
-  }
 
   main { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
   .card {
@@ -224,9 +251,21 @@
     <button class="hamburger-btn" onclick="abrirSidebar()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="header-left">
-      <img src="/panel/logo-cr.png" alt="CR" class="header-logo">
-      <h1>MARTÍN CORONADO 3333</h1>
+    <div class="header-titulo">
+      <h1 id="header-titulo-txt">Inicio</h1>
+      <span id="header-subtitulo-txt">Tu turno y fichada de hoy</span>
+    </div>
+    <div class="header-acciones">
+      <button class="header-icon-btn" id="btn-tema" onclick="toggleTema()" aria-label="Cambiar tema"></button>
+      <div class="notif-wrap">
+        <button class="header-icon-btn" onclick="toggleNotif(event)" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <div class="notif-panel oculto" id="notif-panel">
+          <div class="notif-vacio">No tenés notificaciones nuevas</div>
+        </div>
+      </div>
+      <div class="avatar-btn" id="avatar-btn" onclick="abrirSidebar()">--</div>
     </div>
   </header>
 
@@ -285,6 +324,43 @@ function fechaLargaDeHoy() {
   const hoy = new Date();
   return `${DIAS_SEMANA_LARGO[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()]}`;
 }
+
+const ICONO_SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+const ICONO_LUNA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
+// El tema se guarda aparte del login (localStorage sobrevive el logout) para
+// que la preferencia quede en el celular, no en la cuenta.
+function aplicarTema(tema) {
+  document.body.classList.toggle("tema-claro", tema === "claro");
+  const btn = document.getElementById("btn-tema");
+  if (btn) btn.innerHTML = tema === "claro" ? ICONO_LUNA : ICONO_SOL;
+}
+
+function toggleTema() {
+  const nuevo = (localStorage.getItem("app_tema") || "oscuro") === "oscuro" ? "claro" : "oscuro";
+  localStorage.setItem("app_tema", nuevo);
+  aplicarTema(nuevo);
+}
+
+function toggleNotif(evento) {
+  evento.stopPropagation();
+  document.getElementById("notif-panel").classList.toggle("oculto");
+}
+
+document.addEventListener("click", (evento) => {
+  const panel = document.getElementById("notif-panel");
+  if (!panel || panel.classList.contains("oculto")) return;
+  if (!panel.parentElement.contains(evento.target)) panel.classList.add("oculto");
+});
+
+function inicialesDeNombre(nombre) {
+  const partes = (nombre || "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "--";
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+aplicarTema(localStorage.getItem("app_tema") || "oscuro");
 
 function token() { return localStorage.getItem("app_token"); }
 
@@ -369,6 +445,7 @@ function mostrarApp() {
   document.getElementById("app-screen").style.display = "block";
   const nombreCompleto = localStorage.getItem("app_nombre") || "";
   document.getElementById("saludo-nombre-usuario").textContent = nombreCompleto.split(" ")[0] || nombreCompleto;
+  document.getElementById("avatar-btn").textContent = inicialesDeNombre(nombreCompleto);
   document.getElementById("fichadas-periodo").value = periodoActual();
   cargarHoy();
   cargarHorario();
@@ -385,11 +462,20 @@ function cerrarSidebar() {
   document.getElementById("sidebar-overlay").classList.remove("abierto");
 }
 
+const TITULOS_TAB = {
+  inicio: ["Inicio", "Tu turno y fichada de hoy"],
+  fichadas: ["Mis fichadas", "Historial del período"],
+  config: ["Configuración", "Tu cuenta"],
+};
+
 function cambiarTab(tab) {
   document.querySelectorAll(".sidebar-item[data-tab]").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
   document.getElementById("tab-inicio").classList.toggle("oculto", tab !== "inicio");
   document.getElementById("tab-fichadas").classList.toggle("oculto", tab !== "fichadas");
   document.getElementById("tab-config").classList.toggle("oculto", tab !== "config");
+  const [titulo, subtitulo] = TITULOS_TAB[tab] || ["", ""];
+  document.getElementById("header-titulo-txt").textContent = titulo;
+  document.getElementById("header-subtitulo-txt").textContent = subtitulo;
   cerrarSidebar();
 }
 
