@@ -5,64 +5,79 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>FICH-CORONADO</title>
 <link rel="manifest" href="/app/manifest.json">
-<meta name="theme-color" content="#0f1115">
+<meta name="theme-color" content="#0a0c12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1115; --surface: #171a21; --surface2: #1e2229; --border: #2a2f3a;
-    --text: #e6e8eb; --text-muted: #8a919e; --accent: #4f8cff; --accent-hover: #3f78e8;
+    --bg: #0a0c12; --surface: #12151f; --surface2: #171b28; --border: #242a3b;
+    --text: #eef0f6; --text-muted: #8b90a8; --accent: #7c6cf0; --accent-hover: #6c5ce0; --accent-2: #4f8cff;
     --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
+    --font-display: 'Unbounded', sans-serif; --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    min-height: 100vh; padding-bottom: 70px;
+    font-family: var(--font-body);
+    min-height: 100vh; padding-bottom: 70px; font-variant-numeric: tabular-nums;
   }
 
   #login-screen, #cambiar-password-screen {
     display: flex; align-items: center; justify-content: center; min-height: 100vh;
-    background: radial-gradient(circle at 50% 0%, rgba(79,140,255,0.10), transparent 55%), var(--bg);
+    position: relative; overflow: hidden;
+    background-image:
+      linear-gradient(180deg, rgba(10,12,18,0.12) 0%, rgba(10,12,18,0.55) 65%, var(--bg) 100%),
+      linear-gradient(90deg, rgba(10,12,18,0.28), rgba(10,12,18,0.05)),
+      url('/panel/edificio-hero.jpg');
+    background-size: cover, cover, cover;
+    background-position: center, center, center 35%;
     padding: 20px;
   }
   .login-box {
-    background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
-    border-radius: 14px; padding: 36px 28px; width: 100%; max-width: 340px; text-align: center;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    background: linear-gradient(165deg, rgba(23,27,44,0.78), rgba(18,21,31,0.78));
+    border: 1px solid rgba(124,108,240,0.35); border-top: 1px solid rgba(124,108,240,0.35);
+    border-radius: 18px; padding: 36px 28px; width: 100%; max-width: 340px; text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
   .login-logo { height: 52px; width: auto; margin-bottom: 16px; opacity: 0.95; }
-  .login-box h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.02em; }
+  .login-box h2 { font-family: var(--font-display); margin: 0 0 4px; font-size: 17px; letter-spacing: 0.01em; font-weight: 700; }
   .login-box p { color: var(--text-muted); font-size: 13px; margin: 0 0 24px; }
   .login-box input {
     width: 100%; padding: 13px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text); font-size: 16px; text-align: center;
+    background: rgba(10,12,18,0.5); color: var(--text); font-size: 16px; text-align: center;
     margin-bottom: 10px; transition: border-color 0.15s;
   }
   .login-box input:focus { outline: none; border-color: var(--accent); }
   .login-box button {
     width: 100%; margin-top: 8px; padding: 13px; border-radius: 8px; border: none;
-    background: var(--accent); color: white; font-weight: 600; cursor: pointer; font-size: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; font-weight: 700; cursor: pointer; font-size: 15px;
+    transition: filter 0.15s, transform 0.15s; box-shadow: 0 6px 20px rgba(124,108,240,0.35);
   }
-  .login-box button:hover { background: var(--accent-hover); }
+  .login-box button:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
 
   header {
     padding: 16px 18px; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 0; background: var(--bg); z-index: 10;
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(180deg, rgba(10,12,18,0.92), rgba(10,12,18,0.82));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   }
-  header h1 { font-size: 16px; margin: 0; font-weight: 700; }
-  header h1 span { display: block; color: var(--text-muted); font-weight: 500; font-size: 12px; margin-top: 2px; }
+  header h1 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; }
+  header h1 span { display: block; color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 12px; margin-top: 2px; }
   header button {
-    background: none; border: 1px solid var(--border); color: var(--text-muted);
-    padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
   }
 
   main { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
   .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px; margin-bottom: 12px;
+    background: linear-gradient(150deg, rgba(124,108,240,0.08), var(--surface) 60%);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
-  .card-titulo { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; }
+  .card-titulo { font-family: var(--font-display); font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; font-weight: 500; }
   .fila-hora { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .fila-hora:last-child { border-bottom: none; }
   .fila-hora .fecha { font-size: 14px; }
@@ -74,13 +89,14 @@
   .badge-muted { background: var(--surface2); color: var(--text-muted); }
   .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .stat { text-align: center; }
-  .stat .num { font-size: 20px; font-weight: 700; }
-  .stat .label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .stat .num { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+  .stat .label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
   .vacio { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
   nav.tabbar {
     position: fixed; bottom: 0; left: 0; right: 0; display: flex;
-    background: var(--surface); border-top: 1px solid var(--border); z-index: 10;
+    background: linear-gradient(0deg, rgba(10,12,18,0.95), rgba(10,12,18,0.85));
+    border-top: 1px solid var(--border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 10;
   }
   nav.tabbar button {
     flex: 1; background: none; border: none; color: var(--text-muted);
