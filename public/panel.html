@@ -20,14 +20,22 @@
     margin: 0; background: var(--bg); color: var(--text);
     font-family: var(--font-body);
     min-height: 100vh; font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+  /* Foto de fondo fija con position:fixed en vez de background-attachment:fixed
+     -- ese ultimo tiene un bug conocido en Chrome que corta la imagen a la
+     mitad de la pantalla en vez de cubrirla entera. Con un pseudo-elemento
+     fixed independiente no pasa. */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -2;
+    background-image: url('/panel/edificio-hero.jpg');
+    background-size: cover; background-position: center 35%; background-repeat: no-repeat;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
     background-image: radial-gradient(ellipse 900px 600px at 100% 0%, rgba(124,108,240,0.10), transparent 60%),
                        radial-gradient(ellipse 700px 500px at 0% 100%, rgba(79,140,255,0.06), transparent 60%),
-                       linear-gradient(180deg, rgba(10,12,18,0.80), rgba(10,12,18,0.92) 30%, var(--bg) 68%),
-                       url('/panel/edificio-hero.jpg');
-    background-attachment: fixed, fixed, fixed, fixed;
-    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
-    background-size: auto, auto, cover, cover;
-    background-position: 100% 0%, 0% 100%, center, center 35%;
+                       linear-gradient(180deg, rgba(10,12,18,0.80), rgba(10,12,18,0.92) 30%, var(--bg) 68%);
   }
   h3 { font-family: var(--font-display); font-weight: 500; font-size: 15px; letter-spacing: 0.01em; }
   header {
