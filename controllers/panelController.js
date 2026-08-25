@@ -14,7 +14,7 @@ const {
   filaDelDiaPorFecha, filasDelPeriodoDeEmpleado,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   pedidosTotalesPorEmpleado, periodosRecientes,
-  crearEmpleadoApp, listarEmpleadosApp, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
+  crearEmpleadoApp, listarEmpleadosApp, empleadoAppPorId, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
   esEventoRegistrado,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
@@ -309,18 +309,22 @@ router.delete("/api/empleados/whatsapp/:empleado", requerirAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Cuentas de la app de empleado (usuario + PIN) -- gestion exclusiva de admin ──
+// ── Cuentas de la app de empleado (usuario + contraseña) -- gestion exclusiva de admin ──
 
-function generarPin() {
-  return String(Math.floor(100000 + Math.random() * 900000)); // 6 digitos
+// Contraseña inicial predecible (usuario + "1") en vez de un PIN random: mas
+// facil de dictar/anotar para el admin y el empleado. Justo por ser
+// predecible, SIEMPRE queda marcada para cambiar en el proximo login
+// (actualizarPinEmpleadoApp y crearEmpleadoApp ya fuerzan debe_cambiar_pin=1).
+function generarPasswordInicial(usuario) {
+  return `${usuario.toLowerCase()}1`;
 }
 
 router.get("/api/empleados-app", requerirAuth, (req, res) => {
   res.json({ empleados: listarEmpleadosApp() });
 });
 
-// El PIN generado se devuelve en texto plano SOLO en esta respuesta (para
-// que el admin se lo pase al empleado) -- nunca se guarda ni se puede
+// La contraseña generada se devuelve en texto plano SOLO en esta respuesta
+// (para que el admin se la pase al empleado) -- nunca se guarda ni se puede
 // volver a consultar despues, solo su hash.
 router.post("/api/empleados-app", requerirAuth, async (req, res) => {
   const { empleado, usuario } = req.body || {};
@@ -330,7 +334,7 @@ router.post("/api/empleados-app", requerirAuth, async (req, res) => {
   if (!usuario || !/^[a-z0-9_.]{3,30}$/i.test(usuario)) {
     return res.status(400).json({ ok: false, error: "Usuario inválido (letras, números, punto o guión bajo, 3-30 caracteres)" });
   }
-  const pin = generarPin();
+  const pin = generarPasswordInicial(usuario);
   const pinHash = await bcrypt.hash(pin, 10);
   try {
     const id = crearEmpleadoApp({ nombre: empleado, sector: getSectorDeEmpleado(empleado), usuario, pinHash });
@@ -342,9 +346,11 @@ router.post("/api/empleados-app", requerirAuth, async (req, res) => {
 });
 
 router.post("/api/empleados-app/:id/reset-pin", requerirAuth, async (req, res) => {
-  const pin = generarPin();
+  const empleadoApp = empleadoAppPorId(Number(req.params.id));
+  if (!empleadoApp) return res.status(404).json({ ok: false, error: "No encontrado" });
+  const pin = generarPasswordInicial(empleadoApp.usuario);
   const pinHash = await bcrypt.hash(pin, 10);
-  actualizarPinEmpleadoApp(Number(req.params.id), pinHash);
+  actualizarPinEmpleadoApp(empleadoApp.id, pinHash);
   res.json({ ok: true, pin });
 });
 

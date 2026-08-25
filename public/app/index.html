@@ -19,7 +19,7 @@
     min-height: 100vh; padding-bottom: 70px;
   }
 
-  #login-screen {
+  #login-screen, #cambiar-password-screen {
     display: flex; align-items: center; justify-content: center; min-height: 100vh;
     background: radial-gradient(circle at 50% 0%, rgba(79,140,255,0.10), transparent 55%), var(--bg);
     padding: 20px;
@@ -99,11 +99,24 @@
   <div class="login-box">
     <img src="/panel/logo-cr.png" class="login-logo" alt="Logo">
     <h2>FICH-CORONADO</h2>
-    <p>Ingresá con tu usuario y PIN</p>
+    <p>Ingresá con tu usuario y contraseña</p>
     <input type="text" id="login-usuario" placeholder="Usuario" autocomplete="username">
-    <input type="tel" id="login-pin" placeholder="PIN" inputmode="numeric" maxlength="6" autocomplete="current-password">
+    <input type="password" id="login-pin" placeholder="Contraseña" autocomplete="current-password">
     <button onclick="login()">Ingresar</button>
     <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="cambiar-password-screen" style="display:none">
+  <div class="login-box">
+    <img src="/panel/logo-cr.png" class="login-logo" alt="Logo">
+    <h2>Cambiá tu contraseña</h2>
+    <p>Es la primera vez que entrás (o el admin te la reseteó). Elegí una contraseña propia antes de seguir.</p>
+    <input type="password" id="cambiar-actual" placeholder="Contraseña actual" autocomplete="current-password">
+    <input type="password" id="cambiar-nueva" placeholder="Contraseña nueva (mínimo 6 caracteres)" autocomplete="new-password">
+    <input type="password" id="cambiar-confirmar" placeholder="Repetí la contraseña nueva" autocomplete="new-password">
+    <button onclick="cambiarPassword()">Guardar y entrar</button>
+    <div class="login-error" id="cambiar-error"></div>
   </div>
 </div>
 
@@ -168,7 +181,7 @@ async function login() {
   const pin = document.getElementById("login-pin").value.trim();
   const errorEl = document.getElementById("login-error");
   errorEl.textContent = "";
-  if (!usuario || !pin) { errorEl.textContent = "Completá usuario y PIN"; return; }
+  if (!usuario || !pin) { errorEl.textContent = "Completá usuario y contraseña"; return; }
   try {
     const res = await fetch("/app/api/login", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -178,9 +191,35 @@ async function login() {
     if (!res.ok || !data.ok) { errorEl.textContent = data.error || "Error al ingresar"; return; }
     localStorage.setItem("app_token", data.token);
     localStorage.setItem("app_nombre", data.nombre);
-    mostrarApp();
+    if (data.debeCambiarPin) {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("cambiar-password-screen").style.display = "flex";
+    } else {
+      mostrarApp();
+    }
   } catch (err) {
     errorEl.textContent = "No se pudo conectar";
+  }
+}
+
+async function cambiarPassword() {
+  const passwordActual = document.getElementById("cambiar-actual").value;
+  const passwordNueva = document.getElementById("cambiar-nueva").value;
+  const passwordConfirmar = document.getElementById("cambiar-confirmar").value;
+  const errorEl = document.getElementById("cambiar-error");
+  errorEl.textContent = "";
+  if (!passwordActual || !passwordNueva) { errorEl.textContent = "Completá los tres campos"; return; }
+  if (passwordNueva.length < 6) { errorEl.textContent = "La contraseña nueva tiene que tener al menos 6 caracteres"; return; }
+  if (passwordNueva !== passwordConfirmar) { errorEl.textContent = "Las dos contraseñas nuevas no coinciden"; return; }
+  try {
+    await apiFetch("/app/api/cambiar-password", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passwordActual, passwordNueva }),
+    });
+    document.getElementById("cambiar-password-screen").style.display = "none";
+    mostrarApp();
+  } catch (err) {
+    errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
   }
 }
 
@@ -188,6 +227,7 @@ function cerrarSesionLocal() {
   localStorage.removeItem("app_token");
   localStorage.removeItem("app_nombre");
   document.getElementById("app-screen").style.display = "none";
+  document.getElementById("cambiar-password-screen").style.display = "none";
   document.getElementById("login-screen").style.display = "flex";
 }
 

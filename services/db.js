@@ -236,6 +236,16 @@ if (!columnasSolicitudCambio.some((c) => c.name === "snapshot_excepciones")) {
   db.exec("ALTER TABLE solicitudes_cambio ADD COLUMN snapshot_excepciones TEXT");
 }
 
+// Fuerza el cambio de contraseña la primera vez que el empleado entra a su
+// app (o despues de que el admin se la resetee) -- la credencial inicial es
+// predecible (usuario + "1"), asi que no puede quedar como definitiva.
+// Default 1 para que las cuentas ya existentes (creadas con PIN random,
+// nunca cambiado) tambien queden marcadas a cambiar.
+const columnasEmpleados = db.prepare("PRAGMA table_info(empleados)").all();
+if (!columnasEmpleados.some((c) => c.name === "debe_cambiar_pin")) {
+  db.exec("ALTER TABLE empleados ADD COLUMN debe_cambiar_pin INTEGER NOT NULL DEFAULT 1");
+}
+
 function guardarResumenMensual(periodo, resumen) {
   const stmt = db.prepare(`
     INSERT INTO resumen_mensual (empleado, periodo, dias, total_hs, h50, h100, generado_en)
@@ -911,7 +921,8 @@ function crearEmpleadoApp({ nombre, sector, usuario, pinHash }) {
 
 function listarEmpleadosApp() {
   return db.prepare(`
-    SELECT id, nombre, sector, usuario, activo, creado_en as creadoEn FROM empleados ORDER BY nombre
+    SELECT id, nombre, sector, usuario, activo, creado_en as creadoEn, debe_cambiar_pin as debeCambiarPin
+    FROM empleados ORDER BY nombre
   `).all();
 }
 
@@ -923,8 +934,17 @@ function empleadoAppPorId(id) {
   return db.prepare(`SELECT * FROM empleados WHERE id = ?`).get(id);
 }
 
+// La usa el ADMIN para (re)emitir una credencial (alta o reset) -- siempre
+// vuelve a marcar debe_cambiar_pin=1, porque lo que se le entrega al
+// empleado en ese momento es predecible (usuario + "1"), nunca definitivo.
 function actualizarPinEmpleadoApp(id, pinHash) {
-  db.prepare(`UPDATE empleados SET pin_hash = ? WHERE id = ?`).run(pinHash, id);
+  db.prepare(`UPDATE empleados SET pin_hash = ?, debe_cambiar_pin = 1 WHERE id = ?`).run(pinHash, id);
+}
+
+// La usa el EMPLEADO mismo para cambiar su propia contraseña (ya logueado,
+// confirmando la actual) -- limpia la bandera de "debe cambiar" al hacerlo.
+function cambiarPasswordEmpleadoApp(id, pinHash) {
+  db.prepare(`UPDATE empleados SET pin_hash = ?, debe_cambiar_pin = 0 WHERE id = ?`).run(pinHash, id);
 }
 
 function eliminarEmpleadoApp(id) {
@@ -1011,7 +1031,7 @@ module.exports = {
   saludFichajePeriodo,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   crearEmpleadoApp, listarEmpleadosApp, buscarEmpleadoAppPorUsuario, empleadoAppPorId,
-  actualizarPinEmpleadoApp, eliminarEmpleadoApp,
+  actualizarPinEmpleadoApp, cambiarPasswordEmpleadoApp, eliminarEmpleadoApp,
   crearSesionApp, renovarSesionApp, empleadoIdDeSesionApp, eliminarSesionApp, limpiarSesionesAppVencidas,
   estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
 };

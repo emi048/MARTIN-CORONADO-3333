@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v1";
+const CACHE = "fich-coronado-v2"; // v2: login pasa de PIN a contraseña + pantalla de cambio obligatorio
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
