@@ -334,7 +334,7 @@
   </nav>
   <header>
     <div class="header-left">
-      <button id="hamburguesa-btn" aria-label="Abrir menú">☰</button>
+      <button id="hamburguesa-btn" aria-label="Abrir menú" aria-expanded="false" aria-controls="sidebar">☰</button>
       <img src="/panel/logo-cr.png" alt="CR" style="height:48px;width:auto;opacity:0.9">
       <h1>MARTIN CORONADO 3333 <span>— Panel de administración</span></h1>
     </div>
@@ -634,16 +634,32 @@ async function login() {
 
 document.getElementById("logout-btn").addEventListener("click", () => cerrarSesion(true));
 
+const hamburguesaBtn = document.getElementById("hamburguesa-btn");
+const sidebarEl = document.getElementById("sidebar");
+const sidebarOverlayEl = document.getElementById("sidebar-overlay");
+
+function cerrarSidebarConEscape(e) {
+  if (e.key === "Escape") cerrarSidebar();
+}
+
 function abrirSidebar() {
-  document.getElementById("sidebar").classList.add("abierto");
-  document.getElementById("sidebar-overlay").classList.add("abierto");
+  sidebarEl.classList.add("abierto");
+  sidebarOverlayEl.classList.add("abierto");
+  hamburguesaBtn.setAttribute("aria-expanded", "true");
+  document.body.style.overflow = "hidden"; // bloquea el scroll de atras mientras el drawer esta abierto
+  document.addEventListener("keydown", cerrarSidebarConEscape);
 }
 function cerrarSidebar() {
-  document.getElementById("sidebar").classList.remove("abierto");
-  document.getElementById("sidebar-overlay").classList.remove("abierto");
+  const estabaAbierto = sidebarEl.classList.contains("abierto");
+  sidebarEl.classList.remove("abierto");
+  sidebarOverlayEl.classList.remove("abierto");
+  hamburguesaBtn.setAttribute("aria-expanded", "false");
+  document.body.style.overflow = "";
+  document.removeEventListener("keydown", cerrarSidebarConEscape);
+  if (estabaAbierto) hamburguesaBtn.focus(); // devuelve el foco al boton que abrio el drawer
 }
-document.getElementById("hamburguesa-btn").addEventListener("click", abrirSidebar);
-document.getElementById("sidebar-overlay").addEventListener("click", cerrarSidebar);
+hamburguesaBtn.addEventListener("click", abrirSidebar);
+sidebarOverlayEl.addEventListener("click", cerrarSidebar);
 
 // Centraliza el cambio de pestaña (se usa tanto al hacer click como al
 // restaurar la ultima pestaña vista despues de un F5) y la guarda en
