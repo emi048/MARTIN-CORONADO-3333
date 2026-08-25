@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v8"; // v8: barras en vez de botones, dias con problemas en corregir horas, detalle 50/100 por dia
+const CACHE = "fich-coronado-v9"; // v9: infiere si falta ingreso o egreso en dias de una sola marcacion
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

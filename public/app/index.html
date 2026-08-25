@@ -675,8 +675,21 @@ async function cargarProblemasCorreccion() {
   try {
     const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
     const problemas = [
-      ...(data.ausencias || []).filter((a) => !a.compensado).map((a) => ({ fecha: a.fecha, motivo: "Ausente / sin fichada", ingreso: "", egreso: "" })),
-      ...(data.dias || []).filter((d) => d.alerta).map((d) => ({ fecha: d.fecha, motivo: d.alerta, ingreso: d.ingreso || "", egreso: d.egreso || "" })),
+      ...(data.ausencias || []).filter((a) => !a.compensado).map((a) => ({ fecha: a.fecha, motivo: "Sin fichada", ingreso: "", egreso: "" })),
+      ...(data.dias || []).filter((d) => d.alerta).map((d) => {
+        // El reloj no distingue entrada de salida cuando hay una sola
+        // marcacion -- el server infiere cual lado falta comparando esa
+        // hora contra tu horario esperado (ver services/asistencia.js). Si
+        // no pudo inferir (sin horario esperado ese dia), mostramos el
+        // motivo tal cual vino y precargamos como venia guardado.
+        if (d.faltante === "ingreso") {
+          return { fecha: d.fecha, motivo: `Falta ingreso (marcaste salida ${d.ingreso})`, ingreso: "", egreso: d.ingreso };
+        }
+        if (d.faltante === "egreso") {
+          return { fecha: d.fecha, motivo: `Falta egreso (marcaste entrada ${d.ingreso})`, ingreso: d.ingreso, egreso: "" };
+        }
+        return { fecha: d.fecha, motivo: d.alerta, ingreso: d.ingreso || "", egreso: d.egreso && d.egreso !== "—" ? d.egreso : "" };
+      }),
     ].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
     if (problemas.length === 0) {

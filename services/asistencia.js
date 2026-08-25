@@ -25,6 +25,13 @@ function minutosDesdeMedianoche(horaStr) {
   return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
 }
 
+// Distancia entre dos horas del dia sin importar el orden ni si cruzan la
+// medianoche (ej: 23:50 y 00:10 estan a 20 min, no a 1420).
+function distanciaCircularMin(a, b) {
+  const d = Math.abs(a - b);
+  return Math.min(d, 1440 - d);
+}
+
 function calcularAsistencia(empleado, periodo) {
   const rango = rangoFechasDelPeriodo(periodo);
   const diasCrudos = filasDelPeriodoDeEmpleado(empleado, periodo);
@@ -124,13 +131,35 @@ function calcularAsistencia(empleado, periodo) {
       const turno = turnoEsperadoDelDia(new Date(y, m - 1, day));
       const turnoCorregido = turno ? (ETIQUETA_TURNO[turno.tipo] || turno.tipo) : d.turno;
 
-      if (!d.ingreso) return { ...d, turno: turnoCorregido };
+      // Dia con una sola marcacion (motorCalculo.js la guarda siempre como
+      // "ingreso", con el egreso vacio -- el reloj no distingue entrada de
+      // salida). Inferimos cual de los dos lados falta en realidad
+      // comparando esa hora contra el horario esperado ese dia: si esta mas
+      // cerca de la salida esperada, lo que falta es el ingreso (y
+      // viceversa). Es una inferencia -- no un dato cierto -- pero sirve
+      // para precargar el campo correcto en el formulario de correccion.
+      // Ojo: no es lo mismo que la alerta de "REVISAR MANUALMENTE" (3+
+      // marcaciones) -- ahi ingreso Y egreso ya estan cargados, no falta
+      // ningun lado, asi que la condicion de abajo la deja afuera a
+      // proposito (chequea que el egreso este vacio, no solo que haya
+      // alerta).
+      let faltante = null;
+      if (d.alerta && d.ingreso && (!d.egreso || d.egreso === "—") && turno && turno.horario) {
+        const minReal = minutosDesdeMedianoche(d.ingreso);
+        const minIn = minutosDesdeMedianoche(turno.horario.in);
+        const minOut = minutosDesdeMedianoche(turno.horario.out);
+        if (minReal != null && minIn != null && minOut != null) {
+          faltante = distanciaCircularMin(minReal, minOut) < distanciaCircularMin(minReal, minIn) ? "ingreso" : "egreso";
+        }
+      }
+
+      if (!d.ingreso) return { ...d, turno: turnoCorregido, faltante };
       const minEsperado = turno && turno.horario ? minutosDesdeMedianoche(turno.horario.in) : null;
       const minReal = minutosDesdeMedianoche(d.ingreso);
       if (minEsperado == null || minReal == null || minReal <= minEsperado + TOLERANCIA_TARDE_MIN) {
-        return { ...d, turno: turnoCorregido };
+        return { ...d, turno: turnoCorregido, faltante };
       }
-      return { ...d, turno: turnoCorregido, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
+      return { ...d, turno: turnoCorregido, faltante, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
     })
     : diasCrudos;
 
