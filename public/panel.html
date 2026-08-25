@@ -78,17 +78,20 @@
   }
   #sidebar button.tab-btn {
     background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left;
-    padding: 11px 14px; font-size: 14px; cursor: pointer; border-radius: 10px;
-    display: flex; align-items: center; gap: 10px;
-    transition: background 0.15s, color 0.15s, transform 0.1s;
+    padding: 11px 14px; font-size: 14px; font-weight: 500; letter-spacing: 0.015em; cursor: pointer; border-radius: 10px;
+    transition: background 0.15s, color 0.15s, transform 0.1s, letter-spacing 0.15s;
   }
-  #sidebar button.tab-btn:hover { color: var(--text); background: var(--surface2); transform: translateX(2px); }
+  #sidebar button.tab-btn:hover {
+    color: var(--accent-2); background: color-mix(in srgb, var(--accent) 12%, var(--surface2));
+    transform: translateX(2px); letter-spacing: 0.03em;
+  }
   #sidebar button.tab-btn.activo {
-    color: var(--text); font-weight: 600;
+    color: var(--text); font-weight: 700;
     background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent-2) 18%, transparent));
     border-color: color-mix(in srgb, var(--accent) 40%, transparent);
     box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 25%, transparent);
   }
+  #sidebar button.tab-btn.activo:hover { color: var(--text); letter-spacing: 0.015em; }
 
   main { max-width: 960px; margin: 0 auto; padding: 24px; }
 
@@ -362,14 +365,14 @@
   <div id="sidebar-overlay"></div>
   <nav id="sidebar">
     <div class="sidebar-titulo">Secciones</div>
-    <button class="tab-btn activo" data-tab="resumen">🏠 Resumen</button>
-    <button class="tab-btn" data-tab="pendientes">📥 Pendientes</button>
-    <button class="tab-btn" data-tab="empleados">👥 Empleados</button>
-    <button class="tab-btn" data-tab="horas">⏱️ Horas del período</button>
-    <button class="tab-btn" data-tab="fichadas">🔍 Fichadas por empleado</button>
-    <button class="tab-btn" data-tab="licencias">🏖️ Licencias</button>
-    <button class="tab-btn" data-tab="turnos">🔧 Turnos (mantenimiento)</button>
-    <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
+    <button class="tab-btn activo" data-tab="resumen">Resumen</button>
+    <button class="tab-btn" data-tab="pendientes">Pendientes</button>
+    <button class="tab-btn" data-tab="empleados">Empleados</button>
+    <button class="tab-btn" data-tab="horas">Horas del período</button>
+    <button class="tab-btn" data-tab="fichadas">Fichadas por empleado</button>
+    <button class="tab-btn" data-tab="licencias">Licencias</button>
+    <button class="tab-btn" data-tab="turnos">Turnos (mantenimiento)</button>
+    <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
   </nav>
   <header>
     <div class="header-left">
