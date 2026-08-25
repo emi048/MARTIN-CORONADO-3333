@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v4"; // v4: 3 pestañas (Inicio/Mis fichadas/Configuracion), saludo con turno de hoy
+const CACHE = "fich-coronado-v5"; // v5: sidebar deslizable (hamburguesa) en vez de barra inferior
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

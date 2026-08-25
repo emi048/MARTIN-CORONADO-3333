@@ -20,7 +20,7 @@
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: var(--font-body);
-    min-height: 100vh; padding-bottom: 70px; font-variant-numeric: tabular-nums;
+    min-height: 100vh; font-variant-numeric: tabular-nums;
   }
 
   #login-screen, #cambiar-password-screen {
@@ -58,16 +58,50 @@
   .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
 
   header {
-    padding: 16px 18px; border-bottom: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
     position: sticky; top: 0; z-index: 10;
     background: linear-gradient(180deg, rgba(10,12,18,0.92), rgba(10,12,18,0.82));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   }
+  .hamburger-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 38px; height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; padding: 0;
+  }
+  .hamburger-btn svg { width: 19px; height: 19px; }
   header .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-logo { height: 32px; width: auto; opacity: 0.95; flex-shrink: 0; }
-  header h1 { font-family: var(--font-display); font-size: 14px; margin: 0; font-weight: 700; line-height: 1.3; }
+  .header-logo { height: 30px; width: auto; opacity: 0.95; flex-shrink: 0; }
+  header h1 { font-family: var(--font-display); font-size: 13.5px; margin: 0; font-weight: 700; line-height: 1.3; }
   header h1 span { display: block; color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 12px; margin-top: 2px; }
+
+  .sidebar-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 40;
+  }
+  .sidebar-overlay.abierto { opacity: 1; pointer-events: auto; }
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 250px;
+    background: linear-gradient(180deg, #10131d, #0a0c12);
+    border-right: 1px solid var(--border);
+    transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    z-index: 50; display: flex; flex-direction: column; padding: 20px 14px;
+  }
+  .sidebar.abierto { transform: translateX(0); }
+  .sidebar-logo-row { display: flex; align-items: center; gap: 10px; padding: 4px 8px 24px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .sidebar-logo-row img { height: 32px; width: auto; }
+  .sidebar-logo-row .nombre { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+  .sidebar-menu-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 10px 10px; font-weight: 600; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px;
+    color: var(--text-muted); cursor: pointer; font-size: 14.5px; font-weight: 500; margin-bottom: 3px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s; border: 1px solid transparent;
+  }
+  .sidebar-item svg { width: 19px; height: 19px; flex-shrink: 0; }
+  .sidebar-item:hover { background: rgba(124,108,240,0.10); color: var(--text); }
+  .sidebar-item.activo { background: rgba(124,108,240,0.16); color: var(--text); border-color: rgba(124,108,240,0.35); }
+  .sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+  .sidebar-item.salir:hover { background: rgba(229,72,77,0.12); color: var(--danger); }
 
   .saludo-box {
     background: linear-gradient(150deg, rgba(124,108,240,0.14), var(--surface) 65%);
@@ -127,18 +161,6 @@
   }
   .config-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
 
-  nav.tabbar {
-    position: fixed; bottom: 0; left: 0; right: 0; display: flex;
-    background: linear-gradient(0deg, rgba(10,12,18,0.95), rgba(10,12,18,0.85));
-    border-top: 1px solid var(--border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 10;
-  }
-  nav.tabbar button {
-    flex: 1; background: none; border: none; color: var(--text-muted);
-    padding: 14px 0; font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-    cursor: pointer;
-  }
-  nav.tabbar button.activo { color: var(--accent-2); }
-
   #app-screen { display: none; }
   .oculto { display: none !important; }
 </style>
@@ -171,12 +193,41 @@
 </div>
 
 <div id="app-screen">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="cerrarSidebar()"></div>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo-row">
+      <img src="/panel/logo-cr.png" alt="CR">
+      <div class="nombre">MARTÍN<br>CORONADO 3333</div>
+    </div>
+    <div class="sidebar-menu-label">Menú</div>
+    <div class="sidebar-item activo" data-tab="inicio" onclick="cambiarTab('inicio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Inicio
+    </div>
+    <div class="sidebar-item" data-tab="fichadas" onclick="cambiarTab('fichadas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Mis fichadas
+    </div>
+    <div class="sidebar-item" data-tab="config" onclick="cambiarTab('config')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Configuración
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-item salir" onclick="logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Salir
+      </div>
+    </div>
+  </nav>
+
   <header>
+    <button class="hamburger-btn" onclick="abrirSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="header-left">
       <img src="/panel/logo-cr.png" alt="CR" class="header-logo">
       <h1>MARTÍN CORONADO 3333</h1>
     </div>
-    <button onclick="logout()">Salir</button>
   </header>
 
   <main>
@@ -223,12 +274,6 @@
       </div>
     </section>
   </main>
-
-  <nav class="tabbar">
-    <button data-tab="inicio" class="activo" onclick="cambiarTab('inicio')">Inicio</button>
-    <button data-tab="fichadas" onclick="cambiarTab('fichadas')">Mis fichadas</button>
-    <button data-tab="config" onclick="cambiarTab('config')">Configuración</button>
-  </nav>
 </div>
 
 <script>
@@ -330,11 +375,22 @@ function mostrarApp() {
   cargarFichadas();
 }
 
+function abrirSidebar() {
+  document.getElementById("sidebar").classList.add("abierto");
+  document.getElementById("sidebar-overlay").classList.add("abierto");
+}
+
+function cerrarSidebar() {
+  document.getElementById("sidebar").classList.remove("abierto");
+  document.getElementById("sidebar-overlay").classList.remove("abierto");
+}
+
 function cambiarTab(tab) {
-  document.querySelectorAll("nav.tabbar button").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
+  document.querySelectorAll(".sidebar-item[data-tab]").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
   document.getElementById("tab-inicio").classList.toggle("oculto", tab !== "inicio");
   document.getElementById("tab-fichadas").classList.toggle("oculto", tab !== "fichadas");
   document.getElementById("tab-config").classList.toggle("oculto", tab !== "config");
+  cerrarSidebar();
 }
 
 function formatearFecha(iso) {
