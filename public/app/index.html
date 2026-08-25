@@ -188,6 +188,51 @@
   }
   .config-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
 
+  .card-clickable { cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .card-clickable:hover { border-color: rgba(124,108,240,0.35); background: rgba(124,108,240,0.10); }
+
+  /* Recorrido diario -- PROTOTIPO visual, sin logica real de escaneo todavia
+     (eso queda para mas adelante). El timer si es real: cuenta desde que se
+     toca LISTO. "Simular escaneo" avanza el contador a mano en vez de leer
+     una camara. */
+  .recorrido-overlay {
+    position: fixed; inset: 0; background: var(--bg); z-index: 80;
+    display: flex; flex-direction: column; padding: 24px 20px 32px; overflow-y: auto;
+  }
+  .recorrido-estado.oculto { display: none !important; }
+  .recorrido-centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; min-height: 60vh; }
+  .recorrido-icono { width: 52px; height: 52px; color: var(--accent-2); }
+  .recorrido-titulo { font-family: var(--font-display); font-size: 21px; font-weight: 700; }
+  .recorrido-sub { color: var(--text-muted); font-size: 14px; max-width: 300px; line-height: 1.4; }
+  .recorrido-botones { display: flex; gap: 10px; width: 100%; max-width: 300px; margin-top: 10px; }
+  .recorrido-botones button {
+    flex: 1; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; border: none;
+  }
+  .btn-listo { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; }
+  .btn-cancelar { background: var(--surface2); border: 1px solid var(--border) !important; color: var(--text); }
+
+  .recorrido-header-curso { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; }
+  .recorrido-timer { font-family: var(--font-display); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .recorrido-progreso-txt { color: var(--text-muted); font-size: 13px; text-align: right; }
+  .recorrido-barra { height: 6px; border-radius: 3px; background: var(--surface2); overflow: hidden; margin-bottom: 22px; }
+  .recorrido-barra-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s; }
+  .recorrido-viewfinder {
+    flex: 1; min-height: 220px; border: 2px dashed var(--border); border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    color: var(--text-muted); font-size: 12.5px; text-align: center; padding: 20px; margin-bottom: 20px;
+  }
+  .recorrido-viewfinder svg { width: 44px; height: 44px; opacity: 0.5; }
+  .recorrido-punto-actual { font-family: var(--font-display); font-size: 15px; color: var(--text); font-weight: 700; }
+  .btn-escanear {
+    width: 100%; padding: 15px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; margin-bottom: 12px;
+  }
+  .btn-cancelar-recorrido {
+    width: 100%; background: none; border: none; color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
+  }
+  .recorrido-check { width: 60px; height: 60px; color: var(--ok); }
+  .recorrido-tiempo-final { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
+
   .barra-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
   .barra-accion {
     display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
@@ -337,6 +382,11 @@
         <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
       </div>
 
+      <div class="card card-clickable" onclick="abrirRecorrido()">
+        <div class="card-titulo">Recorrido diario</div>
+        <div class="vacio">Todavía no iniciaste el recorrido de hoy</div>
+      </div>
+
       <div class="barra-lista">
         <div class="barra-accion" onclick="abrirModal('correccion')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -431,6 +481,47 @@
       <div id="modal-solicitudes" class="modal-contenido oculto">
         <div class="modal-header"><h3>Mis solicitudes</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
         <div id="solicitudes-contenido"><div class="vacio">Cargando…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="recorrido-overlay oculto" id="recorrido-overlay">
+    <div id="recorrido-confirmar" class="recorrido-estado">
+      <div class="recorrido-centro">
+        <svg class="recorrido-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3"/><path d="M14 20h3"/><path d="M20 20h.01"/></svg>
+        <div class="recorrido-titulo">Recorrido diario</div>
+        <div class="recorrido-sub">Vas a recorrer 15 puntos de control por el edificio. Apretá LISTO para arrancar el cronómetro.</div>
+        <div class="recorrido-botones">
+          <button class="btn-cancelar" onclick="cerrarRecorrido()">CANCELAR</button>
+          <button class="btn-listo" onclick="iniciarRecorrido()">LISTO</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="recorrido-curso" class="recorrido-estado oculto">
+      <div class="recorrido-header-curso">
+        <div class="recorrido-timer" id="recorrido-timer">00:00</div>
+        <div class="recorrido-progreso-txt" id="recorrido-progreso-txt">Punto 1 de 15</div>
+      </div>
+      <div class="recorrido-barra"><div class="recorrido-barra-fill" id="recorrido-barra-fill"></div></div>
+      <div class="recorrido-viewfinder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+        <div class="recorrido-punto-actual" id="recorrido-punto-actual">Punto 1</div>
+        <div>Prototipo — acá va la cámara escaneando el QR real más adelante</div>
+      </div>
+      <button class="btn-escanear" onclick="simularEscaneoRecorrido()">Simular escaneo → siguiente</button>
+      <button class="btn-cancelar-recorrido" onclick="cancelarRecorrido()">Cancelar recorrido</button>
+    </div>
+
+    <div id="recorrido-completo" class="recorrido-estado oculto">
+      <div class="recorrido-centro">
+        <svg class="recorrido-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+        <div class="recorrido-titulo">Recorrido completo</div>
+        <div class="recorrido-tiempo-final" id="recorrido-tiempo-final">00:00</div>
+        <div class="recorrido-sub">15 de 15 puntos recorridos</div>
+        <div class="recorrido-botones">
+          <button class="btn-listo" onclick="cerrarRecorrido()" style="flex:1 1 100%">VOLVER A INICIO</button>
+        </div>
       </div>
     </div>
   </div>
@@ -787,6 +878,75 @@ async function cargarSolicitudes() {
     if (err.message === "Sesión vencida") return;
     el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
   }
+}
+
+// Recorrido diario -- PROTOTIPO visual (pedido explicito: dejar la logica
+// real de escaneo de QR para mas adelante). El cronometro si cuenta tiempo
+// real desde que se toca LISTO; "simular escaneo" avanza el contador a
+// mano en vez de leer una camara -- cuando se arme la logica real, esa
+// funcion es el unico lugar que hay que reemplazar por la lectura del QR.
+const TOTAL_PUNTOS_RECORRIDO = 15;
+let recorridoTimerId = null;
+let recorridoInicioMs = null;
+let recorridoPuntoActual = 0;
+
+function abrirRecorrido() {
+  document.getElementById("recorrido-overlay").classList.remove("oculto");
+  mostrarEstadoRecorrido("confirmar");
+}
+
+function mostrarEstadoRecorrido(estado) {
+  document.querySelectorAll(".recorrido-estado").forEach((e) => e.classList.add("oculto"));
+  document.getElementById("recorrido-" + estado).classList.remove("oculto");
+}
+
+function detenerTimerRecorrido() {
+  if (recorridoTimerId) { clearInterval(recorridoTimerId); recorridoTimerId = null; }
+}
+
+function cerrarRecorrido() {
+  detenerTimerRecorrido();
+  document.getElementById("recorrido-overlay").classList.add("oculto");
+}
+
+function cancelarRecorrido() {
+  detenerTimerRecorrido();
+  cerrarRecorrido();
+}
+
+function actualizarTimerRecorrido() {
+  const seg = Math.floor((Date.now() - recorridoInicioMs) / 1000);
+  const mm = String(Math.floor(seg / 60)).padStart(2, "0");
+  const ss = String(seg % 60).padStart(2, "0");
+  document.getElementById("recorrido-timer").textContent = `${mm}:${ss}`;
+  return `${mm}:${ss}`;
+}
+
+function actualizarProgresoRecorrido() {
+  document.getElementById("recorrido-progreso-txt").textContent = `Punto ${recorridoPuntoActual + 1} de ${TOTAL_PUNTOS_RECORRIDO}`;
+  document.getElementById("recorrido-punto-actual").textContent = `Punto ${recorridoPuntoActual + 1}`;
+  document.getElementById("recorrido-barra-fill").style.width = `${(recorridoPuntoActual / TOTAL_PUNTOS_RECORRIDO) * 100}%`;
+}
+
+function iniciarRecorrido() {
+  recorridoPuntoActual = 0;
+  recorridoInicioMs = Date.now();
+  actualizarProgresoRecorrido();
+  actualizarTimerRecorrido();
+  mostrarEstadoRecorrido("curso");
+  recorridoTimerId = setInterval(actualizarTimerRecorrido, 1000);
+}
+
+function simularEscaneoRecorrido() {
+  recorridoPuntoActual++;
+  if (recorridoPuntoActual >= TOTAL_PUNTOS_RECORRIDO) {
+    const tiempoFinal = actualizarTimerRecorrido();
+    detenerTimerRecorrido();
+    document.getElementById("recorrido-tiempo-final").textContent = tiempoFinal;
+    mostrarEstadoRecorrido("completo");
+    return;
+  }
+  actualizarProgresoRecorrido();
 }
 
 // Pestaña "Mis fichadas" -- historial del período elegido, con ausencias

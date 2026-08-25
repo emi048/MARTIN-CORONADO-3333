@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v9"; // v9: infiere si falta ingreso o egreso en dias de una sola marcacion
+const CACHE = "fich-coronado-v10"; // v10: prototipo visual de recorrido diario (sin logica de escaneo real todavia)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
