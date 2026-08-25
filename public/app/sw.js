@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v10"; // v10: prototipo visual de recorrido diario (sin logica de escaneo real todavia)
+const CACHE = "fich-coronado-v11"; // v11: checklist por punto + observaciones despues de escanear cada QR
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

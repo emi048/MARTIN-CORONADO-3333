@@ -233,6 +233,22 @@
   .recorrido-check { width: 60px; height: 60px; color: var(--ok); }
   .recorrido-tiempo-final { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
 
+  .recorrido-punto-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .recorrido-punto-nombre { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .recorrido-checklist { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+  .recorrido-checklist li { margin-bottom: 2px; }
+  .recorrido-obs-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  #recorrido-observaciones {
+    width: 100%; box-sizing: border-box; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 14px; font-family: inherit;
+    resize: vertical; min-height: 70px; margin-bottom: 14px;
+  }
+  #recorrido-observaciones:focus { outline: none; border-color: var(--accent); }
+  .recorrido-resumen-obs { width: 100%; max-width: 320px; margin-top: 8px; text-align: left; max-height: 220px; overflow-y: auto; }
+  .recorrido-resumen-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .recorrido-resumen-punto { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .recorrido-resumen-texto { font-size: 12.5px; color: var(--text-muted); }
+
   .barra-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
   .barra-accion {
     display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
@@ -504,12 +520,26 @@
         <div class="recorrido-progreso-txt" id="recorrido-progreso-txt">Punto 1 de 15</div>
       </div>
       <div class="recorrido-barra"><div class="recorrido-barra-fill" id="recorrido-barra-fill"></div></div>
-      <div class="recorrido-viewfinder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-        <div class="recorrido-punto-actual" id="recorrido-punto-actual">Punto 1</div>
-        <div>Prototipo — acá va la cámara escaneando el QR real más adelante</div>
+
+      <div id="recorrido-pre-escaneo">
+        <div class="recorrido-viewfinder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+          <div class="recorrido-punto-actual" id="recorrido-punto-nombre-pre">SALA DE MAQUINAS -1</div>
+          <div>Prototipo — acá va la cámara escaneando el QR real más adelante</div>
+        </div>
+        <button class="btn-escanear" onclick="simularEscaneoRecorrido()">Simular escaneo del QR</button>
       </div>
-      <button class="btn-escanear" onclick="simularEscaneoRecorrido()">Simular escaneo → siguiente</button>
+
+      <div id="recorrido-post-escaneo" class="oculto">
+        <div class="recorrido-punto-card">
+          <div class="recorrido-punto-nombre" id="recorrido-punto-nombre-post">SALA DE MAQUINAS -1</div>
+          <ul class="recorrido-checklist" id="recorrido-checklist"></ul>
+        </div>
+        <label class="recorrido-obs-label" for="recorrido-observaciones">Observaciones</label>
+        <textarea id="recorrido-observaciones" placeholder="Ej: se encontró el tablero apagado"></textarea>
+        <button class="btn-escanear" onclick="confirmarPuntoRecorrido()">Confirmar y siguiente punto</button>
+      </div>
+
       <button class="btn-cancelar-recorrido" onclick="cancelarRecorrido()">Cancelar recorrido</button>
     </div>
 
@@ -519,6 +549,7 @@
         <div class="recorrido-titulo">Recorrido completo</div>
         <div class="recorrido-tiempo-final" id="recorrido-tiempo-final">00:00</div>
         <div class="recorrido-sub">15 de 15 puntos recorridos</div>
+        <div class="recorrido-resumen-obs" id="recorrido-resumen-obs"></div>
         <div class="recorrido-botones">
           <button class="btn-listo" onclick="cerrarRecorrido()" style="flex:1 1 100%">VOLVER A INICIO</button>
         </div>
@@ -881,14 +912,44 @@ async function cargarSolicitudes() {
 }
 
 // Recorrido diario -- PROTOTIPO visual (pedido explicito: dejar la logica
-// real de escaneo de QR para mas adelante). El cronometro si cuenta tiempo
-// real desde que se toca LISTO; "simular escaneo" avanza el contador a
-// mano en vez de leer una camara -- cuando se arme la logica real, esa
-// funcion es el unico lugar que hay que reemplazar por la lectura del QR.
-const TOTAL_PUNTOS_RECORRIDO = 15;
+// real de escaneo de QR para mas adelante). El cronometro y las
+// observaciones cargadas SI son reales (quedan en memoria durante el
+// recorrido); lo unico simulado es la lectura del QR en si -- cuando se
+// arme eso, simularEscaneoRecorrido() es el unico lugar a reemplazar por
+// la lectura real de la camara.
+//
+// PLACEHOLDER: solo el primer punto tiene nombre/checklist reales (el que
+// dio el admin de ejemplo). Los otros 14 quedan "a definir" hasta que
+// pase la lista completa de puntos del recorrido -- ahi se completa este
+// array nada mas, no hace falta tocar el resto de la logica.
+const PUNTOS_RECORRIDO = [
+  { nombre: "SALA DE MAQUINAS -1", checklist: ["Revisar bombas", "Revisar tableros"] },
+  { nombre: "Punto 2 (a definir)", checklist: [] },
+  { nombre: "Punto 3 (a definir)", checklist: [] },
+  { nombre: "Punto 4 (a definir)", checklist: [] },
+  { nombre: "Punto 5 (a definir)", checklist: [] },
+  { nombre: "Punto 6 (a definir)", checklist: [] },
+  { nombre: "Punto 7 (a definir)", checklist: [] },
+  { nombre: "Punto 8 (a definir)", checklist: [] },
+  { nombre: "Punto 9 (a definir)", checklist: [] },
+  { nombre: "Punto 10 (a definir)", checklist: [] },
+  { nombre: "Punto 11 (a definir)", checklist: [] },
+  { nombre: "Punto 12 (a definir)", checklist: [] },
+  { nombre: "Punto 13 (a definir)", checklist: [] },
+  { nombre: "Punto 14 (a definir)", checklist: [] },
+  { nombre: "Punto 15 (a definir)", checklist: [] },
+];
+const TOTAL_PUNTOS_RECORRIDO = PUNTOS_RECORRIDO.length;
 let recorridoTimerId = null;
 let recorridoInicioMs = null;
 let recorridoPuntoActual = 0;
+let recorridoObservaciones = [];
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 function abrirRecorrido() {
   document.getElementById("recorrido-overlay").classList.remove("oculto");
@@ -924,29 +985,73 @@ function actualizarTimerRecorrido() {
 
 function actualizarProgresoRecorrido() {
   document.getElementById("recorrido-progreso-txt").textContent = `Punto ${recorridoPuntoActual + 1} de ${TOTAL_PUNTOS_RECORRIDO}`;
-  document.getElementById("recorrido-punto-actual").textContent = `Punto ${recorridoPuntoActual + 1}`;
   document.getElementById("recorrido-barra-fill").style.width = `${(recorridoPuntoActual / TOTAL_PUNTOS_RECORRIDO) * 100}%`;
+}
+
+// Muestra el punto actual en la pantalla previa al escaneo (nombre nada
+// mas) -- el checklist recien se revela despues de "escanear", junto con
+// el campo de observaciones.
+function mostrarPuntoActual() {
+  const punto = PUNTOS_RECORRIDO[recorridoPuntoActual];
+  document.getElementById("recorrido-punto-nombre-pre").textContent = punto.nombre;
+  document.getElementById("recorrido-punto-nombre-post").textContent = punto.nombre;
+  const checklistEl = document.getElementById("recorrido-checklist");
+  checklistEl.innerHTML = punto.checklist.length
+    ? punto.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+    : `<li>Sin checklist cargado para este punto todavía</li>`;
+  document.getElementById("recorrido-observaciones").value = "";
+  document.getElementById("recorrido-pre-escaneo").classList.remove("oculto");
+  document.getElementById("recorrido-post-escaneo").classList.add("oculto");
 }
 
 function iniciarRecorrido() {
   recorridoPuntoActual = 0;
+  recorridoObservaciones = [];
   recorridoInicioMs = Date.now();
   actualizarProgresoRecorrido();
+  mostrarPuntoActual();
   actualizarTimerRecorrido();
   mostrarEstadoRecorrido("curso");
   recorridoTimerId = setInterval(actualizarTimerRecorrido, 1000);
 }
 
+// "Escanear" el QR revela el checklist de ese punto + el campo de
+// observaciones -- todavía no avanza al siguiente (eso lo hace
+// confirmarPuntoRecorrido, despues de que cargue lo que encontró).
 function simularEscaneoRecorrido() {
+  document.getElementById("recorrido-pre-escaneo").classList.add("oculto");
+  document.getElementById("recorrido-post-escaneo").classList.remove("oculto");
+}
+
+function confirmarPuntoRecorrido() {
+  const observaciones = document.getElementById("recorrido-observaciones").value.trim();
+  recorridoObservaciones.push({ punto: PUNTOS_RECORRIDO[recorridoPuntoActual].nombre, observaciones });
   recorridoPuntoActual++;
   if (recorridoPuntoActual >= TOTAL_PUNTOS_RECORRIDO) {
     const tiempoFinal = actualizarTimerRecorrido();
     detenerTimerRecorrido();
     document.getElementById("recorrido-tiempo-final").textContent = tiempoFinal;
+    mostrarResumenRecorrido();
     mostrarEstadoRecorrido("completo");
     return;
   }
   actualizarProgresoRecorrido();
+  mostrarPuntoActual();
+}
+
+function mostrarResumenRecorrido() {
+  const el = document.getElementById("recorrido-resumen-obs");
+  const conObservaciones = recorridoObservaciones.filter((o) => o.observaciones);
+  if (conObservaciones.length === 0) {
+    el.innerHTML = `<div class="vacio">Sin observaciones cargadas</div>`;
+    return;
+  }
+  el.innerHTML = conObservaciones.map((o) => `
+    <div class="recorrido-resumen-item">
+      <div class="recorrido-resumen-punto">${escapeHtml(o.punto)}</div>
+      <div class="recorrido-resumen-texto">${escapeHtml(o.observaciones)}</div>
+    </div>
+  `).join("");
 }
 
 // Pestaña "Mis fichadas" -- historial del período elegido, con ausencias
