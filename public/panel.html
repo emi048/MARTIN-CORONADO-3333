@@ -136,17 +136,14 @@
   .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
   .login-ok { color: var(--ok); font-size: 13px; margin-top: 10px; min-height: 16px; }
 
-  #cambiar-pass-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60;
-    align-items: center; justify-content: center; padding: 20px;
+  .perfil-avatar {
+    width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 18px; font-weight: 700; overflow: hidden;
   }
-  #cambiar-pass-overlay.abierto { display: flex; }
-  #cambiar-pass-overlay .login-box { width: 100%; max-width: 320px; padding: 32px 28px; }
-  #cambiar-pass-overlay .login-box input { margin-bottom: 10px; }
-  #cambiar-pass-overlay .btn-secundario {
-    width: 100%; margin-top: 8px; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text); font-weight: 600; cursor: pointer; font-size: 14px;
-  }
+  .perfil-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .perfil-avatar-header { width: 38px; height: 38px; font-size: 13px; cursor: pointer; }
 
   nav { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
   nav button {
@@ -376,19 +373,6 @@
 
 <div id="app" style="display:none">
   <div id="sidebar-overlay"></div>
-  <div id="cambiar-pass-overlay">
-    <div class="login-box">
-      <h2>Cambiar contraseña</h2>
-      <p>Contraseña del panel de administración</p>
-      <input type="password" id="cambiar-pass-actual" placeholder="Contraseña actual">
-      <input type="password" id="cambiar-pass-nueva" placeholder="Contraseña nueva (mínimo 8 caracteres)">
-      <input type="password" id="cambiar-pass-confirmar" placeholder="Repetí la contraseña nueva">
-      <button id="cambiar-pass-guardar-btn">Guardar</button>
-      <button id="cambiar-pass-cancelar-btn" class="btn-secundario">Cancelar</button>
-      <div class="login-error" id="cambiar-pass-error"></div>
-      <div class="login-ok" id="cambiar-pass-ok"></div>
-    </div>
-  </div>
   <nav id="sidebar">
     <div class="sidebar-titulo">Secciones</div>
     <button class="tab-btn activo" data-tab="resumen">Resumen</button>
@@ -399,6 +383,7 @@
     <button class="tab-btn" data-tab="licencias">Licencias</button>
     <button class="tab-btn" data-tab="turnos">Turnos (mantenimiento)</button>
     <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
+    <button class="tab-btn" data-tab="config">Configuración</button>
   </nav>
   <header>
     <div class="header-left">
@@ -406,7 +391,7 @@
       <img src="/panel/logo-cr.png" alt="CR" style="height:48px;width:auto;opacity:0.9">
       <h1>MARTIN CORONADO 3333 <span>— Panel de administración</span></h1>
     </div>
-    <button id="cambiar-pass-btn">Cambiar contraseña</button>
+    <div id="header-perfil-avatar" class="perfil-avatar perfil-avatar-header" onclick="activarTab('config')" title="Configuración">--</div>
     <button id="logout-btn">Cerrar sesión</button>
   </header>
   <main>
@@ -646,6 +631,38 @@
       </table></div>
     </section>
 
+    <section id="tab-config" style="display:none">
+      <h3 style="margin-top:0">👤 Perfil</h3>
+      <div class="form-row" style="align-items:center">
+        <div id="perfil-avatar-preview" class="perfil-avatar">--</div>
+        <input type="file" id="perfil-foto-input" accept="image/*" style="display:none">
+        <button class="btn" id="perfil-foto-btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)">Cambiar foto</button>
+      </div>
+      <div class="form-row">
+        <div class="form-field"><label for="perfil-nombre">Nombre</label><input type="text" id="perfil-nombre"></div>
+        <div class="form-field"><label for="perfil-apellido">Apellido</label><input type="text" id="perfil-apellido"></div>
+        <div class="form-field"><label for="perfil-usuario">Usuario</label><input type="text" id="perfil-usuario"></div>
+        <button class="btn btn-accent" id="perfil-guardar-btn">Guardar perfil</button>
+      </div>
+      <div class="login-ok" id="perfil-ok" style="margin-bottom:16px"></div>
+
+      <h3>🔔 Notificaciones</h3>
+      <div class="card-sub" style="margin-bottom:10px">Recibí un aviso en este navegador cuando llegue una solicitud nueva de un empleado (corrección, cambio de turno, etc.).</div>
+      <button class="btn btn-accent" id="btn-activar-notif" style="margin-bottom:10px">Activar notificaciones</button>
+      <div class="card-sub" id="config-notif-estado" style="margin-bottom:20px"></div>
+
+      <h3>🔒 Contraseña</h3>
+      <div class="card-sub" style="margin-bottom:10px">Por si la olvidás, podés cambiarla acá mismo sabiendo la actual.</div>
+      <div class="form-row">
+        <div class="form-field"><label for="config-pass-actual">Actual</label><input type="password" id="config-pass-actual"></div>
+        <div class="form-field"><label for="config-pass-nueva">Nueva (mín. 8 caracteres)</label><input type="password" id="config-pass-nueva"></div>
+        <div class="form-field"><label for="config-pass-confirmar">Repetir nueva</label><input type="password" id="config-pass-confirmar"></div>
+        <button class="btn btn-accent" id="config-pass-guardar-btn">Cambiar contraseña</button>
+      </div>
+      <div class="login-error" id="config-pass-error"></div>
+      <div class="login-ok" id="config-pass-ok"></div>
+    </section>
+
   </main>
 </div>
 
@@ -682,6 +699,7 @@ function mostrarApp() {
   const tabGuardada = localStorage.getItem("panel_tab");
   const existe = tabGuardada && document.getElementById("tab-" + tabGuardada);
   activarTab(existe ? tabGuardada : "resumen");
+  cargarPerfil();
 }
 
 function cerrarSesion(avisarServidor) {
@@ -717,35 +735,148 @@ async function login() {
 
 document.getElementById("logout-btn").addEventListener("click", () => cerrarSesion(true));
 
-document.getElementById("cambiar-pass-btn").addEventListener("click", () => {
-  document.getElementById("cambiar-pass-actual").value = "";
-  document.getElementById("cambiar-pass-nueva").value = "";
-  document.getElementById("cambiar-pass-confirmar").value = "";
-  document.getElementById("cambiar-pass-error").textContent = "";
-  document.getElementById("cambiar-pass-ok").textContent = "";
-  document.getElementById("cambiar-pass-overlay").classList.add("abierto");
+// ── Pestaña Configuración: perfil, notificaciones, contraseña ──
+
+function inicialesDe(nombre, apellido) {
+  const n = (nombre || "").trim(); const a = (apellido || "").trim();
+  if (!n && !a) return "--";
+  return ((n[0] || "") + (a[0] || n[1] || "")).toUpperCase();
+}
+
+function pintarAvatares(perfil) {
+  const iniciales = inicialesDe(perfil?.nombre, perfil?.apellido);
+  [document.getElementById("perfil-avatar-preview"), document.getElementById("header-perfil-avatar")].forEach((el) => {
+    if (perfil?.foto) el.innerHTML = `<img src="${perfil.foto}" alt="Foto de perfil">`;
+    else el.textContent = iniciales;
+  });
+}
+
+let perfilFotoPendiente = null;
+
+async function cargarPerfil() {
+  try {
+    const { perfil } = await api("/perfil");
+    document.getElementById("perfil-nombre").value = perfil?.nombre || "";
+    document.getElementById("perfil-apellido").value = perfil?.apellido || "";
+    document.getElementById("perfil-usuario").value = perfil?.usuario || "";
+    perfilFotoPendiente = null;
+    pintarAvatares(perfil);
+  } catch (e) { /* si falla, se deja el formulario vacio */ }
+}
+
+document.getElementById("perfil-foto-btn").addEventListener("click", () => {
+  document.getElementById("perfil-foto-input").click();
 });
-document.getElementById("cambiar-pass-cancelar-btn").addEventListener("click", () => {
-  document.getElementById("cambiar-pass-overlay").classList.remove("abierto");
+document.getElementById("perfil-foto-input").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) { mostrarToast("La foto no puede pesar más de 3MB"); return; }
+  const lector = new FileReader();
+  lector.onload = () => {
+    perfilFotoPendiente = lector.result;
+    pintarAvatares({ nombre: document.getElementById("perfil-nombre").value, apellido: document.getElementById("perfil-apellido").value, foto: perfilFotoPendiente });
+  };
+  lector.readAsDataURL(file);
 });
-document.getElementById("cambiar-pass-guardar-btn").addEventListener("click", async () => {
-  const passwordActual = document.getElementById("cambiar-pass-actual").value;
-  const passwordNueva = document.getElementById("cambiar-pass-nueva").value;
-  const passwordConfirmar = document.getElementById("cambiar-pass-confirmar").value;
-  const errorEl = document.getElementById("cambiar-pass-error");
-  const okEl = document.getElementById("cambiar-pass-ok");
+
+document.getElementById("perfil-guardar-btn").addEventListener("click", async () => {
+  const okEl = document.getElementById("perfil-ok");
+  okEl.textContent = "";
+  try {
+    const { perfil } = await api("/perfil", {
+      method: "POST",
+      body: JSON.stringify({
+        nombre: document.getElementById("perfil-nombre").value,
+        apellido: document.getElementById("perfil-apellido").value,
+        usuario: document.getElementById("perfil-usuario").value,
+        foto: perfilFotoPendiente,
+      }),
+    });
+    perfilFotoPendiente = null;
+    pintarAvatares(perfil);
+    okEl.textContent = "Perfil guardado.";
+  } catch (e) {
+    mostrarToast(e.message || "No se pudo guardar el perfil");
+  }
+});
+
+document.getElementById("config-pass-guardar-btn").addEventListener("click", async () => {
+  const passwordActual = document.getElementById("config-pass-actual").value;
+  const passwordNueva = document.getElementById("config-pass-nueva").value;
+  const passwordConfirmar = document.getElementById("config-pass-confirmar").value;
+  const errorEl = document.getElementById("config-pass-error");
+  const okEl = document.getElementById("config-pass-ok");
   errorEl.textContent = ""; okEl.textContent = "";
   if (!passwordActual || !passwordNueva) { errorEl.textContent = "Completá los tres campos"; return; }
   if (passwordNueva.length < 8) { errorEl.textContent = "La contraseña nueva tiene que tener al menos 8 caracteres"; return; }
   if (passwordNueva !== passwordConfirmar) { errorEl.textContent = "Las dos contraseñas nuevas no coinciden"; return; }
   try {
-    await api("/cambiar-password", {
-      method: "POST", body: JSON.stringify({ passwordActual, passwordNueva }),
-    });
+    await api("/cambiar-password", { method: "POST", body: JSON.stringify({ passwordActual, passwordNueva }) });
     okEl.textContent = "Contraseña actualizada.";
-    setTimeout(() => document.getElementById("cambiar-pass-overlay").classList.remove("abierto"), 1200);
+    document.getElementById("config-pass-actual").value = "";
+    document.getElementById("config-pass-nueva").value = "";
+    document.getElementById("config-pass-confirmar").value = "";
   } catch (e) {
     errorEl.textContent = e.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : (e.message || "Error");
+  }
+});
+
+// Notificaciones push -- pide permiso del navegador, se suscribe con la
+// clave publica VAPID del server, y manda esa suscripcion al backend
+// (services/pushNotifications.js le manda un push la proxima vez que
+// entre una solicitud nueva, ver appController.js).
+function urlBase64ToUint8Array(base64) {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const base64Segura = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64Segura);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+function notifSoportadas() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+function actualizarEstadoNotif() {
+  const btn = document.getElementById("btn-activar-notif");
+  const estadoEl = document.getElementById("config-notif-estado");
+  if (!notifSoportadas()) {
+    btn.disabled = true;
+    estadoEl.textContent = "Este navegador no soporta notificaciones push.";
+    return;
+  }
+  if (Notification.permission === "granted") {
+    btn.textContent = "🔔 Notificaciones activadas";
+    btn.disabled = true;
+    estadoEl.textContent = "";
+  } else if (Notification.permission === "denied") {
+    btn.disabled = true;
+    estadoEl.textContent = "Las bloqueaste desde el navegador -- para activarlas de nuevo, cambiá el permiso de notificaciones del sitio.";
+  } else {
+    btn.textContent = "Activar notificaciones";
+    btn.disabled = false;
+    estadoEl.textContent = "";
+  }
+}
+
+document.getElementById("btn-activar-notif").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-activar-notif");
+  const estadoEl = document.getElementById("config-notif-estado");
+  btn.disabled = true;
+  try {
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") { estadoEl.textContent = "No diste permiso para las notificaciones."; actualizarEstadoNotif(); return; }
+    const registro = await navigator.serviceWorker.register("/panel/panel-sw.js");
+    await navigator.serviceWorker.ready;
+    const { key } = await api("/push/vapid-public-key");
+    let sub = await registro.pushManager.getSubscription();
+    if (!sub) {
+      sub = await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) });
+    }
+    await api("/push/suscribirse", { method: "POST", body: JSON.stringify(sub.toJSON()) });
+    actualizarEstadoNotif();
+  } catch (e) {
+    estadoEl.textContent = "No se pudieron activar las notificaciones.";
+    actualizarEstadoNotif();
   }
 });
 
@@ -804,6 +935,7 @@ function activarTab(tab) {
   if (tab === "licencias") cargarLicencias();
   if (tab === "fichadas") initFichadasEmpleado();
   if (tab === "turnos") cargarTurnos();
+  if (tab === "config") { cargarPerfil(); actualizarEstadoNotif(); }
 }
 
 document.querySelectorAll(".tab-btn").forEach((btn) => {

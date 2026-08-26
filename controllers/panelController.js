@@ -16,6 +16,7 @@ const {
   pedidosTotalesPorEmpleado, periodosRecientes,
   crearEmpleadoApp, listarEmpleadosApp, empleadoAppPorId, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
   passwordPanelHash, establecerPasswordPanel,
+  perfilAdmin, guardarPerfilAdmin, guardarPushSubscripcionPanel,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -23,9 +24,10 @@ const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = requ
 const { calcularAsistencia } = require("../services/asistencia");
 const { twilioClient } = require("../services/twilioClient");
 const whatsapp = require("./whatsappController");
+const { enviarPushATodoElPanel } = require("../services/pushNotifications");
 
 const router = express.Router();
-router.use(express.json());
+router.use(express.json({ limit: "6mb" }));
 // Sirve assets estaticos (ej. el logo) desde public/ bajo /panel/*.
 router.use(express.static(path.join(__dirname, "..", "public")));
 
@@ -86,6 +88,42 @@ router.post("/api/cambiar-password", requerirAuth, async (req, res) => {
   if (!ok) return res.status(401).json({ ok: false, error: "La contraseña actual no es correcta" });
   const nuevoHash = await bcrypt.hash(String(passwordNueva), 10);
   establecerPasswordPanel(nuevoHash);
+  res.json({ ok: true });
+});
+
+// Perfil del admin (nombre/apellido/usuario/foto) -- puramente informativo,
+// no forma parte del login.
+router.get("/api/perfil", requerirAuth, (req, res) => {
+  res.json({ ok: true, perfil: perfilAdmin() });
+});
+
+router.post("/api/perfil", requerirAuth, (req, res) => {
+  const { nombre, apellido, usuario, foto } = req.body || {};
+  if (foto && !String(foto).startsWith("data:image/")) {
+    return res.status(400).json({ ok: false, error: "La foto tiene que ser una imagen" });
+  }
+  guardarPerfilAdmin({
+    nombre: nombre ? String(nombre).trim().slice(0, 60) : null,
+    apellido: apellido ? String(apellido).trim().slice(0, 60) : null,
+    usuario: usuario ? String(usuario).trim().slice(0, 60) : null,
+    foto: foto || null,
+  });
+  res.json({ ok: true, perfil: perfilAdmin() });
+});
+
+// Clave publica VAPID -- la necesita el navegador para pushManager.subscribe.
+router.get("/api/push/vapid-public-key", requerirAuth, (req, res) => {
+  res.json({ ok: true, key: process.env.VAPID_PUBLIC_KEY || "" });
+});
+
+// Guarda la suscripcion Push del panel -- PushSubscription.toJSON() manda
+// exactamente { endpoint, keys: { p256dh, auth } }.
+router.post("/api/push/suscribirse", requerirAuth, (req, res) => {
+  const { endpoint, keys } = req.body || {};
+  if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
+    return res.status(400).json({ ok: false, error: "Suscripción inválida" });
+  }
+  guardarPushSubscripcionPanel({ endpoint, p256dh: keys.p256dh, auth: keys.auth });
   res.json({ ok: true });
 });
 

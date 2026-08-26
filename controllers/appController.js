@@ -14,6 +14,7 @@ const {
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
 const { calcularAsistencia } = require("../services/asistencia");
+const { enviarPushATodoElPanel } = require("../services/pushNotifications");
 
 const router = express.Router();
 router.use(express.json());
@@ -149,6 +150,11 @@ router.post("/api/solicitar-correccion", requerirAuthEmpleado, (req, res) => {
     egresoPropuesto: egresoLimpio || null,
     mensajeOriginal: mensaje ? String(mensaje).trim().slice(0, 300) : "",
   });
+  enviarPushATodoElPanel({
+    titulo: "Nueva solicitud de corrección",
+    cuerpo: `${nombre} pidió corregir el ${fecha}`,
+    url: "/panel/",
+  });
   res.json({ ok: true, id });
 });
 
@@ -186,6 +192,11 @@ router.post("/api/solicitar-cambio", requerirAuthEmpleado, (req, res) => {
     empleadoB,
     fechaA,
     fechaB,
+  });
+  enviarPushATodoElPanel({
+    titulo: "Nueva solicitud de cambio de turno",
+    cuerpo: `${nombre} pidió cambiar el ${fechaA} por el ${fechaB} de ${empleadoB}`,
+    url: "/panel/",
   });
   res.json({ ok: true, id });
 });

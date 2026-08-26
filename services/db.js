@@ -1062,3 +1062,65 @@ function establecerPasswordPanel(hash) {
 
 module.exports.passwordPanelHash = passwordPanelHash;
 module.exports.establecerPasswordPanel = establecerPasswordPanel;
+
+// Perfil del admin (nombre/apellido/usuario/foto) -- puramente informativo,
+// no forma parte del login (que sigue siendo una sola contraseña
+// compartida via panel_password). Fila unica (id=1).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS perfil_admin (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    nombre TEXT,
+    apellido TEXT,
+    usuario TEXT,
+    foto TEXT,
+    actualizado_en TEXT NOT NULL
+  )
+`);
+
+function perfilAdmin() {
+  return db.prepare("SELECT * FROM perfil_admin WHERE id = 1").get() || null;
+}
+
+function guardarPerfilAdmin({ nombre, apellido, usuario, foto }) {
+  db.prepare(`
+    INSERT INTO perfil_admin (id, nombre, apellido, usuario, foto, actualizado_en) VALUES (1, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      nombre = excluded.nombre, apellido = excluded.apellido, usuario = excluded.usuario,
+      foto = COALESCE(excluded.foto, perfil_admin.foto), actualizado_en = excluded.actualizado_en
+  `).run(nombre || null, apellido || null, usuario || null, foto || null, new Date().toISOString());
+}
+
+// Suscripciones Web Push del panel -- separadas de las de la app de
+// empleado (push_subscripciones_app) porque el panel no tiene un
+// empleado_app_id: es un login compartido, no individual.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS push_subscripciones_panel (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    creado_en TEXT NOT NULL
+  )
+`);
+
+function guardarPushSubscripcionPanel({ endpoint, p256dh, auth }) {
+  db.prepare(`
+    INSERT INTO push_subscripciones_panel (endpoint, p256dh, auth, creado_en)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth
+  `).run(endpoint, p256dh, auth, new Date().toISOString());
+}
+
+function eliminarPushSubscripcionPanel(endpoint) {
+  db.prepare(`DELETE FROM push_subscripciones_panel WHERE endpoint = ?`).run(endpoint);
+}
+
+function todasLasSuscripcionesPanel() {
+  return db.prepare(`SELECT * FROM push_subscripciones_panel`).all();
+}
+
+module.exports.perfilAdmin = perfilAdmin;
+module.exports.guardarPerfilAdmin = guardarPerfilAdmin;
+module.exports.guardarPushSubscripcionPanel = guardarPushSubscripcionPanel;
+module.exports.eliminarPushSubscripcionPanel = eliminarPushSubscripcionPanel;
+module.exports.todasLasSuscripcionesPanel = todasLasSuscripcionesPanel;
