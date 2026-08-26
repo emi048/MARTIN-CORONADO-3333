@@ -1035,3 +1035,30 @@ module.exports = {
   crearSesionApp, renovarSesionApp, empleadoIdDeSesionApp, eliminarSesionApp, limpiarSesionesAppVencidas,
   estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
 };
+
+// Contraseña del panel de admin -- migrada de un simple string en .env
+// (ADMIN_PANEL_PASSWORD, comparado en texto plano) a un hash guardado en
+// la base, para poder cambiarla desde adentro del panel sin tocar el .env
+// ni reiniciar el servidor. Fila unica (id=1, forzado por el CHECK).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS panel_password (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    pass_hash TEXT NOT NULL,
+    actualizado_en TEXT NOT NULL
+  )
+`);
+
+function passwordPanelHash() {
+  const row = db.prepare("SELECT pass_hash FROM panel_password WHERE id = 1").get();
+  return row ? row.pass_hash : null;
+}
+
+function establecerPasswordPanel(hash) {
+  db.prepare(`
+    INSERT INTO panel_password (id, pass_hash, actualizado_en) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET pass_hash = excluded.pass_hash, actualizado_en = excluded.actualizado_en
+  `).run(hash, new Date().toISOString());
+}
+
+module.exports.passwordPanelHash = passwordPanelHash;
+module.exports.establecerPasswordPanel = establecerPasswordPanel;

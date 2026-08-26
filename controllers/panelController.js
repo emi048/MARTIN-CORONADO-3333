@@ -15,6 +15,7 @@ const {
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   pedidosTotalesPorEmpleado, periodosRecientes,
   crearEmpleadoApp, listarEmpleadosApp, empleadoAppPorId, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
+  passwordPanelHash, establecerPasswordPanel,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -42,9 +43,11 @@ function nuevoVencimiento() {
   return new Date(Date.now() + DURACION_SESION_MS).toISOString();
 }
 
-router.post("/api/login", (req, res) => {
+router.post("/api/login", async (req, res) => {
   const { password } = req.body || {};
-  if (!process.env.ADMIN_PANEL_PASSWORD || password !== process.env.ADMIN_PANEL_PASSWORD) {
+  const hash = passwordPanelHash();
+  const ok = hash && password && (await bcrypt.compare(String(password), hash));
+  if (!ok) {
     return res.status(401).json({ ok: false, error: "Contraseña incorrecta" });
   }
   const token = generarToken();
@@ -68,6 +71,23 @@ function requerirAuth(req, res, next) {
   }
   next();
 }
+
+// Cambio de contraseña del panel, ya logueado -- pide la actual para
+// confirmar identidad (mismo criterio que el cambio de PIN de la app de
+// empleado). Migro de env var a hash en base justamente para poder hacer
+// esto sin tocar el .env ni reiniciar el servidor.
+router.post("/api/cambiar-password", requerirAuth, async (req, res) => {
+  const { passwordActual, passwordNueva } = req.body || {};
+  if (!passwordNueva || String(passwordNueva).length < 8) {
+    return res.status(400).json({ ok: false, error: "La contraseña nueva tiene que tener al menos 8 caracteres" });
+  }
+  const hash = passwordPanelHash();
+  const ok = hash && (await bcrypt.compare(String(passwordActual || ""), hash));
+  if (!ok) return res.status(401).json({ ok: false, error: "La contraseña actual no es correcta" });
+  const nuevoHash = await bcrypt.hash(String(passwordNueva), 10);
+  establecerPasswordPanel(nuevoHash);
+  res.json({ ok: true });
+});
 
 router.get("/api/pendientes", requerirAuth, (req, res) => {
   // Para cada correccion pendiente, se suma el dato que YA existe ese dia

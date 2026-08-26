@@ -134,6 +134,19 @@
   }
   .login-box button:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .login-ok { color: var(--ok); font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  #cambiar-pass-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #cambiar-pass-overlay.abierto { display: flex; }
+  #cambiar-pass-overlay .login-box { width: 100%; max-width: 320px; padding: 32px 28px; }
+  #cambiar-pass-overlay .login-box input { margin-bottom: 10px; }
+  #cambiar-pass-overlay .btn-secundario {
+    width: 100%; margin-top: 8px; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-weight: 600; cursor: pointer; font-size: 14px;
+  }
 
   nav { display: flex; gap: 6px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
   nav button {
@@ -363,6 +376,19 @@
 
 <div id="app" style="display:none">
   <div id="sidebar-overlay"></div>
+  <div id="cambiar-pass-overlay">
+    <div class="login-box">
+      <h2>Cambiar contraseña</h2>
+      <p>Contraseña del panel de administración</p>
+      <input type="password" id="cambiar-pass-actual" placeholder="Contraseña actual">
+      <input type="password" id="cambiar-pass-nueva" placeholder="Contraseña nueva (mínimo 8 caracteres)">
+      <input type="password" id="cambiar-pass-confirmar" placeholder="Repetí la contraseña nueva">
+      <button id="cambiar-pass-guardar-btn">Guardar</button>
+      <button id="cambiar-pass-cancelar-btn" class="btn-secundario">Cancelar</button>
+      <div class="login-error" id="cambiar-pass-error"></div>
+      <div class="login-ok" id="cambiar-pass-ok"></div>
+    </div>
+  </div>
   <nav id="sidebar">
     <div class="sidebar-titulo">Secciones</div>
     <button class="tab-btn activo" data-tab="resumen">Resumen</button>
@@ -380,6 +406,7 @@
       <img src="/panel/logo-cr.png" alt="CR" style="height:48px;width:auto;opacity:0.9">
       <h1>MARTIN CORONADO 3333 <span>— Panel de administración</span></h1>
     </div>
+    <button id="cambiar-pass-btn">Cambiar contraseña</button>
     <button id="logout-btn">Cerrar sesión</button>
   </header>
   <main>
@@ -689,6 +716,38 @@ async function login() {
 }
 
 document.getElementById("logout-btn").addEventListener("click", () => cerrarSesion(true));
+
+document.getElementById("cambiar-pass-btn").addEventListener("click", () => {
+  document.getElementById("cambiar-pass-actual").value = "";
+  document.getElementById("cambiar-pass-nueva").value = "";
+  document.getElementById("cambiar-pass-confirmar").value = "";
+  document.getElementById("cambiar-pass-error").textContent = "";
+  document.getElementById("cambiar-pass-ok").textContent = "";
+  document.getElementById("cambiar-pass-overlay").classList.add("abierto");
+});
+document.getElementById("cambiar-pass-cancelar-btn").addEventListener("click", () => {
+  document.getElementById("cambiar-pass-overlay").classList.remove("abierto");
+});
+document.getElementById("cambiar-pass-guardar-btn").addEventListener("click", async () => {
+  const passwordActual = document.getElementById("cambiar-pass-actual").value;
+  const passwordNueva = document.getElementById("cambiar-pass-nueva").value;
+  const passwordConfirmar = document.getElementById("cambiar-pass-confirmar").value;
+  const errorEl = document.getElementById("cambiar-pass-error");
+  const okEl = document.getElementById("cambiar-pass-ok");
+  errorEl.textContent = ""; okEl.textContent = "";
+  if (!passwordActual || !passwordNueva) { errorEl.textContent = "Completá los tres campos"; return; }
+  if (passwordNueva.length < 8) { errorEl.textContent = "La contraseña nueva tiene que tener al menos 8 caracteres"; return; }
+  if (passwordNueva !== passwordConfirmar) { errorEl.textContent = "Las dos contraseñas nuevas no coinciden"; return; }
+  try {
+    await api("/cambiar-password", {
+      method: "POST", body: JSON.stringify({ passwordActual, passwordNueva }),
+    });
+    okEl.textContent = "Contraseña actualizada.";
+    setTimeout(() => document.getElementById("cambiar-pass-overlay").classList.remove("abierto"), 1200);
+  } catch (e) {
+    errorEl.textContent = e.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : (e.message || "Error");
+  }
+});
 
 const hamburguesaBtn = document.getElementById("hamburguesa-btn");
 const sidebarEl = document.getElementById("sidebar");
