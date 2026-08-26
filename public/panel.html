@@ -13,7 +13,18 @@
     --text: #eef0f6; --text-muted: #8b90a8; --accent: #7c6cf0; --accent-hover: #6c5ce0; --accent-2: #4f8cff;
     --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
     --serie1: #4f8cff; --serie2: #ff9f5a;
+    --header-bg-1: rgba(10,12,18,0.92); --header-bg-2: rgba(10,12,18,0.82);
+    --hero-tint-1: rgba(10,12,18,0.80); --hero-tint-2: rgba(10,12,18,0.92);
     --font-display: 'Unbounded', sans-serif; --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  /* Modo claro -- togglea las mismas variables que ya usa la app de
+     empleado (mismo criterio, ver public/app/index.html), asi el panel se
+     ve consistente con ella. */
+  body.tema-claro {
+    --bg: #f4f5fa; --surface: #ffffff; --surface2: #edeff7; --border: #dfe2ee;
+    --text: #14161f; --text-muted: #6b7086;
+    --header-bg-1: rgba(255,255,255,0.92); --header-bg-2: rgba(255,255,255,0.82);
+    --hero-tint-1: rgba(244,245,250,0.75); --hero-tint-2: rgba(244,245,250,0.90);
   }
   * { box-sizing: border-box; }
   body {
@@ -21,6 +32,7 @@
     font-family: var(--font-body);
     min-height: 100vh; font-variant-numeric: tabular-nums;
     position: relative;
+    transition: background 0.2s, color 0.2s;
   }
   /* Foto de fondo fija con position:fixed en vez de background-attachment:fixed
      -- ese ultimo tiene un bug conocido en Chrome que corta la imagen a la
@@ -35,13 +47,13 @@
     content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
     background-image: radial-gradient(ellipse 900px 600px at 100% 0%, rgba(124,108,240,0.10), transparent 60%),
                        radial-gradient(ellipse 700px 500px at 0% 100%, rgba(79,140,255,0.06), transparent 60%),
-                       linear-gradient(180deg, rgba(10,12,18,0.80), rgba(10,12,18,0.92) 30%, var(--bg) 68%);
+                       linear-gradient(180deg, var(--hero-tint-1), var(--hero-tint-2) 30%, var(--bg) 68%);
   }
   h3 { font-family: var(--font-display); font-weight: 500; font-size: 15px; letter-spacing: 0.01em; }
   header {
     padding: 18px 24px; border-bottom: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center; gap: 14px;
-    background: linear-gradient(180deg, rgba(10,12,18,0.82), rgba(10,12,18,0.68));
+    background: linear-gradient(180deg, var(--header-bg-1), var(--header-bg-2));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     position: sticky; top: 0; z-index: 30;
   }
@@ -49,6 +61,59 @@
   header h1 { font-family: var(--font-display); font-size: 16px; margin: 0; font-weight: 700; letter-spacing: 0.01em; }
   header h1 span { color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 13px; }
   header button { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+
+  .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .header-icon-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; position: relative; flex-shrink: 0;
+  }
+  .header-icon-btn svg { width: 17px; height: 17px; }
+  .notif-wrap, .avatar-wrap { position: relative; }
+  .notif-panel, .avatar-dropdown {
+    position: absolute; top: 46px; right: 0;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35); z-index: 60;
+  }
+  .notif-panel { width: 210px; padding: 14px; }
+  .notif-panel .notif-vacio { color: var(--text-muted); font-size: 12.5px; text-align: center; }
+  .avatar-dropdown { width: 190px; padding: 8px; }
+  .avatar-dropdown-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px;
+    color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; text-align: left;
+    background: none; border: none; font-family: var(--font-body);
+  }
+  .avatar-dropdown-item:hover { background: var(--surface2); }
+  .avatar-dropdown-item.danger { color: var(--danger); }
+  .avatar-dropdown-divisor { height: 1px; background: var(--border); margin: 6px 4px; }
+
+  .onboard-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .onboard-box {
+    position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: 18px;
+    padding: 30px 24px 22px; max-width: 340px; width: 100%; text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .onboard-cerrar {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface2); border: none; color: var(--text-muted); font-size: 14px; cursor: pointer;
+  }
+  .onboard-logo { height: 42px; width: auto; margin-bottom: 16px; }
+  .onboard-titulo { font-family: var(--font-display); font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+  .onboard-sub { color: var(--text-muted); font-size: 13.5px; line-height: 1.45; margin-bottom: 4px; }
+  .onboard-pasos { text-align: left; margin: 18px 0; }
+  .onboard-pasos:empty { margin: 0; }
+  .onboard-paso { display: flex; gap: 10px; margin-bottom: 12px; font-size: 13.5px; line-height: 1.4; color: var(--text); }
+  .onboard-paso:last-child { margin-bottom: 0; }
+  .onboard-paso-num {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); color: var(--accent-2);
+    font-weight: 700; font-size: 11.5px; display: flex; align-items: center; justify-content: center;
+  }
+  .onboard-box .btn { margin: 6px 0 8px; }
+  .onboard-mas-tarde { width: 100%; background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 700; padding: 8px; cursor: pointer; }
+  .oculto { display: none !important; }
   header button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface2)); }
 
   #hamburguesa-btn {
@@ -391,8 +456,25 @@
       <img src="/panel/logo-cr.png" alt="CR" style="height:48px;width:auto;opacity:0.9">
       <h1>MARTIN CORONADO 3333 <span>— Panel de administración</span></h1>
     </div>
-    <div id="header-perfil-avatar" class="perfil-avatar perfil-avatar-header" onclick="activarTab('config')" title="Configuración">--</div>
-    <button id="logout-btn">Cerrar sesión</button>
+    <div class="header-acciones">
+      <button class="header-icon-btn" id="btn-tema" onclick="toggleTema()" aria-label="Cambiar tema"></button>
+      <div class="notif-wrap">
+        <button class="header-icon-btn" onclick="toggleNotif(event)" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <div class="notif-panel oculto" id="notif-panel">
+          <div class="notif-vacio">No tenés notificaciones nuevas</div>
+        </div>
+      </div>
+      <div class="avatar-wrap">
+        <div id="header-perfil-avatar" class="perfil-avatar perfil-avatar-header" onclick="toggleAvatarMenu(event)" title="Tu cuenta">--</div>
+        <div class="avatar-dropdown oculto" id="avatar-dropdown">
+          <button class="avatar-dropdown-item" onclick="irAConfigDesdeMenu()">✏️ Editar usuario</button>
+          <div class="avatar-dropdown-divisor"></div>
+          <button class="avatar-dropdown-item danger" id="logout-btn">🚪 Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
   </header>
   <main>
     <section id="tab-resumen">
@@ -664,6 +746,22 @@
     </section>
 
   </main>
+
+  <div class="onboard-overlay oculto" id="onboard-notif-overlay">
+    <div class="onboard-box">
+      <button class="onboard-cerrar" onclick="cerrarOnboardNotif()" aria-label="Cerrar">✕</button>
+      <img src="/panel/logo-cr.png" class="onboard-logo" alt="CR">
+      <div class="onboard-titulo">No te pierdas de nada 🔔</div>
+      <div class="onboard-sub">Activá las notificaciones y enterate al toque cuando llegue una solicitud nueva de un empleado.</div>
+      <div class="onboard-pasos">
+        <div class="onboard-paso"><div class="onboard-paso-num">1</div><div>Tocá "Activar notificaciones" abajo.</div></div>
+        <div class="onboard-paso"><div class="onboard-paso-num">2</div><div>Tu navegador te va a preguntar si permitís avisos de este sitio — elegí "Permitir".</div></div>
+        <div class="onboard-paso"><div class="onboard-paso-num">3</div><div>Listo, ya vas a recibir los avisos en este dispositivo.</div></div>
+      </div>
+      <button class="btn btn-accent" id="onboard-btn-accion" style="width:100%" onclick="onboardAccionPrincipal()">🔔 Activar notificaciones</button>
+      <button class="onboard-mas-tarde" onclick="cerrarOnboardNotif()">MÁS TARDE</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -700,6 +798,7 @@ function mostrarApp() {
   const existe = tabGuardada && document.getElementById("tab-" + tabGuardada);
   activarTab(existe ? tabGuardada : "resumen");
   cargarPerfil();
+  mostrarOnboardNotifSiCorresponde();
 }
 
 function cerrarSesion(avisarServidor) {
@@ -821,7 +920,8 @@ document.getElementById("config-pass-guardar-btn").addEventListener("click", asy
   }
 });
 
-// Notificaciones push -- pide permiso del navegador, se suscribe con la
+// Notificaciones push -- mismo patron que la app de empleado (ver
+// public/app/index.html): pide permiso del navegador, se suscribe con la
 // clave publica VAPID del server, y manda esa suscripcion al backend
 // (services/pushNotifications.js le manda un push la proxima vez que
 // entre una solicitud nueva, ver appController.js).
@@ -858,15 +958,16 @@ function actualizarEstadoNotif() {
   }
 }
 
-document.getElementById("btn-activar-notif").addEventListener("click", async () => {
-  const btn = document.getElementById("btn-activar-notif");
+// Usada tanto por el boton de la pestaña Configuración como por el cartel
+// de bienvenida (onboarding) -- un solo lugar que hace la suscripcion de
+// verdad. Devuelve true/false segun si quedo activada.
+async function activarNotificaciones() {
   const estadoEl = document.getElementById("config-notif-estado");
-  btn.disabled = true;
+  if (!notifSoportadas()) { if (estadoEl) estadoEl.textContent = "Este navegador no soporta notificaciones push."; return false; }
   try {
     const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") { estadoEl.textContent = "No diste permiso para las notificaciones."; actualizarEstadoNotif(); return; }
-    const registro = await navigator.serviceWorker.register("/panel/panel-sw.js");
-    await navigator.serviceWorker.ready;
+    if (permiso !== "granted") { if (estadoEl) estadoEl.textContent = "No diste permiso para las notificaciones."; actualizarEstadoNotif(); return false; }
+    const registro = await navigator.serviceWorker.ready;
     const { key } = await api("/push/vapid-public-key");
     let sub = await registro.pushManager.getSubscription();
     if (!sub) {
@@ -874,11 +975,92 @@ document.getElementById("btn-activar-notif").addEventListener("click", async () 
     }
     await api("/push/suscribirse", { method: "POST", body: JSON.stringify(sub.toJSON()) });
     actualizarEstadoNotif();
+    return true;
   } catch (e) {
-    estadoEl.textContent = "No se pudieron activar las notificaciones.";
+    if (estadoEl) estadoEl.textContent = "No se pudieron activar las notificaciones.";
     actualizarEstadoNotif();
+    return false;
   }
+}
+
+document.getElementById("btn-activar-notif").addEventListener("click", () => {
+  document.getElementById("btn-activar-notif").disabled = true;
+  activarNotificaciones();
 });
+
+// Campanita del header: si ya estan activadas muestra el desplegable chico
+// (sin novedades por ahora); si no, abre el mismo cartel de bienvenida con
+// el paso a paso para activarlas.
+function toggleNotif(evento) {
+  evento.stopPropagation();
+  if (notifSoportadas() && Notification.permission === "granted") {
+    document.getElementById("notif-panel").classList.toggle("oculto");
+  } else {
+    document.getElementById("onboard-notif-overlay").classList.remove("oculto");
+  }
+}
+
+document.addEventListener("click", (evento) => {
+  const panel = document.getElementById("notif-panel");
+  if (panel && !panel.classList.contains("oculto") && !panel.parentElement.contains(evento.target)) panel.classList.add("oculto");
+  const menu = document.getElementById("avatar-dropdown");
+  if (menu && !menu.classList.contains("oculto") && !menu.parentElement.contains(evento.target)) menu.classList.add("oculto");
+});
+
+// Cartel de bienvenida -- aparece una unica vez por dispositivo (o hasta
+// que el permiso vuelva a "default", ej. si lo resetean a mano). Mismo
+// criterio que la app de empleado.
+function mostrarOnboardNotifSiCorresponde() {
+  if (localStorage.getItem("panel_onboard_notif_visto")) return;
+  if (!notifSoportadas()) return;
+  if (Notification.permission !== "default") { localStorage.setItem("panel_onboard_notif_visto", "1"); return; }
+  document.getElementById("onboard-notif-overlay").classList.remove("oculto");
+}
+
+function cerrarOnboardNotif() {
+  localStorage.setItem("panel_onboard_notif_visto", "1");
+  document.getElementById("onboard-notif-overlay").classList.add("oculto");
+}
+
+async function onboardAccionPrincipal() {
+  const ok = await activarNotificaciones();
+  if (ok) cerrarOnboardNotif();
+}
+
+// Tema claro/oscuro -- mismo par de iconos y misma logica que la app de
+// empleado, clave de localStorage separada (panel_tema) para no acoplar
+// la preferencia de un producto con el otro.
+const ICONO_SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+const ICONO_LUNA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+
+function aplicarTema(tema) {
+  document.body.classList.toggle("tema-claro", tema === "claro");
+  const btn = document.getElementById("btn-tema");
+  if (btn) btn.innerHTML = tema === "claro" ? ICONO_LUNA : ICONO_SOL;
+}
+
+function toggleTema() {
+  const nuevo = (localStorage.getItem("panel_tema") || "oscuro") === "oscuro" ? "claro" : "oscuro";
+  localStorage.setItem("panel_tema", nuevo);
+  aplicarTema(nuevo);
+}
+
+aplicarTema(localStorage.getItem("panel_tema") || "oscuro");
+
+// Menu del avatar (arriba a la derecha) -- editar usuario / cerrar sesion.
+function toggleAvatarMenu(evento) {
+  evento.stopPropagation();
+  document.getElementById("avatar-dropdown").classList.toggle("oculto");
+}
+
+function irAConfigDesdeMenu() {
+  document.getElementById("avatar-dropdown").classList.add("oculto");
+  activarTab("config");
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/panel/panel-sw.js").catch(() => {});
+}
 
 const hamburguesaBtn = document.getElementById("hamburguesa-btn");
 const sidebarEl = document.getElementById("sidebar");
