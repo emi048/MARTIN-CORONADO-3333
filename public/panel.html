@@ -166,6 +166,47 @@
   .novedad-comentar-row input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 12.5px; }
   .novedad-comentar-row button { flex-shrink: 0; }
 
+  .config-categoria { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 12px; overflow: hidden; }
+  .config-categoria-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; cursor: pointer; }
+  .config-categoria-header:hover { background: var(--surface2); }
+  .config-categoria-kicker { font-size: 11px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 3px; }
+  .config-categoria-titulo { font-family: var(--font-display); font-size: 15px; font-weight: 700; }
+  .config-categoria-chevron { width: 18px; height: 18px; color: var(--text-muted); transition: transform 0.2s; flex-shrink: 0; margin-left: 12px; }
+  .config-categoria.abierto .config-categoria-chevron { transform: rotate(180deg); }
+  .config-categoria-body { padding: 0 18px 18px; display: none; }
+  .config-categoria.abierto .config-categoria-body { display: block; }
+
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch-track { position: absolute; inset: 0; background: var(--border); border-radius: 999px; transition: background 0.15s; cursor: pointer; }
+  .switch-track::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.15s; }
+  .switch input:checked + .switch-track { background: var(--accent); }
+  .switch input:checked + .switch-track::before { transform: translateX(20px); }
+
+  .acc-fila { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .acc-fila-titulo { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; }
+  .tamano-letra-grupo { display: flex; gap: 8px; flex-shrink: 0; }
+  .tamano-letra-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 12px; min-width: 56px;
+    border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    cursor: pointer; font-weight: 700; font-family: var(--font-body);
+  }
+  .tamano-letra-btn[data-tam="chico"] { font-size: 12px; }
+  .tamano-letra-btn[data-tam="mediano"] { font-size: 15px; }
+  .tamano-letra-btn[data-tam="grande"] { font-size: 18px; }
+  .tamano-letra-btn span { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+  .tamano-letra-btn.activo { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface2)); }
+
+  .btn-leer-voz {
+    display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--accent-2); cursor: pointer; flex-shrink: 0; padding: 0;
+    margin-left: 6px; vertical-align: middle;
+  }
+  .btn-leer-voz svg { width: 13px; height: 13px; }
+
+  html.letra-chico { zoom: 0.88; }
+  html.letra-grande { zoom: 1.16; }
+
   #hamburguesa-btn {
     background: none; border: 1px solid var(--border); color: var(--text);
     width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
@@ -822,43 +863,106 @@
     </section>
 
     <section id="tab-config" style="display:none">
-      <h3 style="margin-top:0">👤 Perfil</h3>
-      <div class="form-row" style="align-items:center">
-        <div id="perfil-avatar-preview" class="perfil-avatar">--</div>
-        <input type="file" id="perfil-foto-input" accept="image/*" style="display:none">
-        <button class="btn" id="perfil-foto-btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)">Cambiar foto</button>
-      </div>
-      <div class="form-row">
-        <div class="form-field"><label for="perfil-nombre">Nombre</label><input type="text" id="perfil-nombre"></div>
-        <div class="form-field"><label for="perfil-apellido">Apellido</label><input type="text" id="perfil-apellido"></div>
-        <div class="form-field"><label for="perfil-usuario">Usuario</label><input type="text" id="perfil-usuario"></div>
-        <div class="form-field">
-          <label for="perfil-sector">Sector</label>
-          <select id="perfil-sector">
-            <option value="">Sin especificar</option>
-            <option value="mantenimiento">Mantenimiento</option>
-            <option value="conserjeria">Conserjería</option>
-          </select>
+      <div class="config-categoria abierto" id="cat-datos-personales">
+        <div class="config-categoria-header" onclick="toggleCategoriaConfig(this)">
+          <div>
+            <div class="config-categoria-kicker">👤 Datos personales</div>
+            <div class="config-categoria-titulo">Tu perfil</div>
+          </div>
+          <svg class="config-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <button class="btn btn-accent" id="perfil-guardar-btn">Guardar perfil</button>
+        <div class="config-categoria-body">
+          <div class="form-row" style="align-items:center">
+            <div id="perfil-avatar-preview" class="perfil-avatar">--</div>
+            <input type="file" id="perfil-foto-input" accept="image/*" style="display:none">
+            <button class="btn" id="perfil-foto-btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)">Cambiar foto</button>
+          </div>
+          <div class="form-row">
+            <div class="form-field"><label for="perfil-nombre">Nombre</label><input type="text" id="perfil-nombre"></div>
+            <div class="form-field"><label for="perfil-apellido">Apellido</label><input type="text" id="perfil-apellido"></div>
+            <div class="form-field"><label for="perfil-usuario">Usuario</label><input type="text" id="perfil-usuario"></div>
+            <div class="form-field">
+              <label for="perfil-sector">Sector</label>
+              <select id="perfil-sector">
+                <option value="">Sin especificar</option>
+                <option value="mantenimiento">Mantenimiento</option>
+                <option value="conserjeria">Conserjería</option>
+              </select>
+            </div>
+            <button class="btn btn-accent" id="perfil-guardar-btn">Guardar perfil</button>
+          </div>
+          <div class="login-ok" id="perfil-ok"></div>
+        </div>
       </div>
-      <div class="login-ok" id="perfil-ok" style="margin-bottom:16px"></div>
 
-      <h3>🔔 Notificaciones</h3>
-      <div class="card-sub" style="margin-bottom:10px">Recibí un aviso en este navegador cuando llegue una solicitud nueva de un empleado (corrección, cambio de turno, etc.).</div>
-      <button class="btn btn-accent" id="btn-activar-notif" style="margin-bottom:10px">Activar notificaciones</button>
-      <div class="card-sub" id="config-notif-estado" style="margin-bottom:20px"></div>
-
-      <h3>🔒 Contraseña</h3>
-      <div class="card-sub" style="margin-bottom:10px">Por si la olvidás, podés cambiarla acá mismo sabiendo la actual.</div>
-      <div class="form-row">
-        <div class="form-field"><label for="config-pass-actual">Actual</label><input type="password" id="config-pass-actual"></div>
-        <div class="form-field"><label for="config-pass-nueva">Nueva (mín. 8 caracteres)</label><input type="password" id="config-pass-nueva"></div>
-        <div class="form-field"><label for="config-pass-confirmar">Repetir nueva</label><input type="password" id="config-pass-confirmar"></div>
-        <button class="btn btn-accent" id="config-pass-guardar-btn">Cambiar contraseña</button>
+      <div class="config-categoria" id="cat-notificaciones">
+        <div class="config-categoria-header" onclick="toggleCategoriaConfig(this)">
+          <div>
+            <div class="config-categoria-kicker">🔔 Notificaciones</div>
+            <div class="config-categoria-titulo">Avisos del navegador</div>
+          </div>
+          <svg class="config-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="config-categoria-body">
+          <div class="card-sub" style="margin-bottom:10px">Recibí un aviso en este navegador cuando llegue una solicitud nueva de un empleado (corrección, cambio de turno, etc.).</div>
+          <button class="btn btn-accent" id="btn-activar-notif" style="margin-bottom:10px">Activar notificaciones</button>
+          <div class="card-sub" id="config-notif-estado"></div>
+        </div>
       </div>
-      <div class="login-error" id="config-pass-error"></div>
-      <div class="login-ok" id="config-pass-ok"></div>
+
+      <div class="config-categoria" id="cat-accesibilidad">
+        <div class="config-categoria-header" onclick="toggleCategoriaConfig(this)">
+          <div>
+            <div class="config-categoria-kicker">♿ Accesibilidad</div>
+            <div class="config-categoria-titulo">Tamaño de letra y lectura</div>
+          </div>
+          <svg class="config-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="config-categoria-body">
+          <div class="acc-fila">
+            <div>
+              <div class="acc-fila-titulo">Tamaño de letra</div>
+              <div class="card-sub">Agrandá o achicá todo el panel. Se guarda en este dispositivo.</div>
+            </div>
+            <div class="tamano-letra-grupo">
+              <button class="tamano-letra-btn" data-tam="chico" onclick="cambiarTamanoLetra('chico')">Aa<span>Chico</span></button>
+              <button class="tamano-letra-btn" data-tam="mediano" onclick="cambiarTamanoLetra('mediano')">Aa<span>Mediano</span></button>
+              <button class="tamano-letra-btn" data-tam="grande" onclick="cambiarTamanoLetra('grande')">Aa<span>Grande</span></button>
+            </div>
+          </div>
+          <div class="acc-fila" style="margin-bottom:0">
+            <div>
+              <div class="acc-fila-titulo">Leer en voz alta</div>
+              <div class="card-sub">Muestra un botón 🔊 para escuchar el texto (novedades, pendientes). Ideal si te cuesta leer.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="acc-leer-voz" onchange="toggleLeerVoz()">
+              <span class="switch-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-categoria" id="cat-seguridad">
+        <div class="config-categoria-header" onclick="toggleCategoriaConfig(this)">
+          <div>
+            <div class="config-categoria-kicker">🔒 Seguridad</div>
+            <div class="config-categoria-titulo">Cambiar contraseña</div>
+          </div>
+          <svg class="config-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="config-categoria-body">
+          <div class="card-sub" style="margin-bottom:10px">Por si la olvidás, podés cambiarla acá mismo sabiendo la actual.</div>
+          <div class="form-row">
+            <div class="form-field"><label for="config-pass-actual">Actual</label><input type="password" id="config-pass-actual"></div>
+            <div class="form-field"><label for="config-pass-nueva">Nueva (mín. 8 caracteres)</label><input type="password" id="config-pass-nueva"></div>
+            <div class="form-field"><label for="config-pass-confirmar">Repetir nueva</label><input type="password" id="config-pass-confirmar"></div>
+            <button class="btn btn-accent" id="config-pass-guardar-btn">Cambiar contraseña</button>
+          </div>
+          <div class="login-error" id="config-pass-error"></div>
+          <div class="login-ok" id="config-pass-ok"></div>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -2448,7 +2552,7 @@ async function cargarNovedades() {
           <div class="novedad-fecha">${escapeHtml(n.fecha)}</div>
         </div>
         <div class="novedad-usuario">Cargado por ${escapeHtml(n.usuario_nombre)}</div>
-        ${n.observacion ? `<div class="novedad-obs">${escapeHtml(n.observacion)}</div>` : ""}
+        ${n.observacion ? `<div class="novedad-obs">${escapeHtml(n.observacion)}${leerVozActiva() ? `<button class="btn-leer-voz" data-texto="${escapeHtml(n.observacion)}" onclick="leerTexto(this.dataset.texto)" aria-label="Escuchar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>` : ""}</div>` : ""}
         ${fotosHtml}
         <div class="novedad-comentarios">
           ${comentariosHtml || `<div class="card-sub">Sin comentarios todavía</div>`}
@@ -2476,6 +2580,46 @@ async function comentarNovedad(id) {
     mostrarToast(e.message || "No se pudo comentar");
   }
 }
+
+// ── Accesibilidad: categorías colapsables, tamaño de letra, leer en voz alta ──
+
+function toggleCategoriaConfig(headerEl) {
+  headerEl.closest(".config-categoria").classList.toggle("abierto");
+}
+
+function aplicarTamanoLetra(tam) {
+  document.documentElement.classList.remove("letra-chico", "letra-grande");
+  if (tam === "chico") document.documentElement.classList.add("letra-chico");
+  if (tam === "grande") document.documentElement.classList.add("letra-grande");
+  document.querySelectorAll(".tamano-letra-btn").forEach((b) => b.classList.toggle("activo", b.dataset.tam === tam));
+}
+
+function cambiarTamanoLetra(tam) {
+  localStorage.setItem("panel_tamano_letra", tam);
+  aplicarTamanoLetra(tam);
+}
+
+aplicarTamanoLetra(localStorage.getItem("panel_tamano_letra") || "mediano");
+
+function leerVozActiva() {
+  return localStorage.getItem("panel_leer_voz") === "1";
+}
+
+function toggleLeerVoz() {
+  const activo = document.getElementById("acc-leer-voz").checked;
+  localStorage.setItem("panel_leer_voz", activo ? "1" : "0");
+  if (document.getElementById("tab-novedades").style.display !== "none") cargarNovedades();
+}
+
+function leerTexto(texto) {
+  if (!("speechSynthesis" in window)) { mostrarToast("Tu navegador no soporta lectura en voz alta"); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = "es-AR";
+  window.speechSynthesis.speak(utterance);
+}
+
+document.getElementById("acc-leer-voz").checked = leerVozActiva();
 
 if (token) mostrarApp(); else document.getElementById("login-screen").style.display = "flex";
 </script>
