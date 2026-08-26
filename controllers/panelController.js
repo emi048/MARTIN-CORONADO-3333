@@ -15,8 +15,10 @@ const {
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
   pedidosTotalesPorEmpleado, periodosRecientes,
   crearEmpleadoApp, listarEmpleadosApp, empleadoAppPorId, actualizarPinEmpleadoApp, eliminarEmpleadoApp,
-  passwordPanelHash, establecerPasswordPanel,
-  perfilAdmin, guardarPerfilAdmin, guardarPushSubscripcionPanel,
+  guardarPushSubscripcionPanel,
+  crearAdmin, listarAdmins, adminPorUsuario, adminPorId, actualizarPerfilAdminPorId, actualizarPasswordAdmin,
+  actualizarDatosAdmin, adminIdDeSesionPanel,
+  listarNovedades, comentariosDeNovedades, crearComentarioNovedad,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -46,14 +48,17 @@ function nuevoVencimiento() {
 }
 
 router.post("/api/login", async (req, res) => {
-  const { password } = req.body || {};
-  const hash = passwordPanelHash();
-  const ok = hash && password && (await bcrypt.compare(String(password), hash));
+  const { usuario, password } = req.body || {};
+  if (!usuario || !password) {
+    return res.status(401).json({ ok: false, error: "Completá usuario y contraseña" });
+  }
+  const admin = adminPorUsuario(String(usuario).trim());
+  const ok = admin && (await bcrypt.compare(String(password), admin.pass_hash));
   if (!ok) {
-    return res.status(401).json({ ok: false, error: "Contraseña incorrecta" });
+    return res.status(401).json({ ok: false, error: "Usuario o contraseña incorrecta" });
   }
   const token = generarToken();
-  crearSesionPanel(token, nuevoVencimiento());
+  crearSesionPanel(token, nuevoVencimiento(), admin.id);
   res.json({ ok: true, token });
 });
 
@@ -71,6 +76,7 @@ function requerirAuth(req, res, next) {
   if (!valida) {
     return res.status(401).json({ ok: false, error: "No autorizado" });
   }
+  req.adminId = adminIdDeSesionPanel(token);
   next();
 }
 
@@ -83,32 +89,44 @@ router.post("/api/cambiar-password", requerirAuth, async (req, res) => {
   if (!passwordNueva || String(passwordNueva).length < 8) {
     return res.status(400).json({ ok: false, error: "La contraseña nueva tiene que tener al menos 8 caracteres" });
   }
-  const hash = passwordPanelHash();
-  const ok = hash && (await bcrypt.compare(String(passwordActual || ""), hash));
+  const admin = adminPorId(req.adminId);
+  const ok = admin && (await bcrypt.compare(String(passwordActual || ""), admin.pass_hash));
   if (!ok) return res.status(401).json({ ok: false, error: "La contraseña actual no es correcta" });
   const nuevoHash = await bcrypt.hash(String(passwordNueva), 10);
-  establecerPasswordPanel(nuevoHash);
+  actualizarPasswordAdmin(req.adminId, nuevoHash);
   res.json({ ok: true });
 });
 
-// Perfil del admin (nombre/apellido/usuario/foto) -- puramente informativo,
-// no forma parte del login.
+// Perfil del admin logueado (nombre/apellido/usuario/sector/foto).
 router.get("/api/perfil", requerirAuth, (req, res) => {
-  res.json({ ok: true, perfil: perfilAdmin() });
+  const admin = adminPorId(req.adminId);
+  if (!admin) return res.json({ ok: true, perfil: null });
+  const { pass_hash, ...perfil } = admin;
+  res.json({ ok: true, perfil });
 });
 
 router.post("/api/perfil", requerirAuth, (req, res) => {
-  const { nombre, apellido, usuario, foto } = req.body || {};
+  const { nombre, apellido, usuario, sector, foto } = req.body || {};
   if (foto && !String(foto).startsWith("data:image/")) {
     return res.status(400).json({ ok: false, error: "La foto tiene que ser una imagen" });
   }
-  guardarPerfilAdmin({
-    nombre: nombre ? String(nombre).trim().slice(0, 60) : null,
-    apellido: apellido ? String(apellido).trim().slice(0, 60) : null,
-    usuario: usuario ? String(usuario).trim().slice(0, 60) : null,
-    foto: foto || null,
-  });
-  res.json({ ok: true, perfil: perfilAdmin() });
+  if (!usuario || !String(usuario).trim()) {
+    return res.status(400).json({ ok: false, error: "El usuario no puede estar vacío" });
+  }
+  try {
+    actualizarPerfilAdminPorId(req.adminId, {
+      nombre: nombre ? String(nombre).trim().slice(0, 60) : null,
+      apellido: apellido ? String(apellido).trim().slice(0, 60) : null,
+      usuario: String(usuario).trim().slice(0, 60),
+      sector: sector && ["mantenimiento", "conserjeria"].includes(sector) ? sector : null,
+      foto: foto || null,
+    });
+  } catch (err) {
+    return res.status(400).json({ ok: false, error: "Ese usuario ya está en uso" });
+  }
+  const admin = adminPorId(req.adminId);
+  const { pass_hash, ...perfil } = admin;
+  res.json({ ok: true, perfil });
 });
 
 // Clave publica VAPID -- la necesita el navegador para pushManager.subscribe.
@@ -124,6 +142,91 @@ router.post("/api/push/suscribirse", requerirAuth, (req, res) => {
     return res.status(400).json({ ok: false, error: "Suscripción inválida" });
   }
   guardarPushSubscripcionPanel({ endpoint, p256dh: keys.p256dh, auth: keys.auth });
+  res.json({ ok: true });
+});
+
+// ── Administracion de cuentas de admin (pestaña "Admins") ──
+router.get("/api/admins", requerirAuth, (req, res) => {
+  res.json({ ok: true, admins: listarAdmins() });
+});
+
+router.post("/api/admins", requerirAuth, async (req, res) => {
+  const { nombre, apellido, puesto, usuario, permisos, password } = req.body || {};
+  if (!usuario || !String(usuario).trim()) return res.status(400).json({ ok: false, error: "Elegí un usuario" });
+  if (!password || String(password).length < 8) return res.status(400).json({ ok: false, error: "La contraseña tiene que tener al menos 8 caracteres" });
+  const passHash = await bcrypt.hash(String(password), 10);
+  try {
+    const id = crearAdmin({
+      nombre: nombre ? String(nombre).trim().slice(0, 60) : null,
+      apellido: apellido ? String(apellido).trim().slice(0, 60) : null,
+      puesto: puesto ? String(puesto).trim().slice(0, 60) : null,
+      usuario: String(usuario).trim().slice(0, 60),
+      passHash,
+      permisos: permisos || "admin",
+    });
+    res.json({ ok: true, id });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: "Ese usuario ya está en uso" });
+  }
+});
+
+router.post("/api/admins/:id", requerirAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const admin = adminPorId(id);
+  if (!admin) return res.status(404).json({ ok: false, error: "No encontrado" });
+  const { nombre, apellido, puesto, permisos } = req.body || {};
+  actualizarDatosAdmin(id, {
+    nombre: nombre !== undefined ? (nombre ? String(nombre).trim().slice(0, 60) : null) : admin.nombre,
+    apellido: apellido !== undefined ? (apellido ? String(apellido).trim().slice(0, 60) : null) : admin.apellido,
+    puesto: puesto !== undefined ? (puesto ? String(puesto).trim().slice(0, 60) : null) : admin.puesto,
+    permisos: permisos || admin.permisos,
+    activo: !!admin.activo,
+  });
+  res.json({ ok: true });
+});
+
+router.post("/api/admins/:id/activo", requerirAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const { activo } = req.body || {};
+  if (id === req.adminId && activo === false) {
+    return res.status(400).json({ ok: false, error: "No podés desactivar tu propia cuenta" });
+  }
+  const admin = adminPorId(id);
+  if (!admin) return res.status(404).json({ ok: false, error: "No encontrado" });
+  actualizarDatosAdmin(id, { nombre: admin.nombre, apellido: admin.apellido, puesto: admin.puesto, permisos: admin.permisos, activo: !!activo });
+  res.json({ ok: true });
+});
+
+router.post("/api/admins/:id/resetear-password", requerirAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  const admin = adminPorId(id);
+  if (!admin) return res.status(404).json({ ok: false, error: "No encontrado" });
+  const nueva = crypto.randomBytes(9).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+  const hash = await bcrypt.hash(nueva, 10);
+  actualizarPasswordAdmin(id, hash);
+  res.json({ ok: true, passwordNueva: nueva });
+});
+
+// ── Novedades del recorrido diario -- mismos datos que ya carga la app de
+// empleado (services/db.js), leidos y comentados tambien desde el panel. ──
+const RE_PERIODO_PANEL = /^\d{4}-\d{2}$/;
+router.get("/api/novedades", requerirAuth, (req, res) => {
+  const periodo = RE_PERIODO_PANEL.test(req.query.periodo || "") ? req.query.periodo : null;
+  const novedades = listarNovedades(periodo);
+  const comentarios = comentariosDeNovedades(novedades.map((n) => n.id));
+  res.json({
+    ok: true,
+    novedades: novedades.map((n) => ({ ...n, comentarios: comentarios.filter((c) => c.novedad_id === n.id) })),
+  });
+});
+
+router.post("/api/novedades/:id/comentarios", requerirAuth, (req, res) => {
+  const novedadId = Number(req.params.id);
+  const texto = String((req.body || {}).texto || "").trim().slice(0, 500);
+  if (!novedadId || !texto) return res.status(400).json({ ok: false, error: "Escribí un comentario" });
+  const admin = adminPorId(req.adminId);
+  const nombreAdmin = admin ? `${admin.nombre || ""} ${admin.apellido || ""}`.trim() || admin.usuario : "Administrador";
+  crearComentarioNovedad({ novedadId, empleadoAppId: null, usuarioNombre: nombreAdmin + " (admin)", texto });
   res.json({ ok: true });
 });
 

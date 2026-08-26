@@ -1124,3 +1124,118 @@ module.exports.guardarPerfilAdmin = guardarPerfilAdmin;
 module.exports.guardarPushSubscripcionPanel = guardarPushSubscripcionPanel;
 module.exports.eliminarPushSubscripcionPanel = eliminarPushSubscripcionPanel;
 module.exports.todasLasSuscripcionesPanel = todasLasSuscripcionesPanel;
+// Admins del panel -- reemplaza la contraseña compartida (panel_password)
+// por cuentas individuales, cada una con su propio login (usuario +
+// contraseña), nombre/puesto/sector/foto y un campo de permisos (por
+// ahora solo se guarda/muestra, no se aplica ninguna restriccion real
+// todavia -- eso queda para cuando se definan que acciones hay que
+// limitar por rol).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT,
+    apellido TEXT,
+    puesto TEXT,
+    usuario TEXT NOT NULL UNIQUE,
+    pass_hash TEXT NOT NULL,
+    permisos TEXT NOT NULL DEFAULT 'admin',
+    sector TEXT,
+    foto TEXT,
+    activo INTEGER NOT NULL DEFAULT 1,
+    creado_en TEXT NOT NULL
+  )
+`);
+
+// sesiones_panel necesita saber A QUE admin pertenece cada sesion (antes
+// una sola contraseña compartida no distinguia quien era quien).
+if (!db.prepare("PRAGMA table_info(sesiones_panel)").all().some((c) => c.name === "admin_id")) {
+  db.exec("ALTER TABLE sesiones_panel ADD COLUMN admin_id INTEGER");
+}
+
+// Migracion unica: si todavia no hay ningun admin cargado pero ya existia
+// la contraseña compartida de siempre (panel_password) y el perfil viejo
+// (perfil_admin), se crea el primer admin a partir de esos datos --
+// copiando el HASH de la contraseña tal cual (no hace falta saber la
+// contraseña en texto plano), asi el login de siempre sigue funcionando
+// igual, ahora pidiendo tambien el usuario.
+const yaHayAdmins = db.prepare("SELECT COUNT(*) as n FROM admins").get().n;
+if (yaHayAdmins === 0) {
+  const perfilViejo = db.prepare("SELECT * FROM perfil_admin WHERE id = 1").get();
+  const passwordViejo = db.prepare("SELECT pass_hash FROM panel_password WHERE id = 1").get();
+  if (passwordViejo) {
+    db.prepare(`
+      INSERT INTO admins (nombre, apellido, puesto, usuario, pass_hash, permisos, sector, foto, activo, creado_en)
+      VALUES (?, ?, ?, ?, ?, 'admin', ?, ?, 1, ?)
+    `).run(
+      perfilViejo?.nombre || "Admin", perfilViejo?.apellido || "", "",
+      perfilViejo?.usuario || "admin", passwordViejo.pass_hash,
+      perfilViejo?.sector || null, perfilViejo?.foto || null,
+      new Date().toISOString()
+    );
+  }
+}
+
+function crearAdmin({ nombre, apellido, puesto, usuario, passHash, permisos, sector }) {
+  const info = db.prepare(`
+    INSERT INTO admins (nombre, apellido, puesto, usuario, pass_hash, permisos, sector, activo, creado_en)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+  `).run(nombre || null, apellido || null, puesto || null, usuario, passHash, permisos || "admin", sector || null, new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function listarAdmins() {
+  return db.prepare(`
+    SELECT id, nombre, apellido, puesto, usuario, permisos, sector, foto, activo, creado_en FROM admins ORDER BY id ASC
+  `).all();
+}
+
+function adminPorUsuario(usuario) {
+  return db.prepare(`SELECT * FROM admins WHERE usuario = ? AND activo = 1`).get(usuario);
+}
+
+function adminPorId(id) {
+  return db.prepare(`SELECT * FROM admins WHERE id = ?`).get(id);
+}
+
+// foto: COALESCE con la que ya habia -- si no se manda una nueva (no se
+// toco "Cambiar foto" esta vez), no se borra la que ya tenia.
+function actualizarPerfilAdminPorId(id, { nombre, apellido, usuario, sector, foto }) {
+  db.prepare(`
+    UPDATE admins SET nombre = ?, apellido = ?, usuario = ?, sector = ?, foto = COALESCE(?, foto) WHERE id = ?
+  `).run(nombre || null, apellido || null, usuario, sector || null, foto || null, id);
+}
+
+function actualizarPasswordAdmin(id, passHash) {
+  db.prepare(`UPDATE admins SET pass_hash = ? WHERE id = ?`).run(passHash, id);
+}
+
+function actualizarDatosAdmin(id, { nombre, apellido, puesto, permisos, activo }) {
+  db.prepare(`
+    UPDATE admins SET nombre = ?, apellido = ?, puesto = ?, permisos = ?, activo = ? WHERE id = ?
+  `).run(nombre || null, apellido || null, puesto || null, permisos || "admin", activo === false ? 0 : 1, id);
+}
+
+function adminIdDeSesionPanel(token) {
+  const row = db.prepare(`SELECT admin_id FROM sesiones_panel WHERE token = ?`).get(token);
+  return row ? row.admin_id : null;
+}
+
+// Redefine crearSesionPanel para que tambien guarde a que admin pertenece
+// la sesion (parametro nuevo, opcional -- por hoisting de function
+// declarations, esta version pisa a la original en todo el archivo, sin
+// tener que tocar la definicion vieja).
+function crearSesionPanel(token, expiraEnISO, adminId) {
+  limpiarSesionesVencidas();
+  db.prepare(`INSERT INTO sesiones_panel (token, creado_en, expira_en, admin_id) VALUES (?, ?, ?, ?)`)
+    .run(token, new Date().toISOString(), expiraEnISO, adminId || null);
+}
+
+module.exports.crearAdmin = crearAdmin;
+module.exports.listarAdmins = listarAdmins;
+module.exports.adminPorUsuario = adminPorUsuario;
+module.exports.adminPorId = adminPorId;
+module.exports.actualizarPerfilAdminPorId = actualizarPerfilAdminPorId;
+module.exports.actualizarPasswordAdmin = actualizarPasswordAdmin;
+module.exports.actualizarDatosAdmin = actualizarDatosAdmin;
+module.exports.adminIdDeSesionPanel = adminIdDeSesionPanel;
+module.exports.crearSesionPanel = crearSesionPanel;
