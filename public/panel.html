@@ -148,6 +148,29 @@
   .onboard-box .btn { margin: 6px 0 8px; }
   .onboard-mas-tarde { width: 100%; background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 700; padding: 8px; cursor: pointer; }
   .oculto { display: none !important; }
+
+  .mural-stepper { display: flex; align-items: center; margin: 14px 0 4px; }
+  .mural-stepper-paso { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+  .mural-stepper-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--border); border: 2px solid var(--border); z-index: 1; }
+  .mural-stepper-label { font-size: 10.5px; color: var(--text-muted); margin-top: 6px; text-align: center; }
+  .mural-stepper-linea { position: absolute; top: 6px; left: -50%; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+  .mural-stepper-paso:first-child .mural-stepper-linea { display: none; }
+  .mural-stepper-paso.completo .mural-stepper-dot { background: var(--ok); border-color: var(--ok); }
+  .mural-stepper-paso.completo .mural-stepper-linea { background: var(--ok); }
+  .mural-stepper-paso.activo .mural-stepper-dot { background: var(--accent); border-color: var(--accent); }
+  .mural-stepper-paso.activo .mural-stepper-label { color: var(--text); font-weight: 700; }
+
+  .mural-audiencia-wrap { position: relative; }
+  .mural-audiencia-menu {
+    position: absolute; top: 40px; left: 0; z-index: 60; width: 230px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35); padding: 6px;
+  }
+  .mural-audiencia-menu button {
+    display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 7px;
+    background: none; border: none; color: var(--text); font-size: 13px; font-family: var(--font-body); cursor: pointer;
+  }
+  .mural-audiencia-menu button:hover { background: var(--surface2); }
   header button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface2)); }
 
   .novedad-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
@@ -542,6 +565,7 @@
     <button class="tab-btn" data-tab="licencias">Licencias</button>
     <button class="tab-btn" data-tab="turnos">Turnos (mantenimiento)</button>
     <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
+    <button class="tab-btn" data-tab="mural">🧵 Mural</button>
     <button class="tab-btn" data-tab="novedades">Novedades</button>
     <button class="tab-btn" data-tab="admins">Admins</button>
     <button class="tab-btn" data-tab="config">Configuración</button>
@@ -669,7 +693,7 @@
       </div>
 
       <div class="tabla-scroll"><table>
-        <thead><tr><th>Nombre</th><th>Usuario</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th></th></tr></thead>
         <tbody id="tabla-empleados-app"></tbody>
       </table></div>
     </section>
@@ -825,6 +849,35 @@
         <thead><tr><th>Empleado</th><th>Número</th><th>Última vez</th></tr></thead>
         <tbody id="tabla-actividad"></tbody>
       </table></div>
+    </section>
+
+    <section id="tab-mural" style="display:none">
+      <h3 style="margin-top:0">🧵 Mural</h3>
+      <div class="card-sub" style="margin-bottom:16px">Publicá tareas o comunicados para el equipo -- se pueden reclamar y vos aprobás quién se queda con cada una.</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <textarea id="mural-texto" placeholder="Describí la tarea o comunicado…" rows="3" style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
+        <input type="file" accept="image/*" id="mural-foto-input" style="display:none" onchange="onMuralFotoSeleccionada(event)">
+        <div id="mural-foto-preview"></div>
+        <div class="form-row" style="margin-top:10px;align-items:center">
+          <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="document.getElementById('mural-foto-input').click()">📷 Agregar foto</button>
+          <div class="mural-audiencia-wrap">
+            <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="toggleMuralAudienciaMenu()">Para: <span id="mural-audiencia-label">Todo mantenimiento</span> ▾</button>
+            <div id="mural-audiencia-menu" class="mural-audiencia-menu oculto">
+              <button onclick="elegirMuralAudiencia('mantenimiento')">Todo mantenimiento</button>
+              <button onclick="elegirMuralAudiencia('conserjeria')">Todo conserjería</button>
+              <button onclick="elegirMuralAudiencia('jefes')">Solo jefes/coordinadores</button>
+              <button onclick="elegirMuralAudiencia('admins')">Solo admins</button>
+              <button onclick="elegirMuralAudiencia('individual')">Empleado/s individual/es</button>
+            </div>
+          </div>
+          <button class="btn btn-accent" style="margin-left:auto" onclick="publicarMural()">Publicar</button>
+        </div>
+        <div id="mural-individual-picker" class="oculto" style="margin-top:10px"></div>
+        <div class="login-error" id="mural-error"></div>
+      </div>
+
+      <div id="mural-feed"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-novedades" style="display:none">
@@ -1545,6 +1598,7 @@ function activarTab(tab) {
   if (tab === "fichadas") initFichadasEmpleado();
   if (tab === "turnos") cargarTurnos();
   if (tab === "config") { cargarPerfil(); actualizarEstadoNotif(); }
+  if (tab === "mural") cargarMural();
   if (tab === "novedades") cargarNovedades();
   if (tab === "admins") cargarAdmins();
 }
@@ -1769,6 +1823,12 @@ async function cargarEmpleadosApp() {
         <tr>
           <td>${e.nombre}</td>
           <td>${e.usuario}</td>
+          <td>
+            <select onchange="cambiarRolEmpleado(${e.id}, this.value)" style="padding:4px 6px;font-size:12px">
+              <option value="empleado" ${e.rol === "jefe" ? "" : "selected"}>Empleado</option>
+              <option value="jefe" ${e.rol === "jefe" ? "selected" : ""}>Jefe/Coordinador</option>
+            </select>
+          </td>
           <td>
             <button class="btn" onclick="resetearPinUI(${e.id}, '${e.nombre}', this)">Resetear PIN</button>
             <button class="btn btn-danger" onclick="eliminarAccesoAppUI(${e.id}, '${e.nombre}', this)">Eliminar</button>
@@ -2528,6 +2588,176 @@ async function resetearPasswordAdmin(id, usuario) {
   } catch (e) {
     mostrarToast(e.message || "No se pudo resetear");
   }
+}
+
+async function cambiarRolEmpleado(id, rol) {
+  try {
+    await api(`/empleados-app/${id}/rol`, { method: "POST", body: JSON.stringify({ rol }) });
+    mostrarToast("Rol actualizado");
+  } catch (e) {
+    mostrarToast(e.message || "No se pudo actualizar el rol");
+  }
+}
+
+// ── Pestaña Mural ──
+
+const ETIQUETA_AUDIENCIA_MURAL = {
+  mantenimiento: "Todo mantenimiento",
+  conserjeria: "Todo conserjería",
+  jefes: "Solo jefes/coordinadores",
+  admins: "Solo admins",
+  individual: "Empleado/s individual/es",
+};
+
+let muralFotoBase64 = null;
+let muralAudienciaSeleccionada = "mantenimiento";
+let muralIndividualSeleccionados = new Set();
+
+function onMuralFotoSeleccionada(event) {
+  const archivo = event.target.files[0];
+  event.target.value = "";
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = () => {
+    muralFotoBase64 = lector.result;
+    document.getElementById("mural-foto-preview").innerHTML =
+      `<img src="${muralFotoBase64}" style="max-width:160px;border-radius:8px;margin-top:8px;cursor:pointer" title="Sacar foto" onclick="muralFotoBase64=null;this.parentElement.innerHTML=''">`;
+  };
+  lector.readAsDataURL(archivo);
+}
+
+function toggleMuralAudienciaMenu() {
+  document.getElementById("mural-audiencia-menu").classList.toggle("oculto");
+}
+
+async function elegirMuralAudiencia(valor) {
+  muralAudienciaSeleccionada = valor;
+  document.getElementById("mural-audiencia-label").textContent = ETIQUETA_AUDIENCIA_MURAL[valor];
+  document.getElementById("mural-audiencia-menu").classList.add("oculto");
+  const picker = document.getElementById("mural-individual-picker");
+  if (valor !== "individual") {
+    picker.classList.add("oculto");
+    picker.innerHTML = "";
+    return;
+  }
+  picker.classList.remove("oculto");
+  picker.innerHTML = `<div class="vacio">Cargando…</div>`;
+  muralIndividualSeleccionados = new Set();
+  try {
+    const { empleados } = await api("/empleados-app");
+    const activos = empleados.filter((e) => e.activo);
+    picker.innerHTML = activos.length
+      ? activos.map((e) => `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px">
+          <input type="checkbox" value="${e.id}" onchange="toggleMuralIndividual(${e.id}, this.checked)">
+          ${escapeHtml(e.nombre)} <span class="card-sub">(${escapeHtml(e.sector)})</span>
+        </label>`).join("")
+      : `<div class="vacio">No hay empleados con acceso a la app todavía</div>`;
+  } catch (e) {
+    picker.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
+  }
+}
+
+function toggleMuralIndividual(id, marcado) {
+  if (marcado) muralIndividualSeleccionados.add(id);
+  else muralIndividualSeleccionados.delete(id);
+}
+
+async function publicarMural() {
+  const errorEl = document.getElementById("mural-error");
+  errorEl.textContent = "";
+  const texto = document.getElementById("mural-texto").value.trim();
+  if (!texto) { errorEl.textContent = "Escribí una descripción"; return; }
+  if (muralAudienciaSeleccionada === "individual" && muralIndividualSeleccionados.size === 0) {
+    errorEl.textContent = "Elegí al menos un empleado";
+    return;
+  }
+  try {
+    await api("/mural", {
+      method: "POST",
+      body: JSON.stringify({
+        texto, foto: muralFotoBase64, audiencia: muralAudienciaSeleccionada,
+        empleadoIds: muralAudienciaSeleccionada === "individual" ? [...muralIndividualSeleccionados] : undefined,
+      }),
+    });
+    document.getElementById("mural-texto").value = "";
+    muralFotoBase64 = null;
+    document.getElementById("mural-foto-preview").innerHTML = "";
+    mostrarToast("Publicado");
+    cargarMural();
+  } catch (e) {
+    errorEl.textContent = e.message || "No se pudo publicar";
+  }
+}
+
+function stepperMural(estado) {
+  const pasos = ["Publicada", "Reclamada", "En proceso", "Finalizada"];
+  const idxEstado = { publicada: 0, reclamada_pendiente: 1, en_proceso: 2, finalizada: 3 }[estado] ?? 0;
+  return `<div class="mural-stepper">${pasos.map((nombrePaso, i) => {
+    const clase = i < idxEstado ? "completo" : i === idxEstado ? "activo" : "";
+    return `<div class="mural-stepper-paso ${clase}"><div class="mural-stepper-linea"></div><div class="mural-stepper-dot"></div><div class="mural-stepper-label">${nombrePaso}</div></div>`;
+  }).join("")}</div>`;
+}
+
+async function cargarMural() {
+  const el = document.getElementById("mural-feed");
+  el.innerHTML = `<div class="vacio">Cargando…</div>`;
+  try {
+    const { posts } = await api("/mural");
+    if (posts.length === 0) { el.innerHTML = `<div class="vacio">Todavía no hay nada publicado</div>`; return; }
+    el.innerHTML = posts.map((p) => {
+      const destinatariosTxt = p.audiencia === "individual" && p.destinatarios && p.destinatarios.length
+        ? p.destinatarios.map((d) => d.nombre).join(", ")
+        : (ETIQUETA_AUDIENCIA_MURAL[p.audiencia] || p.audiencia);
+      const fotoHtml = p.foto ? `<img src="${p.foto}" style="max-width:220px;border-radius:8px;margin:10px 0;cursor:pointer;display:block" onclick="window.open(this.src)">` : "";
+      let acciones = "";
+      if (p.estado === "publicada" && p.audiencia === "admins") {
+        acciones = `<div class="form-row" style="margin-top:10px">
+          <button class="btn btn-accent" style="padding:7px 12px;font-size:12px" onclick="reclamarMuralAdmin(${p.id})">Reclamar</button>
+        </div>`;
+      } else if (p.estado === "reclamada_pendiente") {
+        acciones = `<div class="form-row" style="margin-top:10px">
+          <button class="btn btn-accent" style="padding:7px 12px;font-size:12px" onclick="aprobarMural(${p.id})">Aprobar a ${escapeHtml(p.reclamado_por_nombre || "")}</button>
+          <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 12px;font-size:12px" onclick="rechazarMural(${p.id})">Rechazar</button>
+        </div>`;
+      } else if (p.estado === "en_proceso") {
+        acciones = `<div class="form-row" style="margin-top:10px">
+          <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 12px;font-size:12px" onclick="finalizarMural(${p.id})">Marcar como finalizada</button>
+        </div>`;
+      }
+      return `<div class="novedad-card">
+        <div class="novedad-top">
+          <div class="novedad-punto">${escapeHtml(p.autor_nombre)}</div>
+          <div class="novedad-fecha">${escapeHtml(new Date(p.creado_en).toLocaleString("es-AR"))}</div>
+        </div>
+        <div class="card-sub" style="margin-bottom:6px">Para: ${escapeHtml(destinatariosTxt)}</div>
+        <div class="novedad-obs">${escapeHtml(p.texto)}</div>
+        ${fotoHtml}
+        ${stepperMural(p.estado)}
+        ${p.reclamado_por_nombre ? `<div class="card-sub" style="margin-top:6px">Reclamada por ${escapeHtml(p.reclamado_por_nombre)}</div>` : ""}
+        ${acciones}
+      </div>`;
+    }).join("");
+  } catch (e) {
+    el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
+  }
+}
+
+async function reclamarMuralAdmin(id) {
+  try { await api(`/mural/${id}/reclamar`, { method: "POST" }); cargarMural(); }
+  catch (e) { mostrarToast(e.message || "No se pudo reclamar"); }
+}
+async function aprobarMural(id) {
+  try { await api(`/mural/${id}/aprobar`, { method: "POST" }); cargarMural(); }
+  catch (e) { mostrarToast(e.message || "No se pudo aprobar"); }
+}
+async function rechazarMural(id) {
+  try { await api(`/mural/${id}/rechazar`, { method: "POST" }); cargarMural(); }
+  catch (e) { mostrarToast(e.message || "No se pudo rechazar"); }
+}
+async function finalizarMural(id) {
+  try { await api(`/mural/${id}/finalizar`, { method: "POST" }); cargarMural(); }
+  catch (e) { mostrarToast(e.message || "No se pudo finalizar"); }
 }
 
 // ── Pestaña Novedades ──

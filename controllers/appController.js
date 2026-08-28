@@ -10,6 +10,7 @@ const {
   cambiarPasswordEmpleadoApp,
   numeroDeEmpleado, crearSolicitud, solicitudesDeEmpleado, crearSolicitudCambio, solicitudesCambioDeEmpleado,
   filaDelDiaPorFecha,
+  crearPostMural, listarPostsMuralParaEmpleado, reclamarPostMural, finalizarPostMural, postMuralPorId,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -227,6 +228,38 @@ router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
     correcciones,
     cambios: solicitudesCambioDeEmpleado(nombre, 20),
   });
+});
+
+// ── Mural de tareas -- ve solo lo que le corresponde segun su sector, si
+// es jefe/coordinador, o si fue elegido individualmente (ver
+// listarPostsMuralParaEmpleado en services/db.js). ──
+router.get("/api/mural", requerirAuthEmpleado, (req, res) => {
+  const { id, sector, rol } = req.empleadoApp;
+  res.json({ ok: true, posts: listarPostsMuralParaEmpleado(id, sector, rol || "empleado") });
+});
+
+router.post("/api/mural/:id/reclamar", requerirAuthEmpleado, (req, res) => {
+  const post = postMuralPorId(Number(req.params.id));
+  if (!post) return res.status(404).json({ ok: false, error: "No encontrada" });
+  const { id, sector, rol, nombre } = req.empleadoApp;
+  const visibles = listarPostsMuralParaEmpleado(id, sector, rol || "empleado").map((p) => p.id);
+  if (!visibles.includes(post.id)) return res.status(403).json({ ok: false, error: "Esta tarea no es para vos" });
+  const ok = reclamarPostMural(post.id, { tipo: "empleado", id, nombre });
+  if (!ok) return res.status(409).json({ ok: false, error: "Ya fue reclamada por otra persona" });
+  res.json({ ok: true });
+});
+
+router.post("/api/mural/:id/finalizar", requerirAuthEmpleado, (req, res) => {
+  const post = postMuralPorId(Number(req.params.id));
+  if (!post) return res.status(404).json({ ok: false, error: "No encontrada" });
+  if (post.reclamado_por_tipo !== "empleado" || post.reclamado_por_id !== req.empleadoApp.id) {
+    return res.status(403).json({ ok: false, error: "Esta tarea no la reclamaste vos" });
+  }
+  if (post.estado !== "en_proceso") {
+    return res.status(409).json({ ok: false, error: "Todavía no está aprobada por un admin" });
+  }
+  finalizarPostMural(post.id);
+  res.json({ ok: true });
 });
 
 router.get("/", (req, res) => {

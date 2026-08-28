@@ -19,6 +19,8 @@ const {
   crearAdmin, listarAdmins, adminPorUsuario, adminPorId, actualizarPerfilAdminPorId, actualizarPasswordAdmin,
   actualizarDatosAdmin, adminIdDeSesionPanel,
   listarNovedades, comentariosDeNovedades, crearComentarioNovedad,
+  crearPostMural, listarPostsMural, reclamarPostMural, aprobarReclamoMural, rechazarReclamoMural,
+  finalizarPostMural, postMuralPorId, actualizarRolEmpleado,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -26,7 +28,7 @@ const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = requ
 const { calcularAsistencia } = require("../services/asistencia");
 const { twilioClient } = require("../services/twilioClient");
 const whatsapp = require("./whatsappController");
-const { enviarPushATodoElPanel } = require("../services/pushNotifications");
+const { enviarPushATodoElPanel, enviarPushAEmpleado, enviarPushAEmpleados } = require("../services/pushNotifications");
 
 const router = express.Router();
 router.use(express.json({ limit: "6mb" }));
@@ -227,6 +229,87 @@ router.post("/api/novedades/:id/comentarios", requerirAuth, (req, res) => {
   const admin = adminPorId(req.adminId);
   const nombreAdmin = admin ? `${admin.nombre || ""} ${admin.apellido || ""}`.trim() || admin.usuario : "Administrador";
   crearComentarioNovedad({ novedadId, empleadoAppId: null, usuarioNombre: nombreAdmin + " (admin)", texto });
+  res.json({ ok: true });
+});
+
+// ── Mural de tareas -- posts de un admin dirigidos a una audiencia, que
+// un empleado (o un admin, si la tarea es interna) puede reclamar y
+// despues un admin aprobar/rechazar/finalizar. ──
+const AUDIENCIAS_MURAL = ["mantenimiento", "conserjeria", "jefes", "individual", "admins"];
+
+router.get("/api/mural", requerirAuth, (req, res) => {
+  res.json({ ok: true, posts: listarPostsMural() });
+});
+
+router.post("/api/mural", requerirAuth, (req, res) => {
+  const { texto, foto, audiencia, empleadoIds } = req.body || {};
+  if (!texto || !String(texto).trim()) return res.status(400).json({ ok: false, error: "Escribí una descripción de la tarea" });
+  if (!AUDIENCIAS_MURAL.includes(audiencia)) return res.status(400).json({ ok: false, error: "Audiencia inválida" });
+  if (foto && !String(foto).startsWith("data:image/")) return res.status(400).json({ ok: false, error: "La foto tiene que ser una imagen" });
+  const idsLimpios = audiencia === "individual" ? (Array.isArray(empleadoIds) ? empleadoIds.map(Number).filter(Boolean) : []) : null;
+  if (audiencia === "individual" && idsLimpios.length === 0) {
+    return res.status(400).json({ ok: false, error: "Elegí al menos un empleado" });
+  }
+  const admin = adminPorId(req.adminId);
+  const autorNombre = admin ? `${admin.nombre || ""} ${admin.apellido || ""}`.trim() || admin.usuario : "Administrador";
+  const textoLimpio = String(texto).trim().slice(0, 1000);
+  const postId = crearPostMural({
+    adminId: req.adminId, autorNombre, texto: textoLimpio,
+    foto: foto || null, audiencia, empleadoIds: idsLimpios,
+  });
+
+  // Push a los destinatarios segun la audiencia -- no bloquea la respuesta
+  // ni rompe la creacion del post si falla el envio (mismo criterio que
+  // el resto de los avisos push del proyecto).
+  const tituloPush = `📌 Nueva tarea — ${autorNombre}`;
+  const cuerpoPush = textoLimpio.slice(0, 120);
+  if (audiencia === "admins") {
+    enviarPushATodoElPanel({ titulo: tituloPush, cuerpo: cuerpoPush, url: "/panel/" }).catch(() => {});
+  } else {
+    const empleadosActivos = listarEmpleadosApp().filter((e) => e.activo);
+    let destino = [];
+    if (audiencia === "individual") destino = empleadosActivos.filter((e) => idsLimpios.includes(e.id));
+    else if (audiencia === "jefes") destino = empleadosActivos.filter((e) => e.rol === "jefe");
+    else destino = empleadosActivos.filter((e) => e.sector === audiencia);
+    enviarPushAEmpleados(destino.map((e) => e.id), { titulo: tituloPush, cuerpo: cuerpoPush, url: "/app/" }).catch(() => {});
+  }
+
+  res.json({ ok: true, id: postId });
+});
+
+// Un admin reclama una tarea interna (audiencia = "admins") -- las demas
+// audiencias las reclaman empleados desde la app (appController.js).
+router.post("/api/mural/:id/reclamar", requerirAuth, (req, res) => {
+  const post = postMuralPorId(Number(req.params.id));
+  if (!post) return res.status(404).json({ ok: false, error: "No encontrado" });
+  if (post.audiencia !== "admins") return res.status(400).json({ ok: false, error: "Esta tarea no es para admins" });
+  const admin = adminPorId(req.adminId);
+  const nombre = admin ? `${admin.nombre || ""} ${admin.apellido || ""}`.trim() || admin.usuario : "Administrador";
+  const ok = reclamarPostMural(post.id, { tipo: "admin", id: req.adminId, nombre });
+  if (!ok) return res.status(409).json({ ok: false, error: "Ya fue reclamada por otro admin" });
+  res.json({ ok: true });
+});
+
+router.post("/api/mural/:id/aprobar", requerirAuth, (req, res) => {
+  aprobarReclamoMural(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+router.post("/api/mural/:id/rechazar", requerirAuth, (req, res) => {
+  const post = postMuralPorId(Number(req.params.id));
+  rechazarReclamoMural(Number(req.params.id));
+  if (post && post.reclamado_por_tipo === "empleado" && post.reclamado_por_id) {
+    enviarPushAEmpleado(post.reclamado_por_id, {
+      titulo: "Tu reclamo no fue aprobado",
+      cuerpo: `"${post.texto.slice(0, 80)}" volvió a estar disponible.`,
+      url: "/app/",
+    }).catch(() => {});
+  }
+  res.json({ ok: true });
+});
+
+router.post("/api/mural/:id/finalizar", requerirAuth, (req, res) => {
+  finalizarPostMural(Number(req.params.id));
   res.json({ ok: true });
 });
 
@@ -513,6 +596,12 @@ router.post("/api/empleados-app/:id/reset-pin", requerirAuth, async (req, res) =
 
 router.delete("/api/empleados-app/:id", requerirAuth, (req, res) => {
   eliminarEmpleadoApp(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+router.post("/api/empleados-app/:id/rol", requerirAuth, (req, res) => {
+  const { rol } = req.body || {};
+  actualizarRolEmpleado(Number(req.params.id), rol === "jefe" ? "jefe" : "empleado");
   res.json({ ok: true });
 });
 

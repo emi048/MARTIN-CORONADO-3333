@@ -1239,3 +1239,137 @@ module.exports.actualizarPasswordAdmin = actualizarPasswordAdmin;
 module.exports.actualizarDatosAdmin = actualizarDatosAdmin;
 module.exports.adminIdDeSesionPanel = adminIdDeSesionPanel;
 module.exports.crearSesionPanel = crearSesionPanel;
+
+// ── Mural de tareas (posts de un admin dirigidos a una audiencia, que un
+// empleado o admin puede reclamar y despues un admin aprobar/rechazar) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mural_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id INTEGER NOT NULL,
+    autor_nombre TEXT NOT NULL,
+    texto TEXT NOT NULL,
+    foto TEXT,
+    audiencia TEXT NOT NULL,
+    estado TEXT NOT NULL DEFAULT 'publicada',
+    reclamado_por_tipo TEXT,
+    reclamado_por_id INTEGER,
+    reclamado_por_nombre TEXT,
+    reclamado_en TEXT,
+    aprobado_en TEXT,
+    finalizada_en TEXT,
+    creado_en TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS mural_post_destinatarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    empleado_id INTEGER NOT NULL
+  );
+`);
+
+// Migracion aditiva: rol del empleado (para poder targetear "jefes/coordinadores").
+const columnasEmpleadosMural = db.prepare("PRAGMA table_info(empleados)").all();
+if (!columnasEmpleadosMural.some((c) => c.name === "rol")) {
+  db.exec("ALTER TABLE empleados ADD COLUMN rol TEXT NOT NULL DEFAULT 'empleado'");
+}
+
+function crearPostMural({ adminId, autorNombre, texto, foto, audiencia, empleadoIds }) {
+  const info = db.prepare(`
+    INSERT INTO mural_posts (admin_id, autor_nombre, texto, foto, audiencia, estado, creado_en)
+    VALUES (?, ?, ?, ?, ?, 'publicada', ?)
+  `).run(adminId, autorNombre, texto, foto || null, audiencia, new Date().toISOString());
+  const postId = info.lastInsertRowid;
+  if (audiencia === "individual" && Array.isArray(empleadoIds)) {
+    const insertDest = db.prepare(`INSERT INTO mural_post_destinatarios (post_id, empleado_id) VALUES (?, ?)`);
+    for (const empleadoId of empleadoIds) insertDest.run(postId, empleadoId);
+  }
+  return postId;
+}
+
+function destinatariosDePostMural(postId) {
+  return db.prepare(`
+    SELECT e.id, e.nombre FROM mural_post_destinatarios d
+    JOIN empleados e ON e.id = d.empleado_id WHERE d.post_id = ?
+  `).all(postId);
+}
+
+// Vista de gestion (panel) -- todos los posts, mas reciente primero, con
+// los destinatarios resueltos para los de audiencia "individual".
+function listarPostsMural() {
+  const posts = db.prepare(`SELECT * FROM mural_posts ORDER BY id DESC`).all();
+  return posts.map((p) => ({
+    ...p,
+    destinatarios: p.audiencia === "individual" ? destinatariosDePostMural(p.id) : [],
+  }));
+}
+
+// Vista del empleado -- solo lo que le corresponde ver segun su sector, si
+// es jefe/coordinador, o si fue elegido individualmente. Nunca ve los
+// posts de audiencia "admins" (coordinacion interna entre admins).
+function listarPostsMuralParaEmpleado(empleadoId, sector, rol) {
+  return db.prepare(`
+    SELECT * FROM mural_posts
+    WHERE audiencia = ?
+       OR (audiencia = 'jefes' AND ? = 'jefe')
+       OR (audiencia = 'individual' AND id IN (SELECT post_id FROM mural_post_destinatarios WHERE empleado_id = ?))
+    ORDER BY id DESC
+  `).all(sector, rol, empleadoId);
+}
+
+// Atomico: solo reclama si todavia estaba "publicada" -- evita que dos
+// personas reclamen la misma tarea a la vez (si ya la reclamo otro, el
+// UPDATE no afecta ninguna fila y se avisa que ya fue tomada).
+function reclamarPostMural(postId, { tipo, id, nombre }) {
+  const info = db.prepare(`
+    UPDATE mural_posts SET estado = 'reclamada_pendiente', reclamado_por_tipo = ?, reclamado_por_id = ?,
+      reclamado_por_nombre = ?, reclamado_en = ? WHERE id = ? AND estado = 'publicada'
+  `).run(tipo, id, nombre, new Date().toISOString(), postId);
+  return info.changes > 0;
+}
+
+function aprobarReclamoMural(postId) {
+  db.prepare(`UPDATE mural_posts SET estado = 'en_proceso', aprobado_en = ? WHERE id = ? AND estado = 'reclamada_pendiente'`)
+    .run(new Date().toISOString(), postId);
+}
+
+// Vuelve a dejar la tarea disponible para que otro la reclame.
+function rechazarReclamoMural(postId) {
+  db.prepare(`
+    UPDATE mural_posts SET estado = 'publicada', reclamado_por_tipo = NULL, reclamado_por_id = NULL,
+      reclamado_por_nombre = NULL, reclamado_en = NULL WHERE id = ? AND estado = 'reclamada_pendiente'
+  `).run(postId);
+}
+
+function finalizarPostMural(postId) {
+  db.prepare(`UPDATE mural_posts SET estado = 'finalizada', finalizada_en = ? WHERE id = ?`)
+    .run(new Date().toISOString(), postId);
+}
+
+function postMuralPorId(postId) {
+  return db.prepare(`SELECT * FROM mural_posts WHERE id = ?`).get(postId);
+}
+
+function actualizarRolEmpleado(id, rol) {
+  db.prepare(`UPDATE empleados SET rol = ? WHERE id = ?`).run(rol === "jefe" ? "jefe" : "empleado", id);
+}
+
+// Redefine listarEmpleadosApp para sumar el rol (jefe/coordinador o
+// empleado) -- por hoisting, esta version pisa a la definida mas arriba en
+// el archivo sin tener que tocarla.
+function listarEmpleadosApp() {
+  return db.prepare(`
+    SELECT id, nombre, sector, usuario, rol, activo, creado_en as creadoEn, debe_cambiar_pin as debeCambiarPin
+    FROM empleados ORDER BY nombre
+  `).all();
+}
+
+module.exports.crearPostMural = crearPostMural;
+module.exports.listarPostsMural = listarPostsMural;
+module.exports.listarPostsMuralParaEmpleado = listarPostsMuralParaEmpleado;
+module.exports.reclamarPostMural = reclamarPostMural;
+module.exports.aprobarReclamoMural = aprobarReclamoMural;
+module.exports.rechazarReclamoMural = rechazarReclamoMural;
+module.exports.finalizarPostMural = finalizarPostMural;
+module.exports.postMuralPorId = postMuralPorId;
+module.exports.actualizarRolEmpleado = actualizarRolEmpleado;
+module.exports.listarEmpleadosApp = listarEmpleadosApp;
