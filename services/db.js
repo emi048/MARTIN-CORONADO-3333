@@ -1571,3 +1571,25 @@ module.exports.registrarNotificacionPanel = registrarNotificacionPanel;
 module.exports.listarNotificacionesPanel = listarNotificacionesPanel;
 module.exports.contarNotificacionesNoLeidasPanel = contarNotificacionesNoLeidasPanel;
 module.exports.marcarNotificacionesLeidasPanel = marcarNotificacionesLeidasPanel;
+
+// ── Perfil del empleado (foto + usuario) -- misma idea que el perfil de
+// admin, pero sin "apellido" (empleados.nombre ya es el nombre completo,
+// ej. "Diego Lastra" -- separarlo en dos campos solo crearia un segundo
+// apellido suelto que no se usa en ningun lado) y sin poder tocar
+// "nombre": es la clave que une empleados.nombre con filas_diarias.empleado
+// y los diccionarios de turnos/sectores de motorCalculo.js, cambiarlo
+// desde el perfil rompería el enlace con su propio historial de fichadas.
+const columnasEmpleadosPerfil = db.prepare("PRAGMA table_info(empleados)").all();
+if (!columnasEmpleadosPerfil.some((c) => c.name === "foto")) {
+  db.exec("ALTER TABLE empleados ADD COLUMN foto TEXT");
+}
+
+// foto: COALESCE con la que ya habia -- si no se manda una nueva, no se
+// borra la que ya tenia (mismo criterio que actualizarPerfilAdminPorId).
+function actualizarPerfilEmpleadoApp(id, { usuario, foto }) {
+  db.prepare(`
+    UPDATE empleados SET usuario = ?, foto = COALESCE(?, foto) WHERE id = ?
+  `).run(usuario, foto || null, id);
+}
+
+module.exports.actualizarPerfilEmpleadoApp = actualizarPerfilEmpleadoApp;

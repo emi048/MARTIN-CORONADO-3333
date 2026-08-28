@@ -13,6 +13,7 @@ const {
   crearPostMural, listarPostsMuralParaEmpleado, reclamarPostMural, finalizarPostMural, postMuralPorId,
   crearComentarioMural,
   listarNotificacionesApp, contarNotificacionesNoLeidasApp, marcarNotificacionesLeidasApp,
+  actualizarPerfilEmpleadoApp,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -92,6 +93,35 @@ router.post("/api/cambiar-password", requerirAuthEmpleado, async (req, res) => {
   const nuevoHash = await bcrypt.hash(String(passwordNueva), 10);
   cambiarPasswordEmpleadoApp(req.empleadoApp.id, nuevoHash);
   res.json({ ok: true });
+});
+
+// Perfil del empleado (usuario/foto) -- el nombre NO se puede cambiar
+// aca, es la clave que lo une con su propio historial de fichadas y
+// turnos (ver nota en services/db.js).
+router.get("/api/perfil", requerirAuthEmpleado, (req, res) => {
+  const { pin_hash, ...perfil } = req.empleadoApp;
+  res.json({ ok: true, perfil });
+});
+
+router.post("/api/perfil", requerirAuthEmpleado, (req, res) => {
+  const { usuario, foto } = req.body || {};
+  if (foto && !String(foto).startsWith("data:image/")) {
+    return res.status(400).json({ ok: false, error: "La foto tiene que ser una imagen" });
+  }
+  if (!usuario || !String(usuario).trim()) {
+    return res.status(400).json({ ok: false, error: "El usuario no puede estar vacío" });
+  }
+  try {
+    actualizarPerfilEmpleadoApp(req.empleadoApp.id, {
+      usuario: String(usuario).trim().slice(0, 60),
+      foto: foto || null,
+    });
+  } catch (err) {
+    return res.status(400).json({ ok: false, error: "Ese usuario ya está en uso" });
+  }
+  const actualizado = empleadoAppPorId(req.empleadoApp.id);
+  const { pin_hash, ...perfil } = actualizado;
+  res.json({ ok: true, perfil });
 });
 
 function fechaISO(d) {
