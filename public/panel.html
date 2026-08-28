@@ -81,8 +81,20 @@
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     box-shadow: 0 12px 30px rgba(0,0,0,0.35); z-index: 60;
   }
-  .notif-panel { width: 210px; padding: 14px; }
-  .notif-panel .notif-vacio { color: var(--text-muted); font-size: 12.5px; text-align: center; }
+  .notif-panel { width: 260px; padding: 8px; max-height: 340px; overflow-y: auto; }
+  .notif-panel .notif-vacio { color: var(--text-muted); font-size: 12.5px; text-align: center; padding: 14px 0; }
+  .notif-badge {
+    position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px;
+    border-radius: 999px; background: var(--danger); color: white; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; line-height: 1; pointer-events: none;
+  }
+  .notif-item { display: block; padding: 10px 8px; border-radius: 8px; text-decoration: none; color: var(--text); }
+  .notif-item:hover { background: var(--surface2); }
+  .notif-item + .notif-item { border-top: 1px solid var(--border); }
+  .notif-item-titulo { font-weight: 700; font-size: 12.5px; }
+  .notif-item.no-leida .notif-item-titulo::before { content: "●  "; color: var(--accent); }
+  .notif-item-cuerpo { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .notif-item-fecha { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; }
   .avatar-dropdown { width: 230px; padding: 8px; }
   .avatar-dropdown-header { display: flex; align-items: center; gap: 10px; padding: 10px 10px 12px; }
   .avatar-dropdown-avatar { width: 38px; height: 38px; font-size: 13px; flex-shrink: 0; }
@@ -592,9 +604,10 @@
       <div class="notif-wrap">
         <button class="header-icon-btn" onclick="toggleNotif(event)" aria-label="Notificaciones">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge oculto" id="notif-badge">0</span>
         </button>
         <div class="notif-panel oculto" id="notif-panel">
-          <div class="notif-vacio">No tenés notificaciones nuevas</div>
+          <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
         </div>
       </div>
       <div class="avatar-wrap">
@@ -889,6 +902,16 @@
         <div class="login-error" id="mural-error"></div>
       </div>
 
+      <div class="form-row" style="align-items:center">
+        <select id="mural-filtro-sector" class="mural-responsable-select" onchange="cargarMural()">
+          <option value="">Todos los sectores</option>
+          <option value="mantenimiento">Mantenimiento</option>
+          <option value="conserjeria">Conserjería</option>
+        </select>
+        <input type="month" id="mural-filtro-mes" class="mural-vencimiento-input" onchange="cargarMural()">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="document.getElementById('mural-filtro-sector').value='';document.getElementById('mural-filtro-mes').value='';cargarMural()">Limpiar filtros</button>
+      </div>
+
       <div id="mural-feed"><div class="vacio">Cargando…</div></div>
     </section>
 
@@ -1104,6 +1127,7 @@ function mostrarApp() {
   cargarPerfil();
   actualizarEstadoNotif();
   mostrarOnboardNotifSiCorresponde();
+  cargarNotificaciones();
 }
 
 function cerrarSesion(avisarServidor) {
@@ -1475,16 +1499,47 @@ document.getElementById("btn-activar-notif").addEventListener("click", () => {
   activarNotificaciones();
 });
 
-// Campanita del header: si ya estan activadas muestra el desplegable chico
-// (sin novedades por ahora); si no, abre el mismo cartel de bienvenida con
-// el paso a paso para activarlas.
+// Campanita del header -- siempre despliega el historial real (viene de
+// la base, no depende de si las notificaciones push estan activadas en
+// este dispositivo) y marca todo como leido al abrirlo.
 function toggleNotif(evento) {
   evento.stopPropagation();
-  if (notifSoportadas() && Notification.permission === "granted") {
-    document.getElementById("notif-panel").classList.toggle("oculto");
-  } else {
-    document.getElementById("onboard-notif-overlay").classList.remove("oculto");
+  const panel = document.getElementById("notif-panel");
+  const abriendo = panel.classList.contains("oculto");
+  panel.classList.toggle("oculto");
+  if (abriendo) {
+    cargarNotificaciones().then(() => {
+      api("/notificaciones/leidas", { method: "POST" }).then(() => actualizarBadgeNotif(0)).catch(() => {});
+    });
   }
+}
+
+function tarjetaNotificacion(n) {
+  return `<a href="${n.url || "#"}" class="notif-item${n.leida ? "" : " no-leida"}">
+    <div class="notif-item-titulo">${escapeHtml(n.titulo)}</div>
+    ${n.cuerpo ? `<div class="notif-item-cuerpo">${escapeHtml(n.cuerpo)}</div>` : ""}
+    <div class="notif-item-fecha">${new Date(n.creado_en).toLocaleString("es-AR")}</div>
+  </a>`;
+}
+
+function actualizarBadgeNotif(cant) {
+  const badge = document.getElementById("notif-badge");
+  if (!badge) return;
+  if (cant > 0) { badge.textContent = cant > 9 ? "9+" : cant; badge.classList.remove("oculto"); }
+  else badge.classList.add("oculto");
+}
+
+async function cargarNotificaciones() {
+  try {
+    const data = await api("/notificaciones");
+    actualizarBadgeNotif(data.noLeidas);
+    const lista = document.getElementById("notif-lista");
+    if (lista) {
+      lista.innerHTML = data.notificaciones.length
+        ? data.notificaciones.map(tarjetaNotificacion).join("")
+        : `<div class="notif-vacio">No tenés notificaciones todavía</div>`;
+    }
+  } catch (e) { /* silencioso -- no bloquea el resto del panel */ }
 }
 
 document.addEventListener("click", (evento) => {
@@ -2795,6 +2850,16 @@ function tarjetaMuralPanel(p) {
   </div>`;
 }
 
+function filtrarPostsMural(posts) {
+  const sector = document.getElementById("mural-filtro-sector").value;
+  const mes = document.getElementById("mural-filtro-mes").value;
+  return posts.filter((p) => {
+    if (sector && p.audiencia !== sector) return false;
+    if (mes && !p.creado_en.startsWith(mes)) return false;
+    return true;
+  });
+}
+
 async function cargarMural() {
   const el = document.getElementById("mural-feed");
   el.innerHTML = `<div class="vacio">Cargando…</div>`;
@@ -2803,7 +2868,10 @@ async function cargarMural() {
     muralEmpleadosCache = empleadosResp.empleados;
     muralAdminsCache = adminsResp.admins;
     if (posts.length === 0) { el.innerHTML = `<div class="vacio">Todavía no hay nada publicado</div>`; return; }
-    el.innerHTML = posts.map(tarjetaMuralPanel).join("");
+    const filtrados = filtrarPostsMural(posts);
+    el.innerHTML = filtrados.length
+      ? filtrados.map(tarjetaMuralPanel).join("")
+      : `<div class="vacio">Nada con estos filtros</div>`;
   } catch (e) {
     el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
   }

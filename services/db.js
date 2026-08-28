@@ -1498,3 +1498,76 @@ function finalizarPostMural(postId, fotos) {
 module.exports.asignarPostMural = asignarPostMural;
 module.exports.desasignarPostMural = desasignarPostMural;
 module.exports.crearComentarioMural = crearComentarioMural;
+
+// ── Historial de notificaciones -- registro persistente de cada push que
+// se manda (independiente de si el push en si tuvo exito o de si el
+// destinatario tiene la suscripcion activada), para poder mostrar un
+// historial + contador de no leidas en la campanita del header. ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notificaciones_app (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empleado_app_id INTEGER NOT NULL,
+    titulo TEXT NOT NULL,
+    cuerpo TEXT,
+    url TEXT,
+    leida INTEGER NOT NULL DEFAULT 0,
+    creado_en TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS notificaciones_panel (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo TEXT NOT NULL,
+    cuerpo TEXT,
+    url TEXT,
+    leida INTEGER NOT NULL DEFAULT 0,
+    creado_en TEXT NOT NULL
+  );
+`);
+
+function registrarNotificacionApp(empleadoAppId, { titulo, cuerpo, url }) {
+  db.prepare(`
+    INSERT INTO notificaciones_app (empleado_app_id, titulo, cuerpo, url, leida, creado_en) VALUES (?, ?, ?, ?, 0, ?)
+  `).run(empleadoAppId, titulo, cuerpo || null, url || null, new Date().toISOString());
+}
+
+function listarNotificacionesApp(empleadoAppId, limite = 50) {
+  return db.prepare(`SELECT * FROM notificaciones_app WHERE empleado_app_id = ? ORDER BY id DESC LIMIT ?`).all(empleadoAppId, limite);
+}
+
+function contarNotificacionesNoLeidasApp(empleadoAppId) {
+  return db.prepare(`SELECT COUNT(*) as n FROM notificaciones_app WHERE empleado_app_id = ? AND leida = 0`).get(empleadoAppId).n;
+}
+
+function marcarNotificacionesLeidasApp(empleadoAppId) {
+  db.prepare(`UPDATE notificaciones_app SET leida = 1 WHERE empleado_app_id = ? AND leida = 0`).run(empleadoAppId);
+}
+
+// El panel tiene login compartido entre admins (las suscripciones push no
+// distinguen quien es quien) -- el historial es igual de compartido, a
+// proposito, mismo criterio que enviarPushATodoElPanel.
+function registrarNotificacionPanel({ titulo, cuerpo, url }) {
+  db.prepare(`
+    INSERT INTO notificaciones_panel (titulo, cuerpo, url, leida, creado_en) VALUES (?, ?, ?, 0, ?)
+  `).run(titulo, cuerpo || null, url || null, new Date().toISOString());
+}
+
+function listarNotificacionesPanel(limite = 50) {
+  return db.prepare(`SELECT * FROM notificaciones_panel ORDER BY id DESC LIMIT ?`).all(limite);
+}
+
+function contarNotificacionesNoLeidasPanel() {
+  return db.prepare(`SELECT COUNT(*) as n FROM notificaciones_panel WHERE leida = 0`).get().n;
+}
+
+function marcarNotificacionesLeidasPanel() {
+  db.prepare(`UPDATE notificaciones_panel SET leida = 1 WHERE leida = 0`).run();
+}
+
+module.exports.registrarNotificacionApp = registrarNotificacionApp;
+module.exports.listarNotificacionesApp = listarNotificacionesApp;
+module.exports.contarNotificacionesNoLeidasApp = contarNotificacionesNoLeidasApp;
+module.exports.marcarNotificacionesLeidasApp = marcarNotificacionesLeidasApp;
+module.exports.registrarNotificacionPanel = registrarNotificacionPanel;
+module.exports.listarNotificacionesPanel = listarNotificacionesPanel;
+module.exports.contarNotificacionesNoLeidasPanel = contarNotificacionesNoLeidasPanel;
+module.exports.marcarNotificacionesLeidasPanel = marcarNotificacionesLeidasPanel;

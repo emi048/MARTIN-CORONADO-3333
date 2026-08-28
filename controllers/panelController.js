@@ -21,6 +21,7 @@ const {
   listarNovedades, comentariosDeNovedades, crearComentarioNovedad,
   crearPostMural, listarPostsMural, reclamarPostMural, asignarPostMural, desasignarPostMural,
   finalizarPostMural, postMuralPorId, actualizarRolEmpleado, crearComentarioMural,
+  listarNotificacionesPanel, contarNotificacionesNoLeidasPanel, marcarNotificacionesLeidasPanel,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -144,6 +145,17 @@ router.post("/api/push/suscribirse", requerirAuth, (req, res) => {
     return res.status(400).json({ ok: false, error: "Suscripción inválida" });
   }
   guardarPushSubscripcionPanel({ endpoint, p256dh: keys.p256dh, auth: keys.auth });
+  res.json({ ok: true });
+});
+
+// ── Historial de notificaciones (campanita del header) -- compartido
+// entre admins, mismo criterio que las suscripciones push del panel. ──
+router.get("/api/notificaciones", requerirAuth, (req, res) => {
+  res.json({ ok: true, notificaciones: listarNotificacionesPanel(), noLeidas: contarNotificacionesNoLeidasPanel() });
+});
+
+router.post("/api/notificaciones/leidas", requerirAuth, (req, res) => {
+  marcarNotificacionesLeidasPanel();
   res.json({ ok: true });
 });
 

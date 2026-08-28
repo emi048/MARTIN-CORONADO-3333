@@ -12,6 +12,7 @@ const {
   filaDelDiaPorFecha,
   crearPostMural, listarPostsMuralParaEmpleado, reclamarPostMural, finalizarPostMural, postMuralPorId,
   crearComentarioMural,
+  listarNotificacionesApp, contarNotificacionesNoLeidasApp, marcarNotificacionesLeidasApp,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -274,6 +275,17 @@ router.post("/api/mural/:id/comentarios", requerirAuthEmpleado, (req, res) => {
   const visibles = listarPostsMuralParaEmpleado(id, sector, rol || "empleado").map((p) => p.id);
   if (!visibles.includes(postId)) return res.status(403).json({ ok: false, error: "Esta tarea no es para vos" });
   crearComentarioMural({ postId, autorTipo: "empleado", autorNombre: nombre, texto });
+  res.json({ ok: true });
+});
+
+// ── Historial de notificaciones (campanita del header) ──
+router.get("/api/notificaciones", requerirAuthEmpleado, (req, res) => {
+  const { id } = req.empleadoApp;
+  res.json({ ok: true, notificaciones: listarNotificacionesApp(id), noLeidas: contarNotificacionesNoLeidasApp(id) });
+});
+
+router.post("/api/notificaciones/leidas", requerirAuthEmpleado, (req, res) => {
+  marcarNotificacionesLeidasApp(req.empleadoApp.id);
   res.json({ ok: true });
 });
 
