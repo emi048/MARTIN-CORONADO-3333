@@ -171,6 +171,17 @@
     background: none; border: none; color: var(--text); font-size: 13px; font-family: var(--font-body); cursor: pointer;
   }
   .mural-audiencia-menu button:hover { background: var(--surface2); }
+
+  .mural-textarea {
+    width: 100%; box-sizing: border-box; resize: vertical; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  }
+  .mural-textarea:focus { outline: none; border-color: var(--accent); }
+  .mural-vencimiento-input { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 13px; font-family: var(--font-body); }
+  .mural-responsable-select { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 12.5px; font-family: var(--font-body); }
+  .mural-vencimiento-badge { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .mural-vencimiento-badge.vencido { color: var(--danger); font-weight: 700; }
   header button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface2)); }
 
   .novedad-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
@@ -856,7 +867,7 @@
       <div class="card-sub" style="margin-bottom:16px">Publicá tareas o comunicados para el equipo -- se pueden reclamar y vos aprobás quién se queda con cada una.</div>
 
       <div class="card" style="margin-bottom:20px">
-        <textarea id="mural-texto" placeholder="Describí la tarea o comunicado…" rows="3" style="width:100%;resize:vertical;box-sizing:border-box"></textarea>
+        <textarea id="mural-texto" class="mural-textarea" placeholder="Describí la tarea o comunicado…" rows="3"></textarea>
         <input type="file" accept="image/*" id="mural-foto-input" style="display:none" onchange="onMuralFotoSeleccionada(event)">
         <div id="mural-foto-preview"></div>
         <div class="form-row" style="margin-top:10px;align-items:center">
@@ -871,6 +882,7 @@
               <button onclick="elegirMuralAudiencia('individual')">Empleado/s individual/es</button>
             </div>
           </div>
+          <input type="date" id="mural-vencimiento" class="mural-vencimiento-input" title="Vencimiento (opcional)">
           <button class="btn btn-accent" style="margin-left:auto" onclick="publicarMural()">Publicar</button>
         </div>
         <div id="mural-individual-picker" class="oculto" style="margin-top:10px"></div>
@@ -2612,6 +2624,8 @@ const ETIQUETA_AUDIENCIA_MURAL = {
 let muralFotoBase64 = null;
 let muralAudienciaSeleccionada = "mantenimiento";
 let muralIndividualSeleccionados = new Set();
+let muralEmpleadosCache = [];
+let muralAdminsCache = [];
 
 function onMuralFotoSeleccionada(event) {
   const archivo = event.target.files[0];
@@ -2672,15 +2686,17 @@ async function publicarMural() {
     errorEl.textContent = "Elegí al menos un empleado";
     return;
   }
+  const vence = document.getElementById("mural-vencimiento").value || null;
   try {
     await api("/mural", {
       method: "POST",
       body: JSON.stringify({
-        texto, foto: muralFotoBase64, audiencia: muralAudienciaSeleccionada,
+        texto, foto: muralFotoBase64, audiencia: muralAudienciaSeleccionada, vence,
         empleadoIds: muralAudienciaSeleccionada === "individual" ? [...muralIndividualSeleccionados] : undefined,
       }),
     });
     document.getElementById("mural-texto").value = "";
+    document.getElementById("mural-vencimiento").value = "";
     muralFotoBase64 = null;
     document.getElementById("mural-foto-preview").innerHTML = "";
     mostrarToast("Publicado");
@@ -2692,71 +2708,136 @@ async function publicarMural() {
 
 function stepperMural(estado) {
   const pasos = ["Publicada", "Reclamada", "En proceso", "Finalizada"];
-  const idxEstado = { publicada: 0, reclamada_pendiente: 1, en_proceso: 2, finalizada: 3 }[estado] ?? 0;
+  const finalizada = estado === "finalizada";
+  const idxEstado = { publicada: 0, en_proceso: 2, finalizada: 3 }[estado] ?? 0;
   return `<div class="mural-stepper">${pasos.map((nombrePaso, i) => {
-    const clase = i < idxEstado ? "completo" : i === idxEstado ? "activo" : "";
+    const clase = finalizada || i < idxEstado ? "completo" : i === idxEstado ? "activo" : "";
     return `<div class="mural-stepper-paso ${clase}"><div class="mural-stepper-linea"></div><div class="mural-stepper-dot"></div><div class="mural-stepper-label">${nombrePaso}</div></div>`;
   }).join("")}</div>`;
+}
+
+function badgeVencimientoMural(p) {
+  if (!p.vence_en) return "";
+  const hoy = new Date().toISOString().slice(0, 10);
+  const vencido = p.estado !== "finalizada" && p.vence_en < hoy;
+  return `<div class="mural-vencimiento-badge${vencido ? " vencido" : ""}">${vencido ? "⚠️ Venció el" : "Vence el"} ${p.vence_en}</div>`;
+}
+
+function fotosCierreMural(p) {
+  if (p.estado !== "finalizada" || !p.fotos_cierre) return "";
+  let fotos = [];
+  try { fotos = JSON.parse(p.fotos_cierre); } catch (e) { fotos = []; }
+  if (!fotos.length) return "";
+  return `<div class="novedad-fotos" style="margin-top:10px">${fotos.map((f) => `<img src="${f}" onclick="window.open(this.src)">`).join("")}</div>`;
+}
+
+// Quien puede figurar como "Responsable" de una tarea depende de la
+// audiencia elegida al publicarla -- mismo criterio que usa el backend
+// para decidir a quien llega el push.
+function candidatosResponsableMural(p) {
+  if (p.audiencia === "admins") {
+    return muralAdminsCache.filter((a) => a.activo).map((a) => ({ tipo: "admin", id: a.id, nombre: `${a.nombre || ""} ${a.apellido || ""}`.trim() || a.usuario }));
+  }
+  if (p.audiencia === "jefes") {
+    return muralEmpleadosCache.filter((e) => e.activo && e.rol === "jefe").map((e) => ({ tipo: "empleado", id: e.id, nombre: e.nombre }));
+  }
+  if (p.audiencia === "individual") {
+    const idsDestino = (p.destinatarios || []).map((d) => d.id);
+    return muralEmpleadosCache.filter((e) => e.activo && idsDestino.includes(e.id)).map((e) => ({ tipo: "empleado", id: e.id, nombre: e.nombre }));
+  }
+  return muralEmpleadosCache.filter((e) => e.activo && e.sector === p.audiencia).map((e) => ({ tipo: "empleado", id: e.id, nombre: e.nombre }));
+}
+
+function tarjetaMuralPanel(p) {
+  const destinatariosTxt = p.audiencia === "individual" && p.destinatarios && p.destinatarios.length
+    ? p.destinatarios.map((d) => d.nombre).join(", ")
+    : (ETIQUETA_AUDIENCIA_MURAL[p.audiencia] || p.audiencia);
+  const fotoHtml = p.foto ? `<img src="${p.foto}" style="max-width:220px;border-radius:8px;margin:10px 0;cursor:pointer;display:block" onclick="window.open(this.src)">` : "";
+  const valorActual = p.reclamado_por_id ? `${p.reclamado_por_tipo}:${p.reclamado_por_id}` : "";
+  let responsableHtml = "";
+  if (p.estado === "finalizada") {
+    responsableHtml = p.reclamado_por_nombre ? `<div class="card-sub" style="margin-top:6px">Hecha por ${escapeHtml(p.reclamado_por_nombre)}</div>` : "";
+  } else {
+    const candidatos = candidatosResponsableMural(p);
+    responsableHtml = `<div class="form-row" style="margin-top:10px;align-items:center">
+      <label class="card-sub" style="margin:0">Responsable:</label>
+      <select class="mural-responsable-select" onchange="cambiarResponsableMural(${p.id}, this.value)">
+        <option value="">Sin asignar</option>
+        ${candidatos.map((c) => `<option value="${c.tipo}:${c.id}" ${valorActual === c.tipo + ":" + c.id ? "selected" : ""}>${escapeHtml(c.nombre)}</option>`).join("")}
+      </select>
+    </div>`;
+  }
+  const finalizarBtn = p.estado === "en_proceso"
+    ? `<button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 12px;font-size:12px;margin-top:10px" onclick="finalizarMural(${p.id})">Marcar como finalizada</button>`
+    : "";
+  const comentariosHtml = p.estado !== "publicada" ? `
+    <div class="novedad-comentarios">
+      ${(p.comentarios || []).map((c) => `<div class="novedad-comentario"><b>${escapeHtml(c.autor_nombre)}${c.autor_tipo === "admin" ? " (admin)" : ""}:</b> <span>${escapeHtml(c.texto)}</span></div>`).join("") || `<div class="card-sub">Sin comentarios todavía</div>`}
+      <div class="novedad-comentar-row">
+        <input type="text" placeholder="Comentar…" id="mural-comentario-${p.id}">
+        <button class="btn btn-accent" style="padding:8px 12px;font-size:12px" onclick="comentarMural(${p.id})">Enviar</button>
+      </div>
+    </div>` : "";
+  return `<div class="novedad-card">
+    <div class="novedad-top">
+      <div class="novedad-punto">${escapeHtml(p.autor_nombre)}</div>
+      <div class="novedad-fecha">${escapeHtml(new Date(p.creado_en).toLocaleString("es-AR"))}</div>
+    </div>
+    <div class="card-sub" style="margin-bottom:6px">Para: ${escapeHtml(destinatariosTxt)}</div>
+    ${badgeVencimientoMural(p)}
+    <div class="novedad-obs">${escapeHtml(p.texto)}</div>
+    ${fotoHtml}
+    ${stepperMural(p.estado)}
+    ${responsableHtml}
+    ${finalizarBtn}
+    ${fotosCierreMural(p)}
+    ${comentariosHtml}
+  </div>`;
 }
 
 async function cargarMural() {
   const el = document.getElementById("mural-feed");
   el.innerHTML = `<div class="vacio">Cargando…</div>`;
   try {
-    const { posts } = await api("/mural");
+    const [{ posts }, empleadosResp, adminsResp] = await Promise.all([api("/mural"), api("/empleados-app"), api("/admins")]);
+    muralEmpleadosCache = empleadosResp.empleados;
+    muralAdminsCache = adminsResp.admins;
     if (posts.length === 0) { el.innerHTML = `<div class="vacio">Todavía no hay nada publicado</div>`; return; }
-    el.innerHTML = posts.map((p) => {
-      const destinatariosTxt = p.audiencia === "individual" && p.destinatarios && p.destinatarios.length
-        ? p.destinatarios.map((d) => d.nombre).join(", ")
-        : (ETIQUETA_AUDIENCIA_MURAL[p.audiencia] || p.audiencia);
-      const fotoHtml = p.foto ? `<img src="${p.foto}" style="max-width:220px;border-radius:8px;margin:10px 0;cursor:pointer;display:block" onclick="window.open(this.src)">` : "";
-      let acciones = "";
-      if (p.estado === "publicada" && p.audiencia === "admins") {
-        acciones = `<div class="form-row" style="margin-top:10px">
-          <button class="btn btn-accent" style="padding:7px 12px;font-size:12px" onclick="reclamarMuralAdmin(${p.id})">Reclamar</button>
-        </div>`;
-      } else if (p.estado === "reclamada_pendiente") {
-        acciones = `<div class="form-row" style="margin-top:10px">
-          <button class="btn btn-accent" style="padding:7px 12px;font-size:12px" onclick="aprobarMural(${p.id})">Aprobar a ${escapeHtml(p.reclamado_por_nombre || "")}</button>
-          <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 12px;font-size:12px" onclick="rechazarMural(${p.id})">Rechazar</button>
-        </div>`;
-      } else if (p.estado === "en_proceso") {
-        acciones = `<div class="form-row" style="margin-top:10px">
-          <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 12px;font-size:12px" onclick="finalizarMural(${p.id})">Marcar como finalizada</button>
-        </div>`;
-      }
-      return `<div class="novedad-card">
-        <div class="novedad-top">
-          <div class="novedad-punto">${escapeHtml(p.autor_nombre)}</div>
-          <div class="novedad-fecha">${escapeHtml(new Date(p.creado_en).toLocaleString("es-AR"))}</div>
-        </div>
-        <div class="card-sub" style="margin-bottom:6px">Para: ${escapeHtml(destinatariosTxt)}</div>
-        <div class="novedad-obs">${escapeHtml(p.texto)}</div>
-        ${fotoHtml}
-        ${stepperMural(p.estado)}
-        ${p.reclamado_por_nombre ? `<div class="card-sub" style="margin-top:6px">Reclamada por ${escapeHtml(p.reclamado_por_nombre)}</div>` : ""}
-        ${acciones}
-      </div>`;
-    }).join("");
+    el.innerHTML = posts.map(tarjetaMuralPanel).join("");
   } catch (e) {
     el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
   }
 }
 
-async function reclamarMuralAdmin(id) {
-  try { await api(`/mural/${id}/reclamar`, { method: "POST" }); cargarMural(); }
-  catch (e) { mostrarToast(e.message || "No se pudo reclamar"); }
+async function cambiarResponsableMural(id, valor) {
+  try {
+    if (!valor) {
+      await api(`/mural/${id}/desasignar`, { method: "POST" });
+    } else {
+      const [tipo, idPersona] = valor.split(":");
+      await api(`/mural/${id}/asignar`, { method: "POST", body: JSON.stringify({ tipo, id: Number(idPersona) }) });
+    }
+    cargarMural();
+  } catch (e) {
+    mostrarToast(e.message || "No se pudo actualizar");
+  }
 }
-async function aprobarMural(id) {
-  try { await api(`/mural/${id}/aprobar`, { method: "POST" }); cargarMural(); }
-  catch (e) { mostrarToast(e.message || "No se pudo aprobar"); }
+
+async function comentarMural(id) {
+  const input = document.getElementById(`mural-comentario-${id}`);
+  const texto = input.value.trim();
+  if (!texto) return;
+  try {
+    await api(`/mural/${id}/comentarios`, { method: "POST", body: JSON.stringify({ texto }) });
+    input.value = "";
+    cargarMural();
+  } catch (e) {
+    mostrarToast(e.message || "No se pudo comentar");
+  }
 }
-async function rechazarMural(id) {
-  try { await api(`/mural/${id}/rechazar`, { method: "POST" }); cargarMural(); }
-  catch (e) { mostrarToast(e.message || "No se pudo rechazar"); }
-}
+
 async function finalizarMural(id) {
-  try { await api(`/mural/${id}/finalizar`, { method: "POST" }); cargarMural(); }
+  try { await api(`/mural/${id}/finalizar`, { method: "POST", body: JSON.stringify({}) }); cargarMural(); }
   catch (e) { mostrarToast(e.message || "No se pudo finalizar"); }
 }
 

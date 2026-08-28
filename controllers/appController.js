@@ -11,6 +11,7 @@ const {
   numeroDeEmpleado, crearSolicitud, solicitudesDeEmpleado, crearSolicitudCambio, solicitudesCambioDeEmpleado,
   filaDelDiaPorFecha,
   crearPostMural, listarPostsMuralParaEmpleado, reclamarPostMural, finalizarPostMural, postMuralPorId,
+  crearComentarioMural,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -256,9 +257,23 @@ router.post("/api/mural/:id/finalizar", requerirAuthEmpleado, (req, res) => {
     return res.status(403).json({ ok: false, error: "Esta tarea no la reclamaste vos" });
   }
   if (post.estado !== "en_proceso") {
-    return res.status(409).json({ ok: false, error: "Todavía no está aprobada por un admin" });
+    return res.status(409).json({ ok: false, error: "Esta tarea no está en proceso" });
   }
-  finalizarPostMural(post.id);
+  const { fotos } = req.body || {};
+  finalizarPostMural(post.id, Array.isArray(fotos) ? fotos : []);
+  res.json({ ok: true });
+});
+
+// Comentar una tarea del Mural -- solo si el empleado la puede ver (mismo
+// chequeo de visibilidad que el resto de los endpoints del Mural).
+router.post("/api/mural/:id/comentarios", requerirAuthEmpleado, (req, res) => {
+  const postId = Number(req.params.id);
+  const texto = String((req.body || {}).texto || "").trim().slice(0, 500);
+  if (!postId || !texto) return res.status(400).json({ ok: false, error: "Escribí un comentario" });
+  const { id, sector, rol, nombre } = req.empleadoApp;
+  const visibles = listarPostsMuralParaEmpleado(id, sector, rol || "empleado").map((p) => p.id);
+  if (!visibles.includes(postId)) return res.status(403).json({ ok: false, error: "Esta tarea no es para vos" });
+  crearComentarioMural({ postId, autorTipo: "empleado", autorNombre: nombre, texto });
   res.json({ ok: true });
 });
 

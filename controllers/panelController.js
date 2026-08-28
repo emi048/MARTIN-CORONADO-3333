@@ -19,8 +19,8 @@ const {
   crearAdmin, listarAdmins, adminPorUsuario, adminPorId, actualizarPerfilAdminPorId, actualizarPasswordAdmin,
   actualizarDatosAdmin, adminIdDeSesionPanel,
   listarNovedades, comentariosDeNovedades, crearComentarioNovedad,
-  crearPostMural, listarPostsMural, reclamarPostMural, aprobarReclamoMural, rechazarReclamoMural,
-  finalizarPostMural, postMuralPorId, actualizarRolEmpleado,
+  crearPostMural, listarPostsMural, reclamarPostMural, asignarPostMural, desasignarPostMural,
+  finalizarPostMural, postMuralPorId, actualizarRolEmpleado, crearComentarioMural,
 } = require("../services/db");
 const { todosLosEmpleados, getSectorDeEmpleado, FERIADOS, calcularDeficitSabadoSemanal } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
@@ -241,11 +241,13 @@ router.get("/api/mural", requerirAuth, (req, res) => {
   res.json({ ok: true, posts: listarPostsMural() });
 });
 
+const RE_FECHA_MURAL = /^\d{4}-\d{2}-\d{2}$/;
 router.post("/api/mural", requerirAuth, (req, res) => {
-  const { texto, foto, audiencia, empleadoIds } = req.body || {};
+  const { texto, foto, audiencia, empleadoIds, vence } = req.body || {};
   if (!texto || !String(texto).trim()) return res.status(400).json({ ok: false, error: "Escribí una descripción de la tarea" });
   if (!AUDIENCIAS_MURAL.includes(audiencia)) return res.status(400).json({ ok: false, error: "Audiencia inválida" });
   if (foto && !String(foto).startsWith("data:image/")) return res.status(400).json({ ok: false, error: "La foto tiene que ser una imagen" });
+  if (vence && !RE_FECHA_MURAL.test(vence)) return res.status(400).json({ ok: false, error: "Fecha de vencimiento inválida" });
   const idsLimpios = audiencia === "individual" ? (Array.isArray(empleadoIds) ? empleadoIds.map(Number).filter(Boolean) : []) : null;
   if (audiencia === "individual" && idsLimpios.length === 0) {
     return res.status(400).json({ ok: false, error: "Elegí al menos un empleado" });
@@ -255,7 +257,7 @@ router.post("/api/mural", requerirAuth, (req, res) => {
   const textoLimpio = String(texto).trim().slice(0, 1000);
   const postId = crearPostMural({
     adminId: req.adminId, autorNombre, texto: textoLimpio,
-    foto: foto || null, audiencia, empleadoIds: idsLimpios,
+    foto: foto || null, audiencia, empleadoIds: idsLimpios, vence: vence || null,
   });
 
   // Push a los destinatarios segun la audiencia -- no bloquea la respuesta
@@ -278,7 +280,8 @@ router.post("/api/mural", requerirAuth, (req, res) => {
 });
 
 // Un admin reclama una tarea interna (audiencia = "admins") -- las demas
-// audiencias las reclaman empleados desde la app (appController.js).
+// audiencias las reclaman empleados desde la app (appController.js). Deja
+// asignado directo, sin paso de aprobacion.
 router.post("/api/mural/:id/reclamar", requerirAuth, (req, res) => {
   const post = postMuralPorId(Number(req.params.id));
   if (!post) return res.status(404).json({ ok: false, error: "No encontrado" });
@@ -290,26 +293,47 @@ router.post("/api/mural/:id/reclamar", requerirAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-router.post("/api/mural/:id/aprobar", requerirAuth, (req, res) => {
-  aprobarReclamoMural(Number(req.params.id));
-  res.json({ ok: true });
-});
-
-router.post("/api/mural/:id/rechazar", requerirAuth, (req, res) => {
+// El admin asigna (o reasigna) la tarea a mano -- a un empleado o a otro
+// admin, sin depender de que esa persona la reclame ella misma.
+router.post("/api/mural/:id/asignar", requerirAuth, (req, res) => {
+  const { tipo, id } = req.body || {};
+  if (tipo !== "empleado" && tipo !== "admin") return res.status(400).json({ ok: false, error: "Tipo inválido" });
+  const nombre = tipo === "admin"
+    ? (() => { const a = adminPorId(Number(id)); return a ? `${a.nombre || ""} ${a.apellido || ""}`.trim() || a.usuario : "Administrador"; })()
+    : (() => { const e = empleadoAppPorId(Number(id)); return e ? e.nombre : "Empleado"; })();
   const post = postMuralPorId(Number(req.params.id));
-  rechazarReclamoMural(Number(req.params.id));
-  if (post && post.reclamado_por_tipo === "empleado" && post.reclamado_por_id) {
-    enviarPushAEmpleado(post.reclamado_por_id, {
-      titulo: "Tu reclamo no fue aprobado",
-      cuerpo: `"${post.texto.slice(0, 80)}" volvió a estar disponible.`,
+  const ok = asignarPostMural(Number(req.params.id), { tipo, id: Number(id), nombre });
+  if (!ok) return res.status(400).json({ ok: false, error: "No se pudo asignar (¿ya está finalizada?)" });
+  if (tipo === "empleado" && post) {
+    enviarPushAEmpleado(Number(id), {
+      titulo: "📌 Te asignaron una tarea",
+      cuerpo: post.texto.slice(0, 120),
       url: "/app/",
     }).catch(() => {});
   }
   res.json({ ok: true });
 });
 
+router.post("/api/mural/:id/desasignar", requerirAuth, (req, res) => {
+  desasignarPostMural(Number(req.params.id));
+  res.json({ ok: true });
+});
+
 router.post("/api/mural/:id/finalizar", requerirAuth, (req, res) => {
-  finalizarPostMural(Number(req.params.id));
+  const { fotos } = req.body || {};
+  finalizarPostMural(Number(req.params.id), Array.isArray(fotos) ? fotos : []);
+  res.json({ ok: true });
+});
+
+// Comentarios sobre una tarea del Mural -- una vez asignada, admins (y el
+// empleado asignado, desde la app) pueden ir dejando observaciones.
+router.post("/api/mural/:id/comentarios", requerirAuth, (req, res) => {
+  const postId = Number(req.params.id);
+  const texto = String((req.body || {}).texto || "").trim().slice(0, 500);
+  if (!postId || !texto) return res.status(400).json({ ok: false, error: "Escribí un comentario" });
+  const admin = adminPorId(req.adminId);
+  const nombreAdmin = admin ? `${admin.nombre || ""} ${admin.apellido || ""}`.trim() || admin.usuario : "Administrador";
+  crearComentarioMural({ postId, autorTipo: "admin", autorNombre: nombreAdmin, texto });
   res.json({ ok: true });
 });
 

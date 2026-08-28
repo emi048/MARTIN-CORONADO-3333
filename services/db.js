@@ -1373,3 +1373,128 @@ module.exports.finalizarPostMural = finalizarPostMural;
 module.exports.postMuralPorId = postMuralPorId;
 module.exports.actualizarRolEmpleado = actualizarRolEmpleado;
 module.exports.listarEmpleadosApp = listarEmpleadosApp;
+
+// ── Mural v2: sin aprobacion de reclamo (reclamar = quedar asignado
+// directo), el admin tambien puede asignar/desasignar a mano, comentarios
+// una vez en proceso, vencimiento opcional, y fotos de cierre. ──
+
+// Migraciones aditivas.
+const columnasMuralPosts = db.prepare("PRAGMA table_info(mural_posts)").all();
+if (!columnasMuralPosts.some((c) => c.name === "vence_en")) {
+  db.exec("ALTER TABLE mural_posts ADD COLUMN vence_en TEXT");
+}
+if (!columnasMuralPosts.some((c) => c.name === "fotos_cierre")) {
+  db.exec("ALTER TABLE mural_posts ADD COLUMN fotos_cierre TEXT");
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mural_post_comentarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    autor_tipo TEXT NOT NULL,
+    autor_nombre TEXT NOT NULL,
+    texto TEXT NOT NULL,
+    creado_en TEXT NOT NULL
+  );
+`);
+
+// Redefine crearPostMural para sumar vencimiento opcional (por hoisting,
+// esta version pisa a la definida mas arriba en el archivo).
+function crearPostMural({ adminId, autorNombre, texto, foto, audiencia, empleadoIds, vence }) {
+  const info = db.prepare(`
+    INSERT INTO mural_posts (admin_id, autor_nombre, texto, foto, audiencia, estado, vence_en, creado_en)
+    VALUES (?, ?, ?, ?, ?, 'publicada', ?, ?)
+  `).run(adminId, autorNombre, texto, foto || null, audiencia, vence || null, new Date().toISOString());
+  const postId = info.lastInsertRowid;
+  if (audiencia === "individual" && Array.isArray(empleadoIds)) {
+    const insertDest = db.prepare(`INSERT INTO mural_post_destinatarios (post_id, empleado_id) VALUES (?, ?)`);
+    for (const empleadoId of empleadoIds) insertDest.run(postId, empleadoId);
+  }
+  return postId;
+}
+
+function comentariosDeMuralPosts(idsPosts) {
+  if (!idsPosts.length) return [];
+  const placeholders = idsPosts.map(() => "?").join(",");
+  return db.prepare(`
+    SELECT * FROM mural_post_comentarios WHERE post_id IN (${placeholders}) ORDER BY id ASC
+  `).all(...idsPosts);
+}
+
+function crearComentarioMural({ postId, autorTipo, autorNombre, texto }) {
+  db.prepare(`
+    INSERT INTO mural_post_comentarios (post_id, autor_tipo, autor_nombre, texto, creado_en)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(postId, autorTipo, autorNombre, texto, new Date().toISOString());
+}
+
+// Redefine listarPostsMural (panel) para sumar comentarios por post.
+function listarPostsMural() {
+  const posts = db.prepare(`SELECT * FROM mural_posts ORDER BY id DESC`).all();
+  const comentarios = comentariosDeMuralPosts(posts.map((p) => p.id));
+  return posts.map((p) => ({
+    ...p,
+    destinatarios: p.audiencia === "individual" ? destinatariosDePostMural(p.id) : [],
+    comentarios: comentarios.filter((c) => c.post_id === p.id),
+  }));
+}
+
+// Redefine listarPostsMuralParaEmpleado (app) para sumar comentarios.
+function listarPostsMuralParaEmpleado(empleadoId, sector, rol) {
+  const posts = db.prepare(`
+    SELECT * FROM mural_posts
+    WHERE audiencia = ?
+       OR (audiencia = 'jefes' AND ? = 'jefe')
+       OR (audiencia = 'individual' AND id IN (SELECT post_id FROM mural_post_destinatarios WHERE empleado_id = ?))
+    ORDER BY id DESC
+  `).all(sector, rol, empleadoId);
+  const comentarios = comentariosDeMuralPosts(posts.map((p) => p.id));
+  return posts.map((p) => ({ ...p, comentarios: comentarios.filter((c) => c.post_id === p.id) }));
+}
+
+// Redefine reclamarPostMural -- ya NO pasa por un estado intermedio de
+// aprobacion: reclamar deja a esa persona asignada directo (en_proceso).
+// Sigue siendo atomico (WHERE estado = 'publicada') para que dos personas
+// no puedan reclamar la misma tarea a la vez.
+function reclamarPostMural(postId, { tipo, id, nombre }) {
+  const info = db.prepare(`
+    UPDATE mural_posts SET estado = 'en_proceso', reclamado_por_tipo = ?, reclamado_por_id = ?,
+      reclamado_por_nombre = ?, reclamado_en = ?, aprobado_en = ? WHERE id = ? AND estado = 'publicada'
+  `).run(tipo, id, nombre, new Date().toISOString(), new Date().toISOString(), postId);
+  return info.changes > 0;
+}
+
+// El admin asigna (o reasigna) la tarea a mano, sin depender de que la
+// persona la reclame ella misma -- funciona en cualquier estado excepto
+// finalizada.
+function asignarPostMural(postId, { tipo, id, nombre }) {
+  const info = db.prepare(`
+    UPDATE mural_posts SET estado = 'en_proceso', reclamado_por_tipo = ?, reclamado_por_id = ?,
+      reclamado_por_nombre = ?, reclamado_en = ?, aprobado_en = ? WHERE id = ? AND estado != 'finalizada'
+  `).run(tipo, id, nombre, new Date().toISOString(), new Date().toISOString(), postId);
+  return info.changes > 0;
+}
+
+// Quita la asignacion actual -- vuelve la tarea a "publicada" para que se
+// pueda reclamar o asignar de nuevo.
+function desasignarPostMural(postId) {
+  db.prepare(`
+    UPDATE mural_posts SET estado = 'publicada', reclamado_por_tipo = NULL, reclamado_por_id = NULL,
+      reclamado_por_nombre = NULL, reclamado_en = NULL, aprobado_en = NULL WHERE id = ? AND estado != 'finalizada'
+  `).run(postId);
+}
+
+// Redefine finalizarPostMural para sumar hasta 5 fotos de cierre
+// (evidencia de que la tarea quedo terminada).
+function finalizarPostMural(postId, fotos) {
+  const fotosLimpias = Array.isArray(fotos)
+    ? fotos.filter((f) => typeof f === "string" && f.startsWith("data:image/")).slice(0, 5)
+    : [];
+  db.prepare(`
+    UPDATE mural_posts SET estado = 'finalizada', finalizada_en = ?, fotos_cierre = ? WHERE id = ?
+  `).run(new Date().toISOString(), fotosLimpias.length ? JSON.stringify(fotosLimpias) : null, postId);
+}
+
+module.exports.asignarPostMural = asignarPostMural;
+module.exports.desasignarPostMural = desasignarPostMural;
+module.exports.crearComentarioMural = crearComentarioMural;
