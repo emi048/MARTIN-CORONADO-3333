@@ -263,8 +263,8 @@ router.post("/api/mural", requerirAuth, (req, res) => {
   // Push a los destinatarios segun la audiencia -- no bloquea la respuesta
   // ni rompe la creacion del post si falla el envio (mismo criterio que
   // el resto de los avisos push del proyecto).
-  const tituloPush = `📌 Nueva tarea — ${autorNombre}`;
-  const cuerpoPush = textoLimpio.slice(0, 120);
+  const tituloPush = "📌 Nueva tarea";
+  const cuerpoPush = "Se te asignó una nueva tarea";
   if (audiencia === "admins") {
     enviarPushATodoElPanel({ titulo: tituloPush, cuerpo: cuerpoPush, url: "/panel/" }).catch(() => {});
   } else {
@@ -306,8 +306,8 @@ router.post("/api/mural/:id/asignar", requerirAuth, (req, res) => {
   if (!ok) return res.status(400).json({ ok: false, error: "No se pudo asignar (¿ya está finalizada?)" });
   if (tipo === "empleado" && post) {
     enviarPushAEmpleado(Number(id), {
-      titulo: "📌 Te asignaron una tarea",
-      cuerpo: post.texto.slice(0, 120),
+      titulo: "📌 Nueva tarea",
+      cuerpo: "Se te asignó una nueva tarea",
       url: "/app/",
     }).catch(() => {});
   }
