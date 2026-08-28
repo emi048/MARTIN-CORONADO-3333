@@ -264,7 +264,14 @@ router.post("/api/mural", requerirAuth, (req, res) => {
   // ni rompe la creacion del post si falla el envio (mismo criterio que
   // el resto de los avisos push del proyecto).
   const tituloPush = "📌 Nueva tarea";
-  const cuerpoPush = "Se te asignó una nueva tarea";
+  const CUERPOS_PUSH_MURAL = {
+    individual: "Se te asignó una nueva tarea",
+    mantenimiento: "Se agregó una nueva tarea para tu sector",
+    conserjeria: "Se agregó una nueva tarea para tu sector",
+    jefes: "Se agregó una nueva tarea para jefes/coordinadores",
+    admins: "Se agregó una nueva tarea interna",
+  };
+  const cuerpoPush = CUERPOS_PUSH_MURAL[audiencia] || "Se agregó una nueva tarea";
   if (audiencia === "admins") {
     enviarPushATodoElPanel({ titulo: tituloPush, cuerpo: cuerpoPush, url: "/panel/" }).catch(() => {});
   } else {
