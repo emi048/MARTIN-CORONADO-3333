@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v38"; // v38: rediseno completo (menu inferior, pedir licencia) + Mural, notificaciones, accesibilidad, perfil y recorrido con camara reintegrados
+const CACHE = "fich-coronado-v39"; // v39: fix critico -- llave de CSS faltante hacia que TODO lo que usa .oculto (incluido el overlay del recorrido) se mostrara solo al entrar
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
