@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v40"; // v40: pestana Novedades de vuelta, como tarjeta en Inicio
+const CACHE = "fich-coronado-v41"; // v41: nombre MARTIN CORONADO en login, tarjeta Corregir horas de vuelta
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

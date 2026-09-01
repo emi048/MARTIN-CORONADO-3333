@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>FICH-CORONADO</title>
+<title>MARTÍN CORONADO</title>
 <link rel="manifest" href="/app/manifest.json">
 <meta name="theme-color" content="#0a0c12">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -633,7 +633,7 @@
 <div id="login-screen">
   <div class="login-box">
     <img src="/panel/logo-cr.png" class="login-logo" alt="Logo">
-    <h2>FICH-CORONADO</h2>
+    <h2>MARTÍN CORONADO</h2>
     <p>Ingresá con tu usuario y contraseña</p>
     <input type="text" id="login-usuario" placeholder="Usuario" autocomplete="username">
     <input type="password" id="login-pin" placeholder="Contraseña" autocomplete="current-password">
@@ -720,6 +720,10 @@
 
       <div class="accesos-titulo">Accesos</div>
       <div class="accesos-grid">
+        <div class="acceso-tile" onclick="abrirCorregir('inicio')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span>Corregir horas</span>
+        </div>
         <div class="acceso-tile oculto" id="acceso-cambio-turno" onclick="abrirModal('cambio')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           <span>Cambio de turno</span>
