@@ -10,6 +10,8 @@ const {
   estadisticasInteracciones, primerMensajeRegistrado, correccionesPorEmpleado,
   ultimaActividadPorEmpleado, fichadasCompletasPorEmpleado, saludFichajePeriodo,
   crearLicencia, listarLicencias, licenciasActivasEnFecha, eliminarLicencia,
+  TIPOS_LICENCIA, solicitudesLicenciaPendientes, todasLasSolicitudesLicencia,
+  obtenerSolicitudLicencia, resolverSolicitudLicencia,
   solicitudesCancelacionPendientes,
   filaDelDiaPorFecha,
   todasLasSolicitudes, todosLosCambiosDeTurno, todasLasCancelaciones,
@@ -372,6 +374,7 @@ router.get("/api/pendientes", requerirAuth, (req, res) => {
     correcciones,
     cambios: solicitudesCambioPendientes(),
     cancelaciones: solicitudesCancelacionPendientes(),
+    licencias: solicitudesLicenciaPendientes(),
   });
 });
 
@@ -492,6 +495,7 @@ router.get("/api/resumen-general", requerirAuth, async (req, res) => {
     pendientes: {
       correcciones: solicitudesPendientes().length,
       cambios: solicitudesCambioPendientes().length,
+      licencias: solicitudesLicenciaPendientes().length,
       cancelaciones: solicitudesCancelacionPendientes().length,
     },
     licenciasHoy: licenciasActivasEnFecha(hoyISO),
@@ -556,6 +560,35 @@ router.post("/api/cancelacion/:id/:accion", requerirAuth, async (req, res) => {
     const resultado = await whatsapp.resolverUnaSolicitudCancelacion(accion, Number(id), periodosTocados);
     for (const periodo of periodosTocados) await whatsapp.regenerarYEnviarExcel(periodo);
     res.json({ ok: true, resultado });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Pedido de licencia hecho por el empleado desde la app -- a diferencia de
+// POST /api/licencias (que el admin carga directo y ya queda aplicada), acá
+// se aprueba/rechaza un pedido. Aprobar termina llamando a crearLicencia
+// con los mismos datos que ya usa la carga directa del panel.
+router.post("/api/licencia-solicitud/:id/:accion", requerirAuth, async (req, res) => {
+  const { id, accion } = req.params;
+  if (!["aprobar", "rechazar"].includes(accion)) return res.status(400).json({ ok: false, error: "Accion invalida" });
+  const solicitud = obtenerSolicitudLicencia(Number(id));
+  if (!solicitud) return res.status(404).json({ ok: false, error: "No encontrada" });
+  if (solicitud.estado !== "pendiente") return res.status(409).json({ ok: false, error: "Ese pedido ya fue resuelto" });
+
+  try {
+    if (accion === "aprobar") {
+      const { periodos } = crearLicencia({
+        empleado: solicitud.empleado, fechaDesde: solicitud.fecha_desde, fechaHasta: solicitud.fecha_hasta,
+        tipo: solicitud.tipo, cargadoPor: "panel (pedido de la app)",
+      });
+      for (const periodo of periodos) await whatsapp.regenerarYEnviarExcel(periodo);
+      resolverSolicitudLicencia(solicitud.id, "aprobada");
+    } else {
+      const { motivo } = req.body || {};
+      resolverSolicitudLicencia(solicitud.id, "rechazada", motivo ? String(motivo).trim().slice(0, 300) : "");
+    }
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -711,6 +744,7 @@ router.get("/api/historial", requerirAuth, (req, res) => {
     correcciones: todasLasSolicitudes(200),
     cambios: todosLosCambiosDeTurno(200),
     cancelaciones: todasLasCancelaciones(200),
+    licencias: todasLasSolicitudesLicencia(200),
   });
 });
 
@@ -765,8 +799,6 @@ router.get("/api/estadisticas", requerirAuth, (req, res) => {
     tendenciaHoras,
   });
 });
-
-const TIPOS_LICENCIA = ["Vacaciones", "Licencia médica", "Estudio", "Otro"];
 
 function hoyISO() {
   const hoy = new Date();

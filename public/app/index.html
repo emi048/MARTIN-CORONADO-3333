@@ -15,17 +15,19 @@
     --text: #eef0f6; --text-muted: #8b90a8; --accent: #7c6cf0; --accent-hover: #6c5ce0; --accent-2: #4f8cff;
     --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
     --header-bg-1: rgba(10,12,18,0.92); --header-bg-2: rgba(10,12,18,0.82);
-    --overlay-bg: rgba(0,0,0,0.55); --sidebar-bg-1: #10131d; --sidebar-bg-2: #0a0c12;
+    --overlay-bg: rgba(0,0,0,0.55); --nav-bg: #0d1019; --nav-inactive: #8b90a8;
     --font-display: 'Unbounded', sans-serif; --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   }
-  /* Modo claro: solo afecta la app ya logueada -- las pantallas de login
+  /* Tema claro: solo afecta la app ya logueada -- las pantallas de login
      quedan siempre oscuras (usan colores fijos, no estas variables) porque
-     tienen la foto del edificio de fondo. */
+     tienen la foto del edificio de fondo. Se diseño en serio, no es el
+     oscuro invertido: superficies blancas propias, no un filtro. */
   body.tema-claro {
     --bg: #f4f5fa; --surface: #ffffff; --surface2: #edeff7; --border: #dfe2ee;
     --text: #14161f; --text-muted: #6b7086;
     --header-bg-1: rgba(255,255,255,0.92); --header-bg-2: rgba(255,255,255,0.82);
-    --overlay-bg: rgba(20,22,31,0.35); --sidebar-bg-1: #ffffff; --sidebar-bg-2: #f4f5fa;
+    --overlay-bg: rgba(20,22,31,0.35); --nav-bg: #ffffff; --nav-inactive: #6b7086;
+    --warn: #a86800;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -48,26 +50,26 @@
   }
   .login-box {
     background: linear-gradient(165deg, rgba(23,27,44,0.78), rgba(18,21,31,0.78));
-    border: 1px solid rgba(124,108,240,0.35); border-top: 1px solid rgba(124,108,240,0.35);
+    border: 1px solid rgba(124,108,240,0.35);
     border-radius: 18px; padding: 36px 28px; width: 100%; max-width: 340px; text-align: center;
     box-shadow: 0 24px 60px rgba(0,0,0,0.5); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
   .login-logo { height: 52px; width: auto; margin-bottom: 16px; opacity: 0.95; }
   .login-box h2 { font-family: var(--font-display); margin: 0 0 4px; font-size: 17px; letter-spacing: 0.01em; font-weight: 700; }
-  .login-box p { color: var(--text-muted); font-size: 13px; margin: 0 0 24px; }
+  .login-box p { color: #8b90a8; font-size: 13px; margin: 0 0 24px; }
   .login-box input {
-    width: 100%; padding: 13px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: rgba(10,12,18,0.5); color: var(--text); font-size: 16px; text-align: center;
+    width: 100%; padding: 13px 14px; border-radius: 8px; border: 1px solid #242a3b;
+    background: rgba(10,12,18,0.5); color: #eef0f6; font-size: 16px; text-align: center;
     margin-bottom: 10px; transition: border-color 0.15s;
   }
-  .login-box input:focus { outline: none; border-color: var(--accent); }
+  .login-box input:focus { outline: none; border-color: #7c6cf0; }
   .login-box button {
     width: 100%; margin-top: 8px; padding: 13px; border-radius: 8px; border: none;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; font-weight: 700; cursor: pointer; font-size: 15px;
+    background: linear-gradient(135deg, #7c6cf0, #4f8cff); color: white; font-weight: 700; cursor: pointer; font-size: 15px;
     transition: filter 0.15s, transform 0.15s; box-shadow: 0 6px 20px rgba(124,108,240,0.35);
   }
   .login-box button:hover { filter: brightness(1.08); transform: translateY(-1px); }
-  .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .login-error { color: #e5484d; font-size: 13px; margin-top: 10px; min-height: 16px; }
 
   header {
     padding: 14px 18px; border-bottom: 1px solid var(--border);
@@ -76,80 +78,68 @@
     background: linear-gradient(180deg, var(--header-bg-1), var(--header-bg-2));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   }
-  .hamburger-btn {
+  .icon-btn {
     background: var(--surface2); border: 1px solid var(--border); color: var(--text);
     width: 38px; height: 38px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; padding: 0;
+    cursor: pointer; flex-shrink: 0; padding: 0; position: relative;
   }
-  .hamburger-btn svg { width: 19px; height: 19px; }
+  .icon-btn svg { width: 18px; height: 18px; }
   .header-titulo { flex: 1; min-width: 0; }
   .header-titulo h1 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .header-titulo span { display: block; color: var(--text-muted); font-weight: 400; font-family: var(--font-body); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .header-icon-btn {
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; padding: 0; position: relative; flex-shrink: 0;
-  }
-  .header-icon-btn svg { width: 17px; height: 17px; }
   .avatar-btn {
-    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
     background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
   }
-  .notif-wrap { position: relative; }
+  .notif-dot {
+    position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px;
+    border-radius: 999px; background: #ff5c5c; color: white; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; line-height: 1; pointer-events: none;
+  }
+  .notif-wrap { position: relative; margin-left: auto; }
   .notif-panel {
     position: absolute; top: 46px; right: 0; width: 210px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.35); z-index: 60;
   }
-  .notif-panel .notif-vacio { color: var(--text-muted); font-size: 12.5px; text-align: center; }
+  .notif-panel { max-height: 340px; overflow-y: auto; }
+  .notif-panel .notif-vacio { color: var(--text-muted); font-size: 12.5px; text-align: center; padding: 10px 0; }
+  .notif-item { display: block; padding: 10px 6px; border-radius: 8px; text-decoration: none; color: var(--text); }
+  .notif-item + .notif-item { border-top: 1px solid var(--border); }
+  .notif-item-titulo { font-weight: 700; font-size: 12.5px; }
+  .notif-item.no-leida .notif-item-titulo::before { content: "●  "; color: var(--accent); }
+  .notif-item-cuerpo { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .notif-item-fecha { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; }
 
-  .sidebar-overlay {
-    position: fixed; inset: 0; background: var(--overlay-bg);
-    opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 40;
-  }
-  .sidebar-overlay.abierto { opacity: 1; pointer-events: auto; }
-  .sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; width: 250px;
-    background: linear-gradient(180deg, var(--sidebar-bg-1), var(--sidebar-bg-2));
-    border-right: 1px solid var(--border);
-    transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-    z-index: 50; display: flex; flex-direction: column; padding: 20px 14px;
-  }
-  .sidebar.abierto { transform: translateX(0); }
-  .sidebar-logo-row { display: flex; align-items: center; gap: 10px; padding: 4px 8px 24px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-  .sidebar-logo-row img { height: 32px; width: auto; }
-  .sidebar-logo-row .nombre { font-family: var(--font-display); font-size: 12.5px; font-weight: 700; line-height: 1.3; }
-  .sidebar-menu-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 10px 10px; font-weight: 600; }
-  .sidebar-item {
-    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px;
-    color: var(--text-muted); cursor: pointer; font-size: 14.5px; font-weight: 500; margin-bottom: 3px;
-    transition: background 0.15s, color 0.15s, border-color 0.15s; border: 1px solid transparent;
-  }
-  .sidebar-item svg { width: 19px; height: 19px; flex-shrink: 0; }
-  .sidebar-item:hover { background: rgba(124,108,240,0.10); color: var(--text); }
-  .sidebar-item.activo { background: rgba(124,108,240,0.16); color: var(--text); border-color: rgba(124,108,240,0.35); }
-  .sidebar-footer { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
-  .sidebar-item.salir:hover { background: rgba(229,72,77,0.12); color: var(--danger); }
+  main { max-width: 480px; margin: 0 auto; padding: 18px 16px calc(88px + env(safe-area-inset-bottom, 0px)); }
 
-  .saludo-box {
-    background: linear-gradient(150deg, rgba(124,108,240,0.14), var(--surface) 65%);
-    border: 1px solid var(--border); border-radius: 14px;
-    padding: 18px 16px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: flex; border-top: 1px solid var(--border); background: var(--nav-bg);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  .saludo-nombre { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
-  .saludo-turno { color: var(--text-muted); font-size: 13.5px; margin-top: 6px; }
-  .saludo-turno strong { color: var(--text); font-weight: 600; }
+  .nav-item {
+    flex: 1; min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; position: relative; cursor: pointer; border: none; background: none; padding: 0; color: var(--nav-inactive);
+  }
+  .nav-item svg { width: 19px; height: 19px; }
+  .nav-item span { font: 600 10.5px/1 Inter, sans-serif; }
+  .nav-item.activo { color: var(--accent-2); }
+  body.tema-claro .nav-item.activo { color: #5a4bd0; }
+  .nav-item.activo::before { content: ""; position: absolute; top: 0; left: 22%; right: 22%; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .nav-badge {
+    position: absolute; top: 12px; right: 26%; min-width: 15px; height: 15px; border-radius: 8px;
+    background: var(--accent); color: #fff; font: 700 10px/15px Inter, sans-serif; text-align: center; padding: 0 3px;
+  }
 
-  main { max-width: 480px; margin: 0 auto; padding: 18px 16px; }
   .card {
     background: linear-gradient(150deg, rgba(124,108,240,0.08), var(--surface) 60%);
     border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
-  .card-titulo { font-family: var(--font-display); font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; font-weight: 500; }
+  .card-titulo { font-family: var(--font-display); font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; font-weight: 500; }
   .fila-hora { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .fila-hora:last-child { border-bottom: none; }
   .fila-hora .fecha { font-size: 14px; }
@@ -158,62 +148,190 @@
   .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
   .badge-ok { background: rgba(62,207,142,0.15); color: var(--ok); }
   .badge-warn { background: rgba(245,166,35,0.15); color: var(--warn); }
+  .badge-danger { background: rgba(229,72,77,0.15); color: var(--danger); }
   .badge-muted { background: var(--surface2); color: var(--text-muted); }
-  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .stat { text-align: center; }
-  .stat .num { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
-  .stat .label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
   .vacio { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
-  .periodo-selector { display: flex; gap: 8px; margin-bottom: 6px; }
-  .periodo-selector input[type="month"] {
-    flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text); font-size: 14px;
-  }
-  .periodo-selector button {
-    padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white;
-  }
-  .rango-real { color: var(--text-muted); font-size: 12px; margin: 0 0 14px 2px; }
+  /* ── Inicio ── */
+  .hoy-card { padding: 18px 16px 16px; }
+  .hoy-card-top { display: flex; justify-content: space-between; align-items: center; }
+  .estado-en-turno { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; background: rgba(62,207,142,0.15); color: var(--ok); font: 600 12px/1 Inter, sans-serif; }
+  .estado-en-turno .punto { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+  .hoy-horas { display: flex; align-items: flex-end; gap: 18px; margin-top: 16px; }
+  .hoy-horas > div { flex: 1; }
+  .hoy-horas .label { font: 400 11px/1 Inter, sans-serif; color: var(--text-muted); letter-spacing: 0.05em; }
+  .hoy-horas .num { font: 700 30px/1.05 Unbounded, sans-serif; margin-top: 8px; }
+  .hoy-horas .separador { width: 1px; height: 44px; background: var(--border); }
+  .hoy-pie { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); }
 
-  .config-form { display: flex; flex-direction: column; gap: 10px; }
-  .config-form input {
-    padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: rgba(10,12,18,0.4); color: var(--text); font-size: 15px;
-  }
-  .config-form input:focus { outline: none; border-color: var(--accent); }
-  .config-form button {
-    padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white;
-  }
-  .config-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
-
-  .card-clickable { cursor: pointer; transition: background 0.15s, border-color 0.15s; }
-  .card-clickable:hover { border-color: rgba(124,108,240,0.35); background: rgba(124,108,240,0.10); }
-
-  /* Tarjeta de Recorrido diario en Inicio -- se la distingue a proposito de
-     las demas tarjetas (fondo mas saturado, icono en badge, texto de
-     llamado a la accion) porque si no se ve igual a una tarjeta
-     informativa cualquiera y no queda claro que hay que tocarla. */
   .recorrido-card-inicio {
-    background: linear-gradient(135deg, rgba(124,108,240,0.22), rgba(79,140,255,0.13) 65%) !important;
-    border: 1px solid rgba(124,108,240,0.4) !important;
+    border-radius: 16px; border: 1px solid rgba(124,108,240,0.4);
+    background: linear-gradient(135deg, rgba(124,108,240,0.22), rgba(79,140,255,0.13) 65%);
+    padding: 16px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
-  .recorrido-card-inicio:hover { background: linear-gradient(135deg, rgba(124,108,240,0.30), rgba(79,140,255,0.20) 65%) !important; }
-  .recorrido-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .recorrido-card-fecha { color: var(--text-muted); font-size: 12px; }
-  .recorrido-card-icono-wrap {
-    width: 38px; height: 38px; border-radius: 10px; background: rgba(124,108,240,0.28);
+  body.tema-claro .recorrido-card-inicio { background: linear-gradient(135deg, rgba(124,108,240,0.10), rgba(79,140,255,0.07) 65%); box-shadow: none; }
+  .recorrido-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .recorrido-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--accent-2); letter-spacing: 0.06em; text-transform: uppercase; }
+  .recorrido-card-titulo { font: 700 18px/1.25 Unbounded, sans-serif; margin-top: 8px; }
+  .recorrido-card-sub { font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 4px; }
+  .recorrido-card-icono {
+    width: 38px; height: 38px; border-radius: 10px; background: rgba(124,108,240,0.22);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .recorrido-card-icono-wrap svg { width: 20px; height: 20px; color: var(--accent-2); }
-  .recorrido-card-cta { display: flex; align-items: center; gap: 4px; color: var(--accent-2); font-size: 12.5px; font-weight: 700; margin-top: 14px; }
-  .recorrido-card-cta svg { width: 14px; height: 14px; }
+  .recorrido-card-icono svg { width: 20px; height: 20px; color: var(--accent-2); }
+  .recorrido-card-cta {
+    min-height: 48px; margin-top: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font: 700 15px/1 Inter, sans-serif;
+    box-shadow: 0 6px 20px rgba(124,108,240,0.35);
+  }
+  .recorrido-card-cta svg { width: 15px; height: 15px; }
 
-  /* Recorrido diario -- PROTOTIPO visual, sin logica real de escaneo todavia
-     (eso queda para mas adelante). El timer si es real: cuenta desde que se
-     toca LISTO. "Simular escaneo" avanza el contador a mano en vez de leer
-     una camara. */
+  .amber-card { border-radius: 16px; border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07); padding: 14px 16px; margin-bottom: 12px; }
+  body.tema-claro .amber-card { border-color: rgba(168,104,0,0.3); background: rgba(168,104,0,0.06); }
+  .amber-card-top { display: flex; justify-content: space-between; align-items: center; }
+  .amber-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--warn); letter-spacing: 0.06em; text-transform: uppercase; }
+  .amber-card-ver-todo { font: 600 12.5px/1 Inter, sans-serif; color: var(--warn); cursor: pointer; }
+  .amber-card-item { display: flex; justify-content: space-between; align-items: center; min-height: 40px; border-bottom: 1px solid rgba(245,166,35,0.18); font: 400 13.5px/1 Inter, sans-serif; }
+  .amber-card-item:last-child { border-bottom: none; }
+  .amber-card-item span:last-child { color: var(--warn); font-size: 12.5px; }
+
+  .accesos-titulo { font: 500 11px/1 Unbounded, sans-serif; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin: 22px 2px 10px; }
+  .accesos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .acceso-tile {
+    min-height: 88px; border-radius: 14px; border: 1px solid var(--border);
+    background: linear-gradient(150deg, rgba(124,108,240,0.08), var(--surface) 60%);
+    padding: 14px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer;
+  }
+  body.tema-claro .acceso-tile { background: var(--surface); box-shadow: 0 2px 8px rgba(20,22,31,0.05); }
+  .acceso-tile svg { width: 19px; height: 19px; color: var(--accent-2); }
+  .acceso-tile span { font: 600 13.5px/1.3 Inter, sans-serif; }
+
+  /* ── Mis horas ── */
+  .periodo-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 14px; }
+  .periodo-pill {
+    flex-shrink: 0; min-height: 42px; padding: 0 16px; border-radius: 22px; border: 1px solid var(--border);
+    background: var(--surface2); display: flex; align-items: center; font: 500 13px/1 Inter, sans-serif; color: var(--text-muted);
+    cursor: pointer; white-space: nowrap;
+  }
+  .periodo-pill.activo { border-color: rgba(124,108,240,0.5); background: rgba(124,108,240,0.16); color: var(--text); font-weight: 600; }
+
+  .resumen-horas-card { border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(150deg, rgba(124,108,240,0.14), var(--surface) 62%); padding: 18px 16px 16px; margin-bottom: 12px; }
+  .resumen-horas-total { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
+  .resumen-horas-total .num { font: 700 42px/1 Unbounded, sans-serif; }
+  .resumen-horas-total .unidad { font: 400 14px/1 Inter, sans-serif; color: var(--text-muted); }
+  .resumen-horas-barra { height: 8px; border-radius: 4px; background: var(--surface2); margin-top: 16px; overflow: hidden; display: flex; }
+  .resumen-horas-leyenda { display: flex; gap: 14px; margin-top: 10px; font: 400 11.5px/1 Inter, sans-serif; color: var(--text-muted); flex-wrap: wrap; }
+  .resumen-horas-leyenda span { display: flex; align-items: center; gap: 6px; }
+  .resumen-horas-leyenda i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .resumen-horas-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); text-align: center; }
+  .resumen-horas-stats .num { font: 700 22px/1 Unbounded, sans-serif; }
+  .resumen-horas-stats .label { font: 400 11px/1.3 Inter, sans-serif; color: var(--text-muted); margin-top: 5px; }
+
+  .dias-card { border-radius: 16px; border: 1px solid var(--border); background: var(--surface); padding: 14px 16px 4px; }
+  .dia-row { display: flex; align-items: center; min-height: 54px; border-bottom: 1px solid var(--border); gap: 10px; }
+  .dia-row:last-child { border-bottom: none; }
+  .dia-row.con-problema { background: rgba(245,166,35,0.07); margin: 0 -16px; padding: 0 16px; }
+  .dia-row .dia-fecha { width: 74px; flex-shrink: 0; font: 500 13.5px/1.3 Inter, sans-serif; }
+  .dia-row .dia-fecha .dia-semana { color: var(--text-muted); font-weight: 400; font-size: 12px; }
+  .dia-row .dia-detalle { flex: 1; font: 400 13.5px/1 Inter, sans-serif; color: var(--text-muted); min-width: 0; }
+  .dia-row .dia-derecha { font: 600 14px/1 Inter, sans-serif; flex-shrink: 0; text-align: right; }
+  .dia-row .dia-derecha.link { color: var(--warn); cursor: pointer; font-size: 12.5px; }
+
+  .rango-real { color: var(--text-muted); font-size: 12px; margin: -8px 0 14px 2px; }
+
+  /* ── Corregir / formularios ── */
+  .corr-problema-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    min-height: 56px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface2); margin-bottom: 8px; cursor: pointer;
+  }
+  .corr-problema-item.destacado { border-color: rgba(124,108,240,0.5); background: rgba(124,108,240,0.14); }
+  .corr-problema-item .fecha { font: 600 14px/1.3 Inter, sans-serif; }
+  .corr-problema-item .detalle { font: 400 12px/1.3 Inter, sans-serif; color: var(--text-muted); margin-top: 2px; }
+  .corr-problema-item .motivo { font: 600 12.5px/1 Inter, sans-serif; color: var(--warn); flex-shrink: 0; }
+
+  .form-stack { display: flex; flex-direction: column; gap: 10px; }
+  .form-stack label { font-size: 12px; color: var(--text-muted); margin-bottom: -4px; }
+  .form-stack input, .form-stack select, .form-stack textarea {
+    padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 15px; font-family: inherit; width: 100%;
+  }
+  .form-stack input:focus, .form-stack select:focus, .form-stack textarea:focus { outline: none; border-color: var(--accent); }
+  .form-stack textarea { resize: vertical; min-height: 64px; }
+  .form-stack button {
+    padding: 13px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; margin-top: 4px;
+    box-shadow: 0 6px 20px rgba(124,108,240,0.3);
+  }
+  .form-error { color: var(--danger); font-size: 13px; min-height: 16px; }
+  .form-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
+  .form-nota { font: 400 12px/1.5 Inter, sans-serif; color: var(--text-muted); text-align: center; margin-top: 4px; }
+
+  /* ── Solicitudes ── */
+  .filtro-chips { display: flex; gap: 8px; margin-bottom: 14px; }
+  .filtro-chip {
+    min-height: 40px; padding: 0 16px; border-radius: 22px; border: 1px solid var(--border);
+    background: var(--surface2); display: flex; align-items: center; font: 500 13px/1 Inter, sans-serif; color: var(--text-muted);
+    cursor: pointer;
+  }
+  .filtro-chip.activo { border-color: rgba(124,108,240,0.5); background: rgba(124,108,240,0.16); color: var(--text); font-weight: 600; }
+
+  .solicitud-item { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .solicitud-top { display: flex; justify-content: space-between; align-items: center; }
+  .solicitud-tipo { font: 700 11px/1 Inter, sans-serif; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .solicitud-resumen { font: 600 15px/1.3 Inter, sans-serif; margin-top: 8px; }
+  .solicitud-comparativa { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+  .solicitud-comparativa svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--accent-2); }
+  .solicitud-comparativa .col { flex: 1; border-radius: 10px; background: var(--surface2); padding: 10px 12px; }
+  .solicitud-comparativa .col.pediste { border: 1px solid rgba(124,108,240,0.4); background: rgba(124,108,240,0.12); }
+  .solicitud-comparativa .col .etq { font: 400 10.5px/1 Inter, sans-serif; color: var(--text-muted); letter-spacing: 0.05em; }
+  .solicitud-comparativa .col .val { font: 400 13.5px/1 Inter, sans-serif; margin-top: 6px; }
+  .solicitud-detalle-txt { font: 400 13px/1.5 Inter, sans-serif; color: var(--text-muted); margin-top: 8px; }
+  .solicitud-motivo { font: 400 13px/1.5 Inter, sans-serif; color: var(--danger); margin-top: 8px; }
+  .solicitud-fechas { font: 400 11.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 12px; }
+
+  /* ── Cuenta ── */
+  .cuenta-perfil { display: flex; align-items: center; gap: 14px; }
+  .cuenta-perfil .avatar-grande {
+    width: 54px; height: 54px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+    display: flex; align-items: center; justify-content: center; font: 700 17px/1 Unbounded, sans-serif;
+  }
+  .cuenta-perfil .nombre { font: 700 16px/1.3 Unbounded, sans-serif; }
+  .cuenta-perfil .sub { font: 400 12.5px/1.3 Inter, sans-serif; color: var(--text-muted); margin-top: 2px; }
+  .tema-switch-row { display: flex; align-items: center; justify-content: space-between; }
+  .switch { width: 46px; height: 26px; border-radius: 14px; background: var(--surface2); border: 1px solid var(--border); position: relative; cursor: pointer; flex-shrink: 0; }
+  .switch .knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); transition: left 0.18s, background 0.18s; }
+  .switch.on { background: rgba(124,108,240,0.25); border-color: rgba(124,108,240,0.5); }
+  .switch.on .knob { left: 22px; background: var(--accent); }
+  .btn-logout {
+    width: 100%; padding: 13px; border-radius: 10px; border: 1px solid rgba(229,72,77,0.35); cursor: pointer;
+    background: rgba(229,72,77,0.1); color: var(--danger); font-weight: 700; font-size: 14px;
+  }
+
+  /* ── Modales ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: var(--overlay-bg);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 70;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.abierto { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px 18px 0 0;
+    width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;
+    padding: 20px 18px 28px; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .modal-overlay.abierto .modal-box { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-header h3 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; }
+  .modal-cerrar {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0; flex-shrink: 0;
+  }
+
+  /* Recorrido diario -- timer, checklist, escaneo real de QR (camara +
+     jsQR) y observaciones, todo real. */
   .recorrido-overlay {
     position: fixed; inset: 0; background: var(--bg); z-index: 80;
     display: flex; flex-direction: column; padding: 24px 20px 32px; overflow-y: auto;
@@ -236,19 +354,37 @@
   .recorrido-barra { height: 6px; border-radius: 3px; background: var(--surface2); overflow: hidden; margin-bottom: 22px; }
   .recorrido-barra-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s; }
   .recorrido-viewfinder {
-    flex: 1; min-height: 220px; border: 2px dashed var(--border); border-radius: 16px;
+    flex: 1; min-height: 280px; border: 2px dashed var(--border); border-radius: 16px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     color: var(--text-muted); font-size: 12.5px; text-align: center; padding: 20px; margin-bottom: 20px;
+    position: relative; overflow: hidden;
   }
   .recorrido-viewfinder svg { width: 44px; height: 44px; opacity: 0.5; }
+  #recorrido-viewfinder-idle, #recorrido-viewfinder-cam, #recorrido-viewfinder-ok {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 100%;
+  }
+  #recorrido-viewfinder-idle {
+    cursor: pointer; border-radius: 14px; padding: 16px; transition: background 0.15s;
+  }
+  #recorrido-viewfinder-idle:active { background: var(--surface2); }
+  #recorrido-viewfinder-idle svg { width: 60px; height: 60px; opacity: 0.6; }
+  .recorrido-viewfinder-titulo { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text); }
+  .recorrido-viewfinder-sub { font-size: 12.5px; color: var(--text-muted); }
+  #recorrido-video { width: 100%; max-height: 240px; object-fit: cover; border-radius: 12px; background: #000; }
+  .recorrido-scan-msg { font-size: 12.5px; color: var(--warn); text-align: center; min-height: 16px; }
+  #recorrido-viewfinder-ok .recorrido-check { width: 52px; height: 52px; }
+  #recorrido-viewfinder-ok .recorrido-viewfinder-titulo { color: var(--ok); }
   .recorrido-punto-actual { font-family: var(--font-display); font-size: 15px; color: var(--text); font-weight: 700; }
   .btn-escanear {
     width: 100%; padding: 15px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 15px;
     background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; margin-bottom: 12px;
   }
+  .recorrido-pie-acciones { display: flex; align-items: center; justify-content: center; gap: 4px; }
   .btn-cancelar-recorrido {
-    width: 100%; background: none; border: none; color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
+    background: none; border: none; color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
   }
+  .btn-cancelar-recorrido:disabled { opacity: 0.35; cursor: default; }
+  .recorrido-pie-acciones .btn-cancelar-recorrido:not(:last-child)::after { content: "·"; margin-left: 8px; color: var(--border); }
   .recorrido-check { width: 60px; height: 60px; color: var(--ok); }
   .recorrido-tiempo-final { font-family: var(--font-display); font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
 
@@ -267,80 +403,224 @@
   .recorrido-resumen-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
   .recorrido-resumen-punto { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
   .recorrido-resumen-texto { font-size: 12.5px; color: var(--text-muted); }
+  .recorrido-resumen-foto { display: block; width: 100%; max-width: 220px; border-radius: 8px; margin-top: 8px; }
 
-  .barra-lista { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .barra-accion {
-    display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
-    background: linear-gradient(150deg, rgba(124,108,240,0.08), var(--surface) 60%);
-    border: 1px solid var(--border); cursor: pointer; transition: background 0.15s, border-color 0.15s;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  /* Lista resumida de todos los puntos en la pantalla de confirmacion --
+     asi el que va a recorrer sabe de entrada que se va a encontrar, sin
+     tener que arrancar el recorrido para verlo. */
+  /* La lista vive dentro del overlay, que ya scrollea solo -- sin scroll
+     propio ademas (quedaba un scroll adentro de otro scroll, feo y
+     confuso). La pantalla de confirmacion arranca arriba en vez de
+     centrada (ver mas abajo) para que una lista larga no empuje todo
+     fuera de la pantalla. */
+  .recorrido-resumen-puntos { width: 100%; max-width: 340px; text-align: left; margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
+  .recorrido-resumen-punto-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); font-size: 13px; }
+  .recorrido-resumen-punto-num {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+    font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center;
   }
-  .barra-accion:hover { background: rgba(124,108,240,0.10); border-color: rgba(124,108,240,0.35); }
-  .barra-accion svg:first-child { width: 19px; height: 19px; color: var(--accent-2); flex-shrink: 0; }
-  .barra-label { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
-  .barra-chevron { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+  .recorrido-resumen-punto-nombre { color: var(--text); line-height: 1.35; font-weight: 500; }
+  #recorrido-confirmar .recorrido-centro { justify-content: flex-start; padding-top: 6vh; min-height: 0; }
 
-  .corr-problemas { margin-bottom: 14px; }
-  .corr-problemas-titulo { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; font-weight: 600; }
-  .corr-problema-item {
-    display: flex; justify-content: space-between; align-items: center; gap: 8px;
-    padding: 10px 12px; background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25);
-    border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 12.5px;
+  .btn-foto-recorrido {
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px dashed var(--border); cursor: pointer; font-weight: 600; font-size: 13.5px;
+    background: var(--surface2); color: var(--text); margin-bottom: 12px;
   }
-  .corr-problema-item:hover { background: rgba(245,166,35,0.14); }
-  .corr-problema-item .motivo { color: var(--warn); font-size: 12px; text-align: right; }
+  /* Grilla de miniaturas -- se puede cargar mas de una foto por punto
+     (hasta MAX_FOTOS_RECORRIDO), cada una con su propia "x" para sacarla. */
+  .recorrido-fotos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .recorrido-fotos-grid:empty { display: none; margin: 0; }
+  .recorrido-foto-thumb { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface2); }
+  .recorrido-foto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .recorrido-foto-thumb button {
+    position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.6); color: white; font-size: 13px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-foto-recorrido:disabled { opacity: 0.45; cursor: default; }
 
-  .modal-overlay {
-    position: fixed; inset: 0; background: var(--overlay-bg);
-    opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 70;
-    display: flex; align-items: flex-end; justify-content: center;
+  /* Modal chico de confirmacion sobre el estado "curso" -- para no perder
+     el progreso del recorrido con un toque accidental en "Cancelar". */
+  .recorrido-confirm-modal {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 90;
   }
-  .modal-overlay.abierto { opacity: 1; pointer-events: auto; }
-  .modal-box {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 18px 18px 0 0;
-    width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;
-    padding: 20px 18px 28px; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  .recorrido-confirm-modal-box { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px 20px; max-width: 320px; width: 100%; }
+  .recorrido-confirm-modal-titulo { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .recorrido-confirm-modal-texto { color: var(--text-muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; }
+  .btn-peligro { background: linear-gradient(135deg, var(--danger), #b23b3b) !important; }
+  .periodo-selector { display: flex; gap: 8px; margin-bottom: 6px; }
+  .periodo-selector input[type="month"] {
+    flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 14px;
+    font-family: var(--font-body); font-weight: 600;
   }
-  .modal-overlay.abierto .modal-box { transform: translateY(0); }
-  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .modal-header h3 { font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; }
-  .modal-cerrar {
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; padding: 0; flex-shrink: 0;
+  /* Safari ignora font-family en el texto interno de type="month" salvo
+     que se lo pidas puntualmente via -webkit-locale / los pseudo-elementos
+     del control -- esto cubre Chrome/Android (donde si se respeta) y
+     evita que quede con la tipografia del sistema en vez de la del sitio. */
+  .periodo-selector input[type="month"]::-webkit-datetime-edit,
+  .periodo-selector input[type="month"]::-webkit-datetime-edit-fields-wrapper,
+  .periodo-selector input[type="month"]::-webkit-datetime-edit-text,
+  .periodo-selector input[type="month"]::-webkit-datetime-edit-month-field,
+  .periodo-selector input[type="month"]::-webkit-datetime-edit-year-field {
+    font-family: var(--font-body); font-weight: 600; color: var(--text);
   }
-  .modal-form { display: flex; flex-direction: column; gap: 10px; }
-  .modal-form label { font-size: 12px; color: var(--text-muted); margin-bottom: -4px; }
-  .modal-form input, .modal-form select, .modal-form textarea {
-    padding: 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text); font-size: 15px; font-family: inherit;
-  }
-  .modal-form input:focus, .modal-form select:focus, .modal-form textarea:focus { outline: none; border-color: var(--accent); }
-  .modal-form textarea { resize: vertical; min-height: 60px; }
-  .modal-form button {
-    padding: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; margin-top: 4px;
-  }
-  .modal-error { color: var(--danger); font-size: 13px; min-height: 16px; }
-  .modal-ok { color: var(--ok); font-size: 13px; min-height: 16px; }
+  .periodo-selector button {
+    padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px;
 
-  .solicitud-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
-  .solicitud-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .solicitud-top-izq { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .solicitud-tipo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; }
-  .solicitud-resumen-fecha { font-size: 13.5px; color: var(--text); font-weight: 600; }
-  .solicitud-top-der { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .solicitud-toggle-btn {
-    display: flex; align-items: center; gap: 4px; background: none; border: none; color: var(--accent-2);
-    font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 2px;
+  /* Novedades como mural: agrupadas por dia, cada dia es un acordeon que
+     se puede plegar (por defecto solo el dia mas reciente arranca
+     abierto) -- si no, con el correr de los dias se amontona todo en una
+     lista interminable. La fecha no se repite en cada tarjeta -- la del
+     grupo alcanza, la tarjeta muestra la hora nada mas. */
+  .novedades-dia-grupo { margin-bottom: 6px; }
+  .novedades-dia-header {
+    width: 100%; display: flex; align-items: center; gap: 8px;
+    background: none; border: none; padding: 4px 2px; margin: 22px 0 10px; cursor: pointer;
+    font-family: inherit; text-align: left;
   }
-  .solicitud-toggle-btn svg { width: 13px; height: 13px; transition: transform 0.2s; }
-  .solicitud-toggle-btn.abierto svg { transform: rotate(90deg); }
-  .solicitud-detalle-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-  .solicitud-detalle { font-size: 13.5px; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
-  .solicitud-cambio-linea { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 3px 0; }
-  .solicitud-cambio-label { color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
-  .solicitud-fechas { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+  .novedades-dia-grupo:first-child .novedades-dia-header { margin-top: 0; }
+  .novedades-dia-titulo {
+    font-family: var(--font-display); font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .novedades-dia-cant {
+    font-size: 11px; font-weight: 700; color: var(--accent-2); background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px;
+  }
+  .novedades-dia-chevron { width: 15px; height: 15px; color: var(--text-muted); margin-left: auto; transition: transform 0.15s; flex-shrink: 0; }
+  .novedades-dia-header[aria-expanded="true"] .novedades-dia-chevron { transform: rotate(180deg); }
+  .novedades-dia-items.oculto { display: none; }
+  .novedad-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+
+  .mural-banner-notif { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+  .mural-banner-icono { font-size: 20px; flex-shrink: 0; }
+  .mural-banner-texto { flex: 1; min-width: 0; }
+  .mural-banner-titulo { font-family: var(--font-display); font-weight: 700; font-size: 13.5px; }
+  .mural-banner-sub { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+  .mural-banner-activar { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .mural-banner-cerrar { background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+
+  .mural-stepper { display: flex; align-items: center; margin: 12px 0 4px; }
+  .mural-stepper-paso { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+  .mural-stepper-dot { width: 13px; height: 13px; border-radius: 50%; background: var(--border); border: 2px solid var(--border); z-index: 1; }
+  .mural-stepper-label { font-size: 10px; color: var(--text-muted); margin-top: 5px; text-align: center; }
+  .mural-stepper-linea { position: absolute; top: 5px; left: -50%; width: 100%; height: 2px; background: var(--border); z-index: 0; }
+  .mural-stepper-paso:first-child .mural-stepper-linea { display: none; }
+  .mural-stepper-paso.completo .mural-stepper-dot { background: var(--ok); border-color: var(--ok); }
+  .mural-stepper-paso.completo .mural-stepper-linea { background: var(--ok); }
+  .mural-stepper-paso.activo .mural-stepper-dot { background: var(--accent); border-color: var(--accent); }
+  .mural-stepper-paso.activo .mural-stepper-label { color: var(--text); font-weight: 700; }
+  .mural-audiencia-badge { display: inline-block; background: var(--surface3, var(--surface2)); color: var(--text-muted); font-size: 11px; border-radius: 6px; padding: 2px 8px; margin-bottom: 6px; }
+  .mural-reclamar-btn { width: 100%; padding: 11px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 10px; }
+  .mural-estado-txt { font-size: 12.5px; color: var(--text-muted); margin-top: 10px; }
+  .mural-vencimiento-badge { font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .mural-vencimiento-badge.vencido { color: #ff6b6b; font-weight: 700; }
+  .mural-finalizar-wrap { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .mural-finalizar-foto-btn {
+    width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); font-weight: 600; font-size: 12.5px; cursor: pointer;
+  }
+  .mural-finalizar-foto-btn:disabled { opacity: 0.6; cursor: default; }
+  .novedad-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .novedad-punto { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .novedad-hora {
+    font-size: 11.5px; color: var(--text-muted); flex-shrink: 0; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px;
+  }
+  .novedad-texto { font-size: 13.5px; color: var(--text); margin-bottom: 10px; line-height: 1.45; }
+  .novedad-fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+  .novedad-fotos.una-foto { grid-template-columns: 1fr; }
+  .novedad-foto { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: zoom-in; display: block; }
+  .novedad-fotos.una-foto .novedad-foto { aspect-ratio: 16/10; }
+  .novedad-usuario { font-size: 11.5px; color: var(--accent-2); font-weight: 600; margin-bottom: 10px; }
+
+  .novedad-comentarios { border-top: 1px solid var(--border); padding-top: 10px; }
+  .novedad-comentario { font-size: 12.5px; margin-bottom: 6px; line-height: 1.4; }
+  .novedad-comentario b { color: var(--text); }
+  .novedad-comentario span { color: var(--text-muted); }
+  .novedad-comentario-form { display: flex; gap: 6px; margin-top: 8px; }
+  .novedad-comentario-form input {
+    flex: 1; min-width: 0; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 12.5px;
+  }
+  .novedad-comentario-form input:focus { outline: none; border-color: var(--accent); }
+
+  .lightbox-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .lightbox-overlay img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+  .lightbox-cerrar {
+    position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none; color: white; font-size: 18px; cursor: pointer;
+  }
+
+  .config-notif-desc { color: var(--text-muted); font-size: 13px; line-height: 1.4; margin: 0 0 14px; }
+  .btn-notif {
+    width: 100%; padding: 13px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white;
+  }
+  .btn-notif:disabled { opacity: 0.6; cursor: default; }
+  .config-notif-estado { font-size: 12.5px; color: var(--text-muted); margin-top: 10px; min-height: 16px; }
+
+  .perfil-avatar {
+    width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 18px; font-weight: 700; overflow: hidden;
+  }
+  .perfil-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-form input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .crop-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 220;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .crop-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px;
+    max-width: 340px; width: 100%; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .crop-titulo { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .crop-sub { color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px; }
+  .crop-canvas-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+  #crop-canvas { border-radius: 12px; background: var(--surface2); cursor: grab; touch-action: none; }
+  #crop-canvas:active { cursor: grabbing; }
+  .crop-zoom-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: var(--text-muted); }
+  .crop-zoom-row svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .crop-zoom-row svg:last-child { width: 22px; height: 22px; }
+  .crop-zoom-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .crop-botones { display: flex; gap: 10px; }
+  .crop-botones button { flex: 1; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 14px; font-family: inherit; }
+  #crop-cancelar-btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  #crop-guardar-btn { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; border: none; }
+
+  .acc-fila { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .acc-fila-titulo { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  .acc-fila-sub { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+  .tamano-letra-grupo { display: flex; gap: 6px; flex-shrink: 0; }
+  .tamano-letra-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 10px; min-width: 48px;
+    border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+    cursor: pointer; font-weight: 700; font-family: var(--font-body);
+  }
+  .tamano-letra-btn[data-tam="chico"] { font-size: 11px; }
+  .tamano-letra-btn[data-tam="mediano"] { font-size: 14px; }
+  .tamano-letra-btn[data-tam="grande"] { font-size: 17px; }
+  .tamano-letra-btn span { font-size: 9px; font-weight: 600; color: var(--text-muted); }
+  .tamano-letra-btn.activo { border-color: var(--accent); background: rgba(124,108,240,0.16); }
+
+  .btn-leer-voz {
+    display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--accent-2); cursor: pointer; flex-shrink: 0; padding: 0;
+    margin-left: 6px; vertical-align: middle;
+  }
+  .btn-leer-voz svg { width: 12px; height: 12px; }
+
+  html.letra-chico { zoom: 0.88; }
+  html.letra-grande { zoom: 1.16; }
 
   #app-screen { display: none; }
   .oculto { display: none !important; }
@@ -374,131 +654,90 @@
 </div>
 
 <div id="app-screen">
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="cerrarSidebar()"></div>
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-logo-row">
-      <img src="/panel/logo-cr.png" alt="CR">
-      <div class="nombre">MARTÍN<br>CORONADO 3333</div>
+  <header id="header-inicio">
+    <div class="avatar-btn" id="avatar-btn">--</div>
+    <div class="header-titulo">
+      <h1 id="saludo-nombre-usuario">—</h1>
+      <span id="saludo-sector-turno">Cargando…</span>
     </div>
-    <div class="sidebar-menu-label">Menú</div>
-    <div class="sidebar-item activo" data-tab="inicio" onclick="cambiarTab('inicio')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Inicio
-    </div>
-    <div class="sidebar-item" data-tab="fichadas" onclick="cambiarTab('fichadas')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Mis fichadas
-    </div>
-    <div class="sidebar-item" data-tab="corregir" onclick="cambiarTab('corregir')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Corregir horas
-    </div>
-    <div class="sidebar-item" data-tab="solicitudes" onclick="cambiarTab('solicitudes')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Mis solicitudes
-    </div>
-    <div class="sidebar-item" data-tab="config" onclick="cambiarTab('config')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Configuración
-    </div>
-    <div class="sidebar-footer">
-      <div class="sidebar-item salir" onclick="logout()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Salir
+    <div class="notif-wrap">
+      <button class="icon-btn" onclick="toggleNotif(event)" aria-label="Notificaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-dot oculto" id="notif-dot"></span>
+      </button>
+      <div class="notif-panel oculto" id="notif-panel">
+        <div id="notif-lista"><div class="notif-vacio">Cargando…</div></div>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <header>
-    <button class="hamburger-btn" id="header-hamburger-btn" onclick="abrirSidebar()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <button class="hamburger-btn oculto" id="header-back-btn" onclick="cambiarTab('inicio')" aria-label="Volver a Inicio">
+  <header id="header-generico" class="oculto">
+    <button class="icon-btn" onclick="volverAInicio()" aria-label="Volver a Inicio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
     <div class="header-titulo">
-      <h1 id="header-titulo-txt">Inicio</h1>
-      <span id="header-subtitulo-txt">Tu turno y fichada de hoy</span>
-    </div>
-    <div class="header-acciones">
-      <button class="header-icon-btn" id="btn-tema" onclick="toggleTema()" aria-label="Cambiar tema"></button>
-      <div class="notif-wrap">
-        <button class="header-icon-btn" onclick="toggleNotif(event)" aria-label="Notificaciones">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </button>
-        <div class="notif-panel oculto" id="notif-panel">
-          <div class="notif-vacio">No tenés notificaciones nuevas</div>
-        </div>
-      </div>
-      <div class="avatar-btn" id="avatar-btn" onclick="abrirSidebar()">--</div>
+      <h1 id="header-titulo-txt">—</h1>
+      <span id="header-subtitulo-txt"></span>
     </div>
   </header>
 
   <main>
     <section id="tab-inicio">
-      <div class="saludo-box">
-        <div class="saludo-nombre">Hola, <span id="saludo-nombre-usuario">—</span></div>
-        <div class="saludo-turno" id="saludo-turno">Cargando tu turno de hoy…</div>
-      </div>
-
-      <div class="card">
-        <div class="card-titulo">Hoy</div>
+      <div class="card hoy-card">
+        <div class="hoy-card-top">
+          <div class="card-titulo" style="margin-bottom:0" id="hoy-fecha">Hoy</div>
+          <span class="estado-en-turno oculto" id="hoy-estado-badge"><span class="punto"></span>En turno</span>
+        </div>
         <div id="hoy-contenido"><div class="vacio">Cargando…</div></div>
       </div>
 
-      <div class="card card-clickable recorrido-card-inicio" onclick="abrirRecorrido()">
+      <div class="recorrido-card-inicio" onclick="abrirRecorrido()">
         <div class="recorrido-card-top">
           <div>
-            <div class="card-titulo" style="margin-bottom:2px">Recorrido diario</div>
-            <div class="recorrido-card-fecha" id="recorrido-card-fecha">—</div>
+            <div class="recorrido-card-eyebrow">Recorrido diario</div>
+            <div class="recorrido-card-titulo" id="recorrido-card-titulo">15 puntos de control</div>
+            <div class="recorrido-card-sub" id="recorrido-card-sub">Cargando…</div>
           </div>
-          <div class="recorrido-card-icono-wrap">
+          <div class="recorrido-card-icono">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3"/><path d="M14 20h3"/><path d="M20 20h.01"/></svg>
           </div>
         </div>
-        <div class="recorrido-card-cta">
-          Tocá para iniciar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <div class="recorrido-card-cta" id="recorrido-card-cta">
+          Iniciar recorrido
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
 
-      <div class="barra-lista">
-        <div class="barra-accion" onclick="cambiarTab('corregir')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          <span class="barra-label">Corregir horas</span>
-          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <div class="amber-card oculto" id="inicio-problemas-card">
+        <div class="amber-card-top">
+          <span class="amber-card-eyebrow" id="inicio-problemas-titulo">Días para corregir</span>
+          <span class="amber-card-ver-todo" onclick="abrirCorregir('inicio')">Ver todo</span>
         </div>
-        <div class="barra-accion" onclick="cambiarTab('fichadas')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="barra-label">Consultar mis horas</span>
-          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="barra-accion oculto" id="btn-cambio-turno" onclick="abrirModal('cambio')">
+        <div id="inicio-problemas-lista"></div>
+      </div>
+
+      <div class="accesos-titulo">Accesos</div>
+      <div class="accesos-grid">
+        <div class="acceso-tile oculto" id="acceso-cambio-turno" onclick="abrirModal('cambio')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          <span class="barra-label">Cambio de turno</span>
-          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <span>Cambio de turno</span>
         </div>
-        <div class="barra-accion" onclick="cambiarTab('solicitudes')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          <span class="barra-label">Mis solicitudes</span>
-          <svg class="barra-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <div class="acceso-tile" onclick="abrirModal('licencia')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Pedir licencia</span>
         </div>
       </div>
     </section>
 
-    <section id="tab-fichadas" class="oculto">
-      <div class="periodo-selector">
-        <input type="month" id="fichadas-periodo">
-        <button onclick="cargarFichadas()">Ver</button>
-      </div>
+    <section id="tab-mishoras" class="oculto">
+      <div class="periodo-pills" id="mishoras-periodos"></div>
       <div class="rango-real" id="fichadas-rango"></div>
-
-      <div class="card">
-        <div class="card-titulo">Resumen del período</div>
+      <div class="resumen-horas-card">
+        <div class="card-titulo" style="margin-bottom:0">Horas del período</div>
         <div id="resumen-contenido"><div class="vacio">Cargando…</div></div>
       </div>
-      <div class="card">
-        <div class="card-titulo">Fichadas y ausencias</div>
+      <div class="dias-card">
+        <div class="card-titulo">Día por día</div>
         <div id="dias-contenido"><div class="vacio">Cargando…</div></div>
       </div>
     </section>
@@ -506,11 +745,11 @@
     <section id="tab-corregir" class="oculto">
       <div class="card">
         <div class="card-titulo">Días con algo pendiente</div>
-        <div id="corr-problemas" class="corr-problemas"></div>
+        <div id="corr-problemas"></div>
       </div>
       <div class="card">
-        <div class="card-titulo">Corregir un día puntual</div>
-        <div class="modal-form">
+        <div class="card-titulo" id="corr-form-titulo">Corregir un día puntual</div>
+        <div class="form-stack">
           <label>Fecha</label>
           <input type="date" id="corr-fecha">
           <label>Ingreso correcto (opcional)</label>
@@ -520,39 +759,163 @@
           <label>Comentario (opcional)</label>
           <textarea id="corr-mensaje" placeholder="Contale al admin qué pasó ese día"></textarea>
           <button onclick="enviarCorreccion()">Enviar pedido</button>
-          <div class="modal-error" id="corr-error"></div>
-          <div class="modal-ok" id="corr-ok"></div>
+          <div class="form-error" id="corr-error"></div>
+          <div class="form-ok" id="corr-ok"></div>
+          <div class="form-nota">Te llega un WhatsApp cuando lo resuelvan</div>
         </div>
       </div>
     </section>
 
     <section id="tab-solicitudes" class="oculto">
-      <div class="card">
-        <div class="card-titulo">Mis solicitudes</div>
-        <div id="solicitudes-contenido"><div class="vacio">Cargando…</div></div>
+      <div class="filtro-chips">
+        <div class="filtro-chip" data-filtro="todas" onclick="filtrarSolicitudes('todas')">Todas</div>
+        <div class="filtro-chip" data-filtro="pendiente" onclick="filtrarSolicitudes('pendiente')">Pendientes</div>
+        <div class="filtro-chip" data-filtro="resuelta" onclick="filtrarSolicitudes('resuelta')">Resueltas</div>
       </div>
+      <div id="solicitudes-contenido"><div class="vacio">Cargando…</div></div>
     </section>
 
-    <section id="tab-config" class="oculto">
+    <section id="tab-mural" class="oculto">
+      <div class="mural-banner-notif oculto" id="mural-banner-notif">
+        <div class="mural-banner-icono">🔔</div>
+        <div class="mural-banner-texto">
+          <div class="mural-banner-titulo">Activá las notificaciones</div>
+          <div class="mural-banner-sub">Recibí los avisos del equipo en este dispositivo.</div>
+        </div>
+        <button class="mural-banner-activar" onclick="activarNotifDesdeBannerMural(this)">ACTIVAR</button>
+        <button class="mural-banner-cerrar" onclick="cerrarBannerMural()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="config-notif-estado" id="mural-banner-estado"></div>
+      <div class="periodo-selector">
+        <input type="month" id="mural-periodo" onchange="cargarMural()">
+        <button onclick="document.getElementById('mural-periodo').value='';cargarMural()">Ver todo</button>
+      </div>
+      <div id="mural-contenido"><div class="vacio">Cargando…</div></div>
+
+    <section id="tab-cuenta" class="oculto">
+      <div class="card cuenta-perfil">
+        <div class="avatar-grande" id="cuenta-avatar">--</div>
+        <div>
+          <div class="nombre" id="cuenta-nombre">—</div>
+          <div class="sub" id="cuenta-sector">—</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Foto y usuario</div>
+        <div style="display:flex;align-items:center;gap:14px;margin:10px 0">
+          <div id="perfil-avatar-preview" class="perfil-avatar">--</div>
+          <input type="file" id="perfil-foto-input" accept="image/*" style="display:none">
+          <button type="button" class="mural-finalizar-foto-btn" id="perfil-foto-btn" style="width:auto;padding:10px 16px">Cambiar foto</button>
+        </div>
+        <div class="form-stack">
+          <input type="text" id="perfil-usuario" placeholder="Usuario">
+          <button type="button" id="perfil-guardar-btn">Guardar perfil</button>
+          <div class="form-ok" id="perfil-ok"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Notificaciones</div>
+        <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted);margin-bottom:12px">Enterate al toque cuando el admin publique algo en el Mural o resuelva tus pedidos.</div>
+        <button type="button" class="mural-finalizar-foto-btn" id="btn-activar-notif" style="width:100%" onclick="activarNotificaciones()">🔔 Activar notificaciones</button>
+        <div class="config-notif-estado" id="config-notif-estado"></div>
+      </div>
+      <div class="card">
+        <div class="tema-switch-row">
+          <div>
+            <div class="card-titulo" style="margin-bottom:2px">Tema oscuro</div>
+            <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted)">La preferencia queda guardada en este celular</div>
+          </div>
+          <div class="switch" id="tema-switch" onclick="toggleTema()"><div class="knob"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-titulo">Tamaño de letra</div>
+        <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted);margin-bottom:12px">Agrandá o achicá toda la app. Se guarda en este dispositivo.</div>
+        <div class="tamano-letra-grupo">
+          <button class="tamano-letra-btn" data-tam="chico" onclick="cambiarTamanoLetra('chico')">Aa<span>Chico</span></button>
+          <button class="tamano-letra-btn" data-tam="mediano" onclick="cambiarTamanoLetra('mediano')">Aa<span>Mediano</span></button>
+          <button class="tamano-letra-btn" data-tam="grande" onclick="cambiarTamanoLetra('grande')">Aa<span>Grande</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="tema-switch-row">
+          <div>
+            <div class="card-titulo" style="margin-bottom:2px">Leer en voz alta</div>
+            <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted)">Muestra un botón 🔊 para escuchar el texto del Mural</div>
+          </div>
+          <div class="switch" id="leer-voz-switch" onclick="toggleLeerVoz()"><div class="knob"></div></div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-titulo">Cambiar contraseña</div>
-        <div class="config-form">
+        <div class="form-stack">
           <input type="password" id="config-pass-actual" placeholder="Contraseña actual" autocomplete="current-password">
           <input type="password" id="config-pass-nueva" placeholder="Contraseña nueva (mínimo 6 caracteres)" autocomplete="new-password">
           <input type="password" id="config-pass-confirmar" placeholder="Repetí la contraseña nueva" autocomplete="new-password">
           <button onclick="guardarPasswordDesdeConfig()">Guardar</button>
-          <div class="login-error" id="config-pass-error"></div>
-          <div class="config-ok" id="config-pass-ok"></div>
+          <div class="form-error" id="config-pass-error"></div>
+          <div class="form-ok" id="config-pass-ok"></div>
         </div>
+      </div>
+      <div class="card">
+        <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
       </div>
     </section>
   </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item activo" data-nav="inicio" onclick="cambiarTab('inicio')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-item" data-nav="mishoras" onclick="cambiarTab('mishoras')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Mis horas</span>
+    </button>
+    <button class="nav-item" data-nav="solicitudes" onclick="cambiarTab('solicitudes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Solicitudes</span>
+      <span class="nav-badge oculto" id="nav-badge-solicitudes"></span>
+    </button>
+    <button class="nav-item" data-nav="mural" onclick="cambiarTab('mural')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+      <span>Mural</span>
+    </button>
+    <button class="nav-item" data-nav="cuenta" onclick="cambiarTab('cuenta')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      <span>Cuenta</span>
+    </button>
+  </nav>
+
+  <div class="lightbox-overlay oculto" id="lightbox-overlay" onclick="cerrarLightbox()">
+    <button class="lightbox-cerrar" onclick="cerrarLightbox(event)" aria-label="Cerrar">✕</button>
+    <img id="lightbox-img" alt="Foto ampliada" onclick="event.stopPropagation()">
+  </div>
+
+  <div class="crop-overlay oculto" id="crop-overlay">
+    <div class="crop-box">
+      <div class="crop-titulo">Ajustá tu foto</div>
+      <div class="crop-sub">Arrastrá para mover, deslizá para acercar o alejar.</div>
+      <div class="crop-canvas-wrap">
+        <canvas id="crop-canvas" width="260" height="260"></canvas>
+      </div>
+      <div class="crop-zoom-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </div>
+      <div class="crop-botones">
+        <button type="button" id="crop-cancelar-btn">Cancelar</button>
+        <button type="button" id="crop-guardar-btn">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="modal-overlay" onclick="cerrarModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div id="modal-cambio" class="modal-contenido oculto">
         <div class="modal-header"><h3>Cambio de turno</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
-        <div class="modal-form">
+        <div class="form-stack">
           <label>Tu turno que cedés</label>
           <input type="date" id="camb-fecha-a">
           <label>Compañero</label>
@@ -560,8 +923,29 @@
           <label>Turno del compañero que tomás</label>
           <input type="date" id="camb-fecha-b">
           <button onclick="enviarCambio()">Enviar pedido</button>
-          <div class="modal-error" id="camb-error"></div>
-          <div class="modal-ok" id="camb-ok"></div>
+          <div class="form-error" id="camb-error"></div>
+          <div class="form-ok" id="camb-ok"></div>
+        </div>
+      </div>
+      <div id="modal-licencia" class="modal-contenido oculto">
+        <div class="modal-header"><h3>Pedir licencia</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="form-stack">
+          <label>Desde</label>
+          <input type="date" id="lic-fecha-desde">
+          <label>Hasta</label>
+          <input type="date" id="lic-fecha-hasta">
+          <label>Tipo</label>
+          <select id="lic-tipo">
+            <option value="Vacaciones">Vacaciones</option>
+            <option value="Licencia médica">Licencia médica</option>
+            <option value="Estudio">Estudio</option>
+            <option value="Otro">Otro</option>
+          </select>
+          <label>Comentario (opcional)</label>
+          <textarea id="lic-mensaje" placeholder="Contale al admin algo más si hace falta"></textarea>
+          <button onclick="enviarLicencia()">Enviar pedido</button>
+          <div class="form-error" id="lic-error"></div>
+          <div class="form-ok" id="lic-ok"></div>
         </div>
       </div>
     </div>
@@ -570,9 +954,10 @@
   <div class="recorrido-overlay oculto" id="recorrido-overlay">
     <div id="recorrido-confirmar" class="recorrido-estado">
       <div class="recorrido-centro">
-        <svg class="recorrido-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3"/><path d="M14 20h3"/><path d="M20 20h.01"/></svg>
+        <img src="/panel/logo-cr.png" class="login-logo" alt="CR">
         <div class="recorrido-titulo">Recorrido diario</div>
-        <div class="recorrido-sub">Vas a recorrer 15 puntos de control por el edificio. Apretá LISTO para arrancar el cronómetro.</div>
+        <div class="recorrido-sub">Vas a recorrer <strong id="recorrido-cant-puntos">10</strong> puntos de control. Apretá LISTO para arrancar el cronómetro.</div>
+        <div class="recorrido-resumen-puntos" id="recorrido-resumen-puntos"></div>
         <div class="recorrido-botones">
           <button class="btn-cancelar" onclick="cerrarRecorrido()">CANCELAR</button>
           <button class="btn-listo" onclick="iniciarRecorrido()">LISTO</button>
@@ -583,30 +968,62 @@
     <div id="recorrido-curso" class="recorrido-estado oculto">
       <div class="recorrido-header-curso">
         <div class="recorrido-timer" id="recorrido-timer">00:00</div>
-        <div class="recorrido-progreso-txt" id="recorrido-progreso-txt">Punto 1 de 15</div>
+        <div class="recorrido-progreso-txt" id="recorrido-progreso-txt">Punto 1 de 10</div>
       </div>
       <div class="recorrido-barra"><div class="recorrido-barra-fill" id="recorrido-barra-fill"></div></div>
 
       <div id="recorrido-pre-escaneo">
-        <div class="recorrido-viewfinder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-          <div class="recorrido-punto-actual" id="recorrido-punto-nombre-pre">SALA DE MAQUINAS -1</div>
-          <div>Prototipo — acá va la cámara escaneando el QR real más adelante</div>
+        <div class="recorrido-punto-card">
+          <div class="recorrido-punto-nombre" id="recorrido-punto-nombre-pre">SALA DE MAQUINAS -1</div>
+          <ul class="recorrido-checklist" id="recorrido-checklist"></ul>
         </div>
-        <button class="btn-escanear" onclick="simularEscaneoRecorrido()">Simular escaneo del QR</button>
+        <div class="recorrido-viewfinder">
+          <div id="recorrido-viewfinder-idle" role="button" tabindex="0" onclick="iniciarEscaneoQR()" onkeydown="if(event.key==='Enter')iniciarEscaneoQR()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            <div class="recorrido-viewfinder-titulo">📷 Tocá para escanear el QR</div>
+            <div class="recorrido-viewfinder-sub">Revisá lo de arriba y después escaneá el QR del punto</div>
+            <div class="recorrido-scan-msg oculto" id="recorrido-cam-error"></div>
+          </div>
+          <div id="recorrido-viewfinder-cam" class="oculto">
+            <video id="recorrido-video" playsinline muted></video>
+            <div class="recorrido-scan-msg" id="recorrido-scan-msg"></div>
+            <button type="button" class="btn-cancelar-recorrido" onclick="pararCamaraQR()">Detener cámara</button>
+          </div>
+          <div id="recorrido-viewfinder-ok" class="oculto">
+            <svg class="recorrido-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+            <div class="recorrido-viewfinder-titulo">Escaneo completado</div>
+          </div>
+        </div>
+        <canvas id="recorrido-canvas" style="display:none"></canvas>
       </div>
 
       <div id="recorrido-post-escaneo" class="oculto">
         <div class="recorrido-punto-card">
           <div class="recorrido-punto-nombre" id="recorrido-punto-nombre-post">SALA DE MAQUINAS -1</div>
-          <ul class="recorrido-checklist" id="recorrido-checklist"></ul>
         </div>
         <label class="recorrido-obs-label" for="recorrido-observaciones">Observaciones</label>
         <textarea id="recorrido-observaciones" placeholder="Ej: se encontró el tablero apagado"></textarea>
+        <input type="file" accept="image/*" capture="environment" multiple id="recorrido-foto-input" onchange="onFotoRecorridoSeleccionada(event)" style="display:none">
+        <div class="recorrido-fotos-grid" id="recorrido-fotos-grid"></div>
+        <button type="button" class="btn-foto-recorrido" id="recorrido-foto-btn" onclick="document.getElementById('recorrido-foto-input').click()">📷 Agregar foto</button>
         <button class="btn-escanear" onclick="confirmarPuntoRecorrido()">Confirmar y siguiente punto</button>
       </div>
 
-      <button class="btn-cancelar-recorrido" onclick="cancelarRecorrido()">Cancelar recorrido</button>
+      <div class="recorrido-pie-acciones">
+        <button class="btn-cancelar-recorrido" id="btn-punto-anterior" onclick="volverPuntoAnterior()">‹ Punto anterior</button>
+        <button class="btn-cancelar-recorrido" onclick="cancelarRecorrido()">Cancelar recorrido</button>
+      </div>
+
+      <div class="recorrido-confirm-modal oculto" id="recorrido-cancelar-confirm">
+        <div class="recorrido-confirm-modal-box">
+          <div class="recorrido-confirm-modal-titulo">¿Cancelar el recorrido?</div>
+          <div class="recorrido-confirm-modal-texto">Estás seguro de que querés cancelar el recorrido diario? Vas a perder el progreso de los puntos ya revisados.</div>
+          <div class="recorrido-botones" style="max-width:none">
+            <button class="btn-cancelar" onclick="ocultarConfirmCancelarRecorrido()">Seguir con el recorrido</button>
+            <button class="btn-listo btn-peligro" onclick="confirmarCancelarRecorrido()">Sí, cancelar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="recorrido-completo" class="recorrido-estado oculto">
@@ -614,7 +1031,8 @@
         <svg class="recorrido-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
         <div class="recorrido-titulo">Recorrido completo</div>
         <div class="recorrido-tiempo-final" id="recorrido-tiempo-final">00:00</div>
-        <div class="recorrido-sub">15 de 15 puntos recorridos</div>
+        <div class="recorrido-sub">10 de 10 puntos recorridos</div>
+        <div class="recorrido-sub" id="recorrido-gracias">¡Gracias!</div>
         <div class="recorrido-resumen-obs" id="recorrido-resumen-obs"></div>
         <div class="recorrido-botones">
           <button class="btn-listo" onclick="cerrarRecorrido()" style="flex:1 1 100%">VOLVER A INICIO</button>
@@ -622,8 +1040,10 @@
       </div>
     </div>
   </div>
+
 </div>
 
+<script src="/app/lib/jsQR.js"></script>
 <script>
 const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const DIAS_SEMANA_LARGO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -634,15 +1054,14 @@ function fechaLargaDeHoy() {
   return `${DIAS_SEMANA_LARGO[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()]}`;
 }
 
-const ICONO_SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-const ICONO_LUNA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+function capitalizar(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
 // El tema se guarda aparte del login (localStorage sobrevive el logout) para
 // que la preferencia quede en el celular, no en la cuenta.
 function aplicarTema(tema) {
   document.body.classList.toggle("tema-claro", tema === "claro");
-  const btn = document.getElementById("btn-tema");
-  if (btn) btn.innerHTML = tema === "claro" ? ICONO_LUNA : ICONO_SOL;
+  const sw = document.getElementById("tema-switch");
+  if (sw) sw.classList.toggle("on", tema === "oscuro");
 }
 
 function toggleTema() {
@@ -653,7 +1072,42 @@ function toggleTema() {
 
 function toggleNotif(evento) {
   evento.stopPropagation();
-  document.getElementById("notif-panel").classList.toggle("oculto");
+  const panel = document.getElementById("notif-panel");
+  const abriendo = panel.classList.contains("oculto");
+  panel.classList.toggle("oculto");
+  if (abriendo) {
+    cargarNotificaciones().then(() => {
+      apiFetch("/app/api/notificaciones/leidas", { method: "POST" }).then(() => actualizarBadgeNotif(0)).catch(() => {});
+    });
+  }
+}
+
+function tarjetaNotificacion(n) {
+  return `<a href="${n.url || "#"}" class="notif-item${n.leida ? "" : " no-leida"}">
+    <div class="notif-item-titulo">${escapeHtml(n.titulo)}</div>
+    ${n.cuerpo ? `<div class="notif-item-cuerpo">${escapeHtml(n.cuerpo)}</div>` : ""}
+    <div class="notif-item-fecha">${new Date(n.creado_en).toLocaleString("es-AR")}</div>
+  </a>`;
+}
+
+function actualizarBadgeNotif(cant) {
+  const badge = document.getElementById("notif-dot");
+  if (!badge) return;
+  if (cant > 0) { badge.textContent = cant > 9 ? "9+" : cant; badge.classList.remove("oculto"); }
+  else badge.classList.add("oculto");
+}
+
+async function cargarNotificaciones() {
+  try {
+    const data = await apiFetch("/app/api/notificaciones");
+    actualizarBadgeNotif(data.noLeidas);
+    const lista = document.getElementById("notif-lista");
+    if (lista) {
+      lista.innerHTML = data.notificaciones.length
+        ? data.notificaciones.map(tarjetaNotificacion).join("")
+        : `<div class="notif-vacio">No tenés notificaciones todavía</div>`;
+    }
+  } catch (err) { /* silencioso */ }
 }
 
 document.addEventListener("click", (evento) => {
@@ -749,6 +1203,16 @@ function periodoActual() {
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function periodosRecientesCliente(n) {
+  const hoy = new Date();
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return out;
+}
+
 function fechaISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -757,58 +1221,99 @@ function mostrarApp() {
   document.getElementById("login-screen").style.display = "none";
   document.getElementById("app-screen").style.display = "block";
   const nombreCompleto = localStorage.getItem("app_nombre") || "";
-  document.getElementById("saludo-nombre-usuario").textContent = nombreCompleto.split(" ")[0] || nombreCompleto;
+  const primerNombre = nombreCompleto.split(" ")[0] || nombreCompleto;
+  document.getElementById("saludo-nombre-usuario").textContent = "Hola, " + primerNombre;
   document.getElementById("avatar-btn").textContent = inicialesDeNombre(nombreCompleto);
-  document.getElementById("recorrido-card-fecha").textContent = fechaLargaDeHoy();
-  document.getElementById("fichadas-periodo").value = periodoActual();
+  document.getElementById("cuenta-avatar").textContent = inicialesDeNombre(nombreCompleto);
+  document.getElementById("cuenta-nombre").textContent = nombreCompleto;
+  document.getElementById("hoy-fecha").textContent = "Hoy · " + fechaCortaDeHoy();
+  mishorasPeriodo = periodoActual();
+  document.getElementById("corr-fecha").value = "";
   cargarHoy();
   cargarHorario();
+  cargarPeriodosMisHoras();
   cargarFichadas();
+  cargarProblemasInicio();
   cargarCompaneros();
+  actualizarTarjetaRecorridoInicio();
+  cargarBadgeSolicitudes();
+  cargarNotificaciones();
+  cargarPerfilApp();
+  actualizarEstadoNotifConfig();
+  actualizarBannerMural();
 }
 
-function abrirSidebar() {
-  document.getElementById("sidebar").classList.add("abierto");
-  document.getElementById("sidebar-overlay").classList.add("abierto");
+function actualizarTarjetaRecorridoInicio() {
+  const titulo = document.getElementById("recorrido-card-titulo");
+  const sub = document.getElementById("recorrido-card-sub");
+  if (titulo) titulo.textContent = `${PUNTOS_RECORRIDO.length} puntos de control`;
+  if (sub) sub.textContent = "Recordá todo el edificio antes de terminar tu turno";
 }
 
-function cerrarSidebar() {
-  document.getElementById("sidebar").classList.remove("abierto");
-  document.getElementById("sidebar-overlay").classList.remove("abierto");
+function fechaCortaDeHoy() {
+  const hoy = new Date();
+  return `${DIAS_SEMANA_LARGO[hoy.getDay()].slice(0, 3)} ${hoy.getDate()}/${hoy.getMonth() + 1}`;
 }
 
 const TITULOS_TAB = {
-  inicio: ["Inicio", "Tu turno y fichada de hoy"],
-  fichadas: ["Mis fichadas", "Historial del período"],
-  corregir: ["Corregir horas", "Días con algo pendiente"],
-  solicitudes: ["Mis solicitudes", "Estado de tus pedidos"],
-  config: ["Configuración", "Tu cuenta"],
+  mishoras: ["Mis horas", "Historial del período"],
+  corregir: ["Corregir horas", "El admin aprueba cada pedido"],
+  solicitudes: ["Solicitudes", "Estado de tus pedidos"],
+  mural: ["Mural", "Tareas y comunicados del equipo"],
+  cuenta: ["Cuenta", "Tu perfil y tu contraseña"],
 };
 
+let pantallaOrigenCorregir = "inicio";
+
 function cambiarTab(tab) {
-  document.querySelectorAll(".sidebar-item[data-tab]").forEach((b) => b.classList.toggle("activo", b.dataset.tab === tab));
-  document.getElementById("tab-inicio").classList.toggle("oculto", tab !== "inicio");
-  document.getElementById("tab-fichadas").classList.toggle("oculto", tab !== "fichadas");
-  document.getElementById("tab-corregir").classList.toggle("oculto", tab !== "corregir");
-  document.getElementById("tab-solicitudes").classList.toggle("oculto", tab !== "solicitudes");
-  document.getElementById("tab-config").classList.toggle("oculto", tab !== "config");
-  const [titulo, subtitulo] = TITULOS_TAB[tab] || ["", ""];
+  document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.toggle("activo", b.dataset.nav === tab));
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta"].forEach((t) => {
+    document.getElementById("tab-" + t).classList.toggle("oculto", t !== tab);
+  });
+  document.getElementById("header-inicio").classList.toggle("oculto", tab !== "inicio");
+  document.getElementById("header-generico").classList.toggle("oculto", tab === "inicio");
+  if (tab !== "inicio") {
+    const [titulo, subtitulo] = TITULOS_TAB[tab] || ["", ""];
+    document.getElementById("header-titulo-txt").textContent = titulo;
+    document.getElementById("header-subtitulo-txt").textContent = subtitulo;
+  }
+  if (tab === "mishoras") cargarFichadas();
+  if (tab === "solicitudes") cargarSolicitudes();
+  if (tab === "mural") { actualizarBannerMural(); cargarMural(); }
+  if (tab === "cuenta") {
+    const sw = document.getElementById("leer-voz-switch");
+    if (sw) sw.classList.toggle("on", leerVozActiva());
+  }
+  cerrarModal();
+}
+
+// "Corregir horas" no es un destino de la barra inferior -- se llega desde
+// la tarjeta ámbar de Inicio o desde "Corregir" en Mis horas, y el botón de
+// volver del header vuelve a la pantalla desde la que se abrió (no siempre
+// Inicio), asi que se guarda aparte de cambiarTab.
+async function abrirCorregir(origen, prefill) {
+  pantallaOrigenCorregir = origen || "inicio";
+  document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta"].forEach((t) => {
+    document.getElementById("tab-" + t).classList.toggle("oculto", t !== "corregir");
+  });
+  document.getElementById("header-inicio").classList.add("oculto");
+  document.getElementById("header-generico").classList.remove("oculto");
+  const [titulo, subtitulo] = TITULOS_TAB.corregir;
   document.getElementById("header-titulo-txt").textContent = titulo;
   document.getElementById("header-subtitulo-txt").textContent = subtitulo;
-  // Fuera de Inicio, el boton de arriba a la izquierda pasa a ser una
-  // flecha para volver -- sin esto, si entraste a "Mis fichadas" o
-  // "Configuracion" desde una barra de Inicio (no desde el menu lateral),
-  // el gesto de "atras" del navegador te saca de la app entera en vez de
-  // volver a Inicio (la app es de una sola pagina, no hay historial real
-  // entre pestañas).
-  document.getElementById("header-hamburger-btn").classList.toggle("oculto", tab !== "inicio");
-  document.getElementById("header-back-btn").classList.toggle("oculto", tab === "inicio");
-  if (tab === "corregir") {
-    if (!document.getElementById("corr-fecha").value) document.getElementById("corr-fecha").value = fechaISO(new Date());
-    cargarProblemasCorreccion();
-  }
-  if (tab === "solicitudes") cargarSolicitudes();
-  cerrarSidebar();
+  if (!document.getElementById("corr-fecha").value) document.getElementById("corr-fecha").value = fechaISO(new Date());
+  // Se espera a que termine de cargar (y de auto-seleccionar el primer
+  // problema) antes de aplicar el prefill puntual -- si no, la carga
+  // asincrónica podría pisar despues la fecha que ya se eligió a proposito
+  // (ej: "Corregir" en un día puntual de Mis horas).
+  await cargarProblemasCorreccion();
+  if (prefill) usarProblemaEnFormulario(prefill.fecha, prefill.ingreso, prefill.egreso);
+}
+
+function volverAInicio() {
+  const destino = document.getElementById("tab-corregir").classList.contains("oculto") ? "inicio" : pantallaOrigenCorregir;
+  cambiarTab(destino === "corregir" ? "inicio" : destino);
 }
 
 function formatearFecha(iso) {
@@ -819,7 +1324,7 @@ function formatearFecha(iso) {
 
 function formatearHoras(n) {
   const v = Math.round(n * 100) / 100;
-  return (Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)) + "hs";
+  return (Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)).replace(".", ",");
 }
 
 // Tarjeta "Hoy" en Inicio -- estado en vivo de la fichada de hoy.
@@ -827,17 +1332,23 @@ async function cargarHoy() {
   try {
     const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
     const hoyEl = document.getElementById("hoy-contenido");
+    const badge = document.getElementById("hoy-estado-badge");
     if (data.hoy && (data.hoy.ingreso_hora || data.hoy.egreso_hora)) {
+      badge.classList.toggle("oculto", !(data.hoy.ingreso_hora && !data.hoy.egreso_hora));
       hoyEl.innerHTML = `
-        <div class="fila-hora">
-          <div class="fecha">Ingreso</div>
-          <div class="horas">${data.hoy.ingreso_hora ? `<span class="badge badge-ok">${data.hoy.ingreso_hora}</span>` : `<span class="badge badge-muted">Sin marcar</span>`}</div>
-        </div>
-        <div class="fila-hora">
-          <div class="fecha">Egreso</div>
-          <div class="horas">${data.hoy.egreso_hora ? `<span class="badge badge-ok">${data.hoy.egreso_hora}</span>` : `<span class="badge badge-muted">Sin marcar</span>`}</div>
+        <div class="hoy-horas">
+          <div>
+            <div class="label">INGRESO</div>
+            <div class="num">${data.hoy.ingreso_hora || "--:--"}</div>
+          </div>
+          <div class="separador"></div>
+          <div>
+            <div class="label">EGRESO</div>
+            <div class="num" style="${data.hoy.egreso_hora ? "" : "color:var(--text-muted)"}">${data.hoy.egreso_hora || "--:--"}</div>
+          </div>
         </div>`;
     } else {
+      badge.classList.add("oculto");
       hoyEl.innerHTML = `<div class="vacio">Todavía no hay fichadas registradas hoy</div>`;
     }
   } catch (err) {
@@ -847,21 +1358,18 @@ async function cargarHoy() {
 
 // Compañeros validos para pedir cambio de turno -- viene vacio si el
 // empleado no es del equipo rotativo de mantenimiento, en cuyo caso el
-// boton de "Cambio de turno" queda oculto (esa feature no le aplica).
+// acceso de "Cambio de turno" queda oculto (esa feature no le aplica).
 let COMPANEROS = [];
 async function cargarCompaneros() {
   try {
     const data = await apiFetch("/app/api/companeros");
     COMPANEROS = data.companeros || [];
-    document.getElementById("btn-cambio-turno").classList.toggle("oculto", COMPANEROS.length === 0);
+    document.getElementById("acceso-cambio-turno").classList.toggle("oculto", COMPANEROS.length === 0);
   } catch (err) {
     if (err.message === "Sesión vencida") return;
   }
 }
 
-// Unico modal que queda (Corregir horas y Mis solicitudes pasaron a ser
-// pestañas propias, ver cambiarTab). Cambio de turno sigue siendo modal
-// porque es una feature chica, solo para el equipo rotativo.
 function abrirModal(tipo) {
   document.querySelectorAll(".modal-contenido").forEach((m) => m.classList.add("oculto"));
   document.getElementById("modal-" + tipo).classList.remove("oculto");
@@ -871,46 +1379,70 @@ function abrirModal(tipo) {
   }
 }
 
+function cerrarModal() {
+  document.getElementById("modal-overlay").classList.remove("abierto");
+}
+
 // Antes de que el empleado tenga que adivinar una fecha, le mostramos los
 // dias del periodo actual que ya sabemos que tienen algo mal: sin fila
 // (ausencia real, sin contar sabados compensados) o con una alerta del
-// motor de calculo (ej. "solo 1 registro, sin egreso"). Tocar un dia
-// precarga la fecha (y el horario que ya haya, si falta solo un lado) en
-// el formulario de abajo.
+// motor de calculo. Se comparte entre la tarjeta ambar de Inicio (2 nomas)
+// y la pantalla de Corregir horas (todos), para no calcular esto dos veces
+// con criterios distintos.
+async function obtenerProblemasCorreccion() {
+  const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
+  return [
+    ...(data.ausencias || []).filter((a) => !a.compensado).map((a) => ({ fecha: a.fecha, motivo: "Sin fichada", ingreso: "", egreso: "" })),
+    ...(data.dias || []).filter((d) => d.alerta).map((d) => {
+      if (d.faltante === "ingreso") {
+        return { fecha: d.fecha, motivo: `Falta ingreso (marcaste salida ${d.ingreso})`, ingreso: "", egreso: d.ingreso };
+      }
+      if (d.faltante === "egreso") {
+        return { fecha: d.fecha, motivo: `Falta egreso (marcaste entrada ${d.ingreso})`, ingreso: d.ingreso, egreso: "" };
+      }
+      return { fecha: d.fecha, motivo: d.alerta, ingreso: d.ingreso || "", egreso: d.egreso && d.egreso !== "—" ? d.egreso : "" };
+    }),
+  ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+async function cargarProblemasInicio() {
+  const card = document.getElementById("inicio-problemas-card");
+  try {
+    const problemas = await obtenerProblemasCorreccion();
+    if (problemas.length === 0) { card.classList.add("oculto"); return; }
+    card.classList.remove("oculto");
+    document.getElementById("inicio-problemas-titulo").textContent =
+      problemas.length === 1 ? "1 día para corregir" : `${problemas.length} días para corregir`;
+    document.getElementById("inicio-problemas-lista").innerHTML = problemas.slice(0, 2).map((p) => `
+      <div class="amber-card-item">
+        <span>${DIAS_SEMANA[new Date(p.fecha + "T00:00:00").getDay()]} ${p.fecha.slice(8, 10)}/${p.fecha.slice(5, 7)}</span>
+        <span>${p.motivo}</span>
+      </div>
+    `).join("");
+  } catch (err) {
+    card.classList.add("oculto");
+  }
+}
+
 async function cargarProblemasCorreccion() {
   const el = document.getElementById("corr-problemas");
   el.innerHTML = `<div class="vacio">Buscando días con algo pendiente…</div>`;
   try {
-    const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
-    const problemas = [
-      ...(data.ausencias || []).filter((a) => !a.compensado).map((a) => ({ fecha: a.fecha, motivo: "Sin fichada", ingreso: "", egreso: "" })),
-      ...(data.dias || []).filter((d) => d.alerta).map((d) => {
-        // El reloj no distingue entrada de salida cuando hay una sola
-        // marcacion -- el server infiere cual lado falta comparando esa
-        // hora contra tu horario esperado (ver services/asistencia.js). Si
-        // no pudo inferir (sin horario esperado ese dia), mostramos el
-        // motivo tal cual vino y precargamos como venia guardado.
-        if (d.faltante === "ingreso") {
-          return { fecha: d.fecha, motivo: `Falta ingreso (marcaste salida ${d.ingreso})`, ingreso: "", egreso: d.ingreso };
-        }
-        if (d.faltante === "egreso") {
-          return { fecha: d.fecha, motivo: `Falta egreso (marcaste entrada ${d.ingreso})`, ingreso: d.ingreso, egreso: "" };
-        }
-        return { fecha: d.fecha, motivo: d.alerta, ingreso: d.ingreso || "", egreso: d.egreso && d.egreso !== "—" ? d.egreso : "" };
-      }),
-    ].sort((a, b) => a.fecha.localeCompare(b.fecha));
-
+    const problemas = await obtenerProblemasCorreccion();
     if (problemas.length === 0) {
-      el.innerHTML = "";
+      el.innerHTML = `<div class="vacio">No tenés nada pendiente por corregir</div>`;
       return;
     }
-    el.innerHTML = `<div class="corr-problemas-titulo">Días con algo pendiente este período</div>` +
-      problemas.map((p) => `
-        <div class="corr-problema-item" onclick="usarProblemaEnFormulario('${p.fecha}','${p.ingreso}','${p.egreso}')">
-          <span class="fecha">${formatearFecha(p.fecha)}</span>
-          <span class="motivo">${p.motivo}</span>
+    el.innerHTML = problemas.map((p, i) => `
+      <div class="corr-problema-item ${i === 0 ? "destacado" : ""}" onclick="usarProblemaEnFormulario('${p.fecha}','${p.ingreso}','${p.egreso}')">
+        <div>
+          <div class="fecha">${DIAS_SEMANA[new Date(p.fecha + "T00:00:00").getDay()]} ${p.fecha.slice(8, 10)}/${p.fecha.slice(5, 7)}</div>
+          <div class="detalle">${p.ingreso ? "Marcaste entrada " + p.ingreso : (p.egreso ? "Marcaste salida " + p.egreso : "")}</div>
         </div>
-      `).join("");
+        <span class="motivo">${p.motivo}</span>
+      </div>
+    `).join("");
+    if (problemas[0]) usarProblemaEnFormulario(problemas[0].fecha, problemas[0].ingreso, problemas[0].egreso);
   } catch (err) {
     el.innerHTML = "";
   }
@@ -920,10 +1452,10 @@ function usarProblemaEnFormulario(fecha, ingreso, egreso) {
   document.getElementById("corr-fecha").value = fecha;
   document.getElementById("corr-ingreso").value = ingreso || "";
   document.getElementById("corr-egreso").value = egreso || "";
-}
-
-function cerrarModal() {
-  document.getElementById("modal-overlay").classList.remove("abierto");
+  document.getElementById("corr-form-titulo").textContent = `Pedido para el ${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
+  document.querySelectorAll("#corr-problemas .corr-problema-item").forEach((el, i) => {
+    el.classList.toggle("destacado", el.getAttribute("onclick").includes(`'${fecha}'`));
+  });
 }
 
 async function enviarCorreccion() {
@@ -943,6 +1475,7 @@ async function enviarCorreccion() {
     document.getElementById("corr-ingreso").value = "";
     document.getElementById("corr-egreso").value = "";
     document.getElementById("corr-mensaje").value = "";
+    cargarBadgeSolicitudes();
   } catch (err) {
     errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
   }
@@ -962,6 +1495,30 @@ async function enviarCambio() {
       body: JSON.stringify({ fechaA, empleadoB, fechaB }),
     });
     okEl.textContent = "Listo, el pedido quedó pendiente de aprobación.";
+    cargarBadgeSolicitudes();
+  } catch (err) {
+    errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
+  }
+}
+
+async function enviarLicencia() {
+  const fechaDesde = document.getElementById("lic-fecha-desde").value;
+  const fechaHasta = document.getElementById("lic-fecha-hasta").value;
+  const tipo = document.getElementById("lic-tipo").value;
+  const mensaje = document.getElementById("lic-mensaje").value;
+  const errorEl = document.getElementById("lic-error");
+  const okEl = document.getElementById("lic-ok");
+  errorEl.textContent = ""; okEl.textContent = "";
+  if (!fechaDesde || !fechaHasta) { errorEl.textContent = "Elegí las dos fechas"; return; }
+  if (fechaHasta < fechaDesde) { errorEl.textContent = "La fecha hasta no puede ser anterior a la fecha desde"; return; }
+  try {
+    await apiFetch("/app/api/solicitar-licencia", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fechaDesde, fechaHasta, tipo, mensaje }),
+    });
+    okEl.textContent = "Listo, el pedido quedó pendiente de aprobación.";
+    document.getElementById("lic-mensaje").value = "";
+    cargarBadgeSolicitudes();
   } catch (err) {
     errorEl.textContent = err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : err.message;
   }
@@ -977,19 +1534,12 @@ function formatearFechaHora(iso) {
   return `${dd}/${mm} ${hh}:${mi}`;
 }
 
-// Texto corto de un horario -- para el resumen colapsado y para las lineas
-// de "antes"/"pediste" del detalle expandido.
 function formatearHorarioCorto(ingreso, egreso) {
   const i = ingreso && ingreso !== "—" ? ingreso : "sin ingreso";
   const e = egreso && egreso !== "—" ? egreso : "sin egreso";
   return `${i} · ${e}`;
 }
 
-// "Antes" viene del server (services/db.js -- snapshot si ya se aprobo,
-// filas_diarias actual si todavia no). "Pediste" se arma acá: el horario
-// que se propuso para el lado que se toco, completado con el que ya tenia
-// para el lado que no se toco -- asi se ve el dia completo que quedaria,
-// no solo el campo suelto que se corrigio.
 function detalleSolicitudCorreccion(s) {
   const antesTxt = s.antes ? formatearHorarioCorto(s.antes.ingreso, s.antes.egreso) : "sin fichada ese día";
   const pedisteIngreso = s.ingreso_propuesto || (s.antes ? s.antes.ingreso : null);
@@ -1010,14 +1560,680 @@ function detalleSolicitudCambio(s, miNombre) {
 function badgeEstadoSolicitud(estado) {
   if (estado === "pendiente") return `<span class="badge badge-warn">Pendiente</span>`;
   if (estado === "aprobada") return `<span class="badge badge-ok">Aprobada</span>`;
-  if (estado === "rechazada") return `<span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Rechazada</span>`;
+  if (estado === "rechazada") return `<span class="badge badge-danger">Rechazada</span>`;
   return `<span class="badge badge-muted">${estado}</span>`;
 }
 
-function toggleDetalleSolicitud(boton) {
-  const panel = boton.closest(".solicitud-top").nextElementSibling;
-  panel.classList.toggle("oculto");
-  boton.classList.toggle("abierto", !panel.classList.contains("oculto"));
+let ULTIMAS_SOLICITUDES = [];
+let filtroSolicitudesActual = "todas";
+
+function filtrarSolicitudes(filtro) {
+  filtroSolicitudesActual = filtro;
+  document.querySelectorAll(".filtro-chip").forEach((c) => c.classList.toggle("activo", c.dataset.filtro === filtro));
+  renderizarSolicitudes();
+}
+
+function renderizarSolicitudes() {
+  const el = document.getElementById("solicitudes-contenido");
+  const items = ULTIMAS_SOLICITUDES.filter((s) => {
+    if (filtroSolicitudesActual === "todas") return true;
+    if (filtroSolicitudesActual === "pendiente") return s.estado === "pendiente";
+    return s.estado !== "pendiente";
+  });
+  if (items.length === 0) {
+    el.innerHTML = `<div class="vacio">${filtroSolicitudesActual === "todas" ? "Todavía no hiciste ningún pedido" : "No hay pedidos en esta categoría"}</div>`;
+    return;
+  }
+  el.innerHTML = items.map((s) => {
+    const fechas = s.resueltoEn
+      ? `Pedido el ${formatearFechaHora(s.creadoEn)} · Resuelto el ${formatearFechaHora(s.resueltoEn)}`
+      : `Pedido el ${formatearFechaHora(s.creadoEn)}`;
+
+    let cuerpo = "";
+    if (s.tipo === "Corrección") {
+      cuerpo = `<div class="solicitud-comparativa">
+        <div class="col"><div class="etq">ANTES</div><div class="val">${s.antesTxt}</div></div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <div class="col pediste"><div class="etq">PEDISTE</div><div class="val">${s.pedisteTxt}</div></div>
+      </div>`;
+    } else if (s.tipo === "Cambio de turno") {
+      cuerpo = `<div class="solicitud-detalle-txt">${s.detalle}</div>`;
+    } else {
+      cuerpo = `<div class="solicitud-detalle-txt">${s.detalle}</div>`;
+      if (s.estado === "rechazada" && s.motivoRechazo) cuerpo += `<div class="solicitud-motivo">Motivo del admin: ${s.motivoRechazo}</div>`;
+    }
+
+    return `<div class="solicitud-item">
+      <div class="solicitud-top">
+        <span class="solicitud-tipo">${s.tipo}</span>
+        ${badgeEstadoSolicitud(s.estado)}
+      </div>
+      <div class="solicitud-resumen">${s.resumenFecha}</div>
+      ${cuerpo}
+      <div class="solicitud-fechas">${fechas}</div>
+    </div>`;
+  }).join("");
+}
+
+function fotosDeNovedad(fotoRaw) {
+  if (!fotoRaw) return [];
+  try {
+    const parsed = JSON.parse(fotoRaw);
+    return Array.isArray(parsed) ? parsed : [fotoRaw];
+  } catch {
+    return [fotoRaw];
+  }
+}
+
+function fechaLarga(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${DIAS_SEMANA_LARGO[dt.getDay()]} ${d} de ${MESES[m - 1]}`;
+}
+
+function horaDeISO(iso) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function toggleDiaNovedades(header) {
+  const expandido = header.getAttribute("aria-expanded") === "true";
+  header.setAttribute("aria-expanded", String(!expandido));
+  header.nextElementSibling.classList.toggle("oculto", expandido);
+}
+
+// ── Pestaña Mural ──
+
+const ETIQUETA_AUDIENCIA_MURAL_APP = {
+  mantenimiento: "Mantenimiento",
+  conserjeria: "Conserjería",
+  jefes: "Jefes/coordinadores",
+  individual: "Para vos",
+};
+
+function stepperMural(estado) {
+  const pasos = ["Publicada", "Reclamada", "En proceso", "Finalizada"];
+  const finalizada = estado === "finalizada";
+  const idxEstado = { publicada: 0, en_proceso: 2, finalizada: 3 }[estado] ?? 0;
+  return `<div class="mural-stepper">${pasos.map((nombrePaso, i) => {
+    const clase = finalizada || i < idxEstado ? "completo" : i === idxEstado ? "activo" : "";
+    return `<div class="mural-stepper-paso ${clase}"><div class="mural-stepper-linea"></div><div class="mural-stepper-dot"></div><div class="mural-stepper-label">${nombrePaso}</div></div>`;
+  }).join("")}</div>`;
+}
+
+function badgeVencimientoMuralApp(p) {
+  if (!p.vence_en) return "";
+  const hoy = new Date().toISOString().slice(0, 10);
+  const vencido = p.estado !== "finalizada" && p.vence_en < hoy;
+  return `<div class="mural-vencimiento-badge${vencido ? " vencido" : ""}">${vencido ? "⚠️ Venció el" : "Vence el"} ${p.vence_en}</div>`;
+}
+
+function fotosCierreMuralApp(p) {
+  if (p.estado !== "finalizada" || !p.fotos_cierre) return "";
+  const fotos = fotosDeNovedad(p.fotos_cierre);
+  if (!fotos.length) return "";
+  return `<div class="novedad-fotos" style="margin-top:8px">${fotos.map((f) => `<img src="${f}" class="novedad-foto" alt="Foto de cierre" onclick="abrirLightbox(this.src)">`).join("")}</div>`;
+}
+
+function comentariosMuralHtml(p) {
+  if (p.estado === "publicada") return "";
+  return `
+    <div class="novedad-comentarios">
+      ${(p.comentarios || []).map((c) => `<div class="novedad-comentario"><b>${escapeHtml(c.autor_nombre)}${c.autor_tipo === "admin" ? " (admin)" : ""}:</b> <span>${escapeHtml(c.texto)}</span></div>`).join("")}
+      <div class="novedad-comentario-form">
+        <input type="text" placeholder="Escribir un comentario…" id="mural-comentario-input-${p.id}" onkeydown="if(event.key==='Enter') enviarComentarioMural(${p.id})">
+        <button onclick="enviarComentarioMural(${p.id})">Enviar</button>
+      </div>
+    </div>`;
+}
+
+function tarjetaMural(p) {
+  const miNombre = localStorage.getItem("app_nombre") || "";
+  const laReclameYo = p.reclamado_por_nombre && p.reclamado_por_nombre === miNombre;
+  let accion = "";
+  if (p.estado === "publicada") {
+    accion = `<button class="mural-reclamar-btn" onclick="reclamarMuralApp(${p.id})">Reclamar esta tarea</button>`;
+  } else if (p.estado === "en_proceso") {
+    accion = laReclameYo
+      ? `<button class="mural-reclamar-btn" id="mural-btn-marcar-${p.id}" onclick="iniciarFinalizarMuralApp(${p.id})">Marcar como terminada</button>
+         <div class="mural-finalizar-wrap oculto" id="mural-finalizar-wrap-${p.id}">
+           <div class="recorrido-fotos-grid" id="mural-finalizar-fotos-grid-${p.id}"></div>
+           <input type="file" accept="image/*" multiple id="mural-finalizar-foto-input-${p.id}" style="display:none" onchange="onFotoFinalizarMuralSeleccionada(event, ${p.id})">
+           <button type="button" class="mural-finalizar-foto-btn" id="mural-finalizar-btn-foto-${p.id}" onclick="document.getElementById('mural-finalizar-foto-input-${p.id}').click()">📷 Agregar fotos (opcional)</button>
+           <button type="button" class="mural-reclamar-btn" onclick="confirmarFinalizarMuralApp(${p.id})">Confirmar finalización</button>
+         </div>`
+      : `<div class="mural-estado-txt">En proceso -- la tiene ${escapeHtml(p.reclamado_por_nombre)}.</div>`;
+  } else if (p.estado === "finalizada") {
+    accion = `<div class="mural-estado-txt">✅ Finalizada${p.reclamado_por_nombre ? " por " + escapeHtml(p.reclamado_por_nombre) : ""}.</div>`;
+  }
+  const fotoHtml = p.foto ? `<div class="novedad-fotos una-foto"><img src="${p.foto}" class="novedad-foto" alt="Foto adjunta" onclick="abrirLightbox(this.src)"></div>` : "";
+  return `
+    <div class="novedad-item">
+      ${ETIQUETA_AUDIENCIA_MURAL_APP[p.audiencia] ? `<span class="mural-audiencia-badge">${ETIQUETA_AUDIENCIA_MURAL_APP[p.audiencia]}</span>` : ""}
+      <div class="novedad-top">
+        <span class="novedad-punto">${escapeHtml(p.autor_nombre)}</span>
+        <span class="novedad-hora">${horaDeISO(p.creado_en)}</span>
+      </div>
+      ${badgeVencimientoMuralApp(p)}
+      <div class="novedad-texto">${escapeHtml(p.texto)}${leerVozActiva() ? `<button class="btn-leer-voz" data-texto="${escapeHtml(p.texto)}" onclick="leerTexto(this.dataset.texto)" aria-label="Escuchar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>` : ""}</div>
+      ${fotoHtml}
+      ${stepperMural(p.estado)}
+      ${accion}
+      ${fotosCierreMuralApp(p)}
+      ${comentariosMuralHtml(p)}
+    </div>
+  `;
+}
+
+async function cargarMural() {
+  const el = document.getElementById("mural-contenido");
+  const expandidosPrevios = new Set(
+    Array.from(el.querySelectorAll('.novedades-dia-header[aria-expanded="true"]')).map((h) => h.dataset.fecha)
+  );
+  el.innerHTML = `<div class="vacio">Cargando…</div>`;
+  try {
+    const data = await apiFetch("/app/api/mural");
+    const periodoInput = document.getElementById("mural-periodo");
+    const mes = periodoInput && periodoInput.value ? periodoInput.value : null;
+    const posts = mes ? data.posts.filter((p) => p.creado_en.startsWith(mes)) : data.posts;
+    if (!posts.length) {
+      el.innerHTML = `<div class="vacio">${mes ? "Nada publicado ese mes" : "Todavía no hay nada publicado"}</div>`;
+      return;
+    }
+    const grupos = [];
+    posts.forEach((p) => {
+      const fecha = p.creado_en.slice(0, 10);
+      let grupo = grupos.find((g) => g.fecha === fecha);
+      if (!grupo) { grupo = { fecha, items: [] }; grupos.push(grupo); }
+      grupo.items.push(p);
+    });
+    el.innerHTML = grupos.map((g, i) => {
+      const expandido = expandidosPrevios.size ? expandidosPrevios.has(g.fecha) : i === 0;
+      return `
+        <div class="novedades-dia-grupo">
+          <button type="button" class="novedades-dia-header" data-fecha="${g.fecha}" onclick="toggleDiaNovedades(this)" aria-expanded="${expandido}">
+            <span class="novedades-dia-titulo">${fechaLarga(g.fecha)}</span>
+            <span class="novedades-dia-cant">${g.items.length}</span>
+            <svg class="novedades-dia-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="novedades-dia-items${expandido ? "" : " oculto"}">
+            ${g.items.map(tarjetaMural).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+    el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
+  }
+}
+
+async function reclamarMuralApp(id) {
+  try {
+    await apiFetch(`/app/api/mural/${id}/reclamar`, { method: "POST" });
+    cargarMural();
+  } catch (err) {
+    alert(err.message || "No se pudo reclamar");
+  }
+}
+
+let muralFotosFinalizarPorPost = {};
+
+function iniciarFinalizarMuralApp(id) {
+  muralFotosFinalizarPorPost[id] = muralFotosFinalizarPorPost[id] || [];
+  const btnMarcar = document.getElementById(`mural-btn-marcar-${id}`);
+  if (btnMarcar) btnMarcar.classList.add("oculto");
+  const wrap = document.getElementById(`mural-finalizar-wrap-${id}`);
+  if (wrap) wrap.classList.remove("oculto");
+  renderFotosFinalizarMural(id);
+}
+
+function onFotoFinalizarMuralSeleccionada(event, id) {
+  const actuales = muralFotosFinalizarPorPost[id] || [];
+  const archivos = Array.from(event.target.files || []).slice(0, 5 - actuales.length);
+  event.target.value = "";
+  archivos.forEach((archivo) => {
+    const lector = new FileReader();
+    lector.onload = () => {
+      muralFotosFinalizarPorPost[id] = muralFotosFinalizarPorPost[id] || [];
+      muralFotosFinalizarPorPost[id].push(lector.result);
+      renderFotosFinalizarMural(id);
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+function renderFotosFinalizarMural(id) {
+  const fotos = muralFotosFinalizarPorPost[id] || [];
+  const grid = document.getElementById(`mural-finalizar-fotos-grid-${id}`);
+  if (!grid) return;
+  grid.innerHTML = fotos.map((foto, i) => `
+    <div class="recorrido-foto-thumb">
+      <img src="${foto}" alt="Foto ${i + 1}">
+      <button type="button" onclick="quitarFotoFinalizarMural(${id}, ${i})" aria-label="Quitar foto">✕</button>
+    </div>
+  `).join("");
+  const btnAgregar = document.getElementById(`mural-finalizar-btn-foto-${id}`);
+  if (btnAgregar) {
+    btnAgregar.disabled = fotos.length >= 5;
+    btnAgregar.textContent = fotos.length >= 5 ? "Máximo 5 fotos" : `📷 Agregar fotos${fotos.length ? ` (${fotos.length}/5)` : " (opcional)"}`;
+  }
+}
+
+function quitarFotoFinalizarMural(id, indice) {
+  muralFotosFinalizarPorPost[id].splice(indice, 1);
+  renderFotosFinalizarMural(id);
+}
+
+async function confirmarFinalizarMuralApp(id) {
+  try {
+    await apiFetch(`/app/api/mural/${id}/finalizar`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fotos: muralFotosFinalizarPorPost[id] || [] }),
+    });
+    delete muralFotosFinalizarPorPost[id];
+    cargarMural();
+  } catch (err) {
+    alert(err.message || "No se pudo finalizar");
+  }
+}
+
+async function enviarComentarioMural(postId) {
+  const input = document.getElementById("mural-comentario-input-" + postId);
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.disabled = true;
+  try {
+    await apiFetch(`/app/api/mural/${postId}/comentarios`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto }),
+    });
+    const miNombre = localStorage.getItem("app_nombre") || "Vos";
+    const div = document.createElement("div");
+    div.className = "novedad-comentario";
+    div.innerHTML = `<b>${escapeHtml(miNombre)}:</b> <span>${escapeHtml(texto)}</span>`;
+    const form = input.closest(".novedad-comentario-form");
+    form.parentElement.insertBefore(div, form);
+    input.value = "";
+    input.disabled = false;
+  } catch (err) {
+    input.disabled = false;
+    alert(err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : "No se pudo enviar el comentario");
+  }
+}
+
+function abrirLightbox(src) {
+  document.getElementById("lightbox-img").src = src;
+  document.getElementById("lightbox-overlay").classList.remove("oculto");
+}
+
+function cerrarLightbox(event) {
+  if (event) event.stopPropagation();
+  document.getElementById("lightbox-overlay").classList.add("oculto");
+  document.getElementById("lightbox-img").src = "";
+}
+
+// ── Accesibilidad: tamaño de letra y leer en voz alta ──
+function aplicarTamanoLetra(tam) {
+  document.documentElement.classList.remove("letra-chico", "letra-grande");
+  if (tam === "chico") document.documentElement.classList.add("letra-chico");
+  if (tam === "grande") document.documentElement.classList.add("letra-grande");
+  document.querySelectorAll(".tamano-letra-btn").forEach((b) => b.classList.toggle("activo", b.dataset.tam === tam));
+}
+
+function cambiarTamanoLetra(tam) {
+  localStorage.setItem("app_tamano_letra", tam);
+  aplicarTamanoLetra(tam);
+}
+
+aplicarTamanoLetra(localStorage.getItem("app_tamano_letra") || "mediano");
+
+function leerVozActiva() {
+  return localStorage.getItem("app_leer_voz") === "1";
+}
+
+function toggleLeerVoz() {
+  const activo = !leerVozActiva();
+  localStorage.setItem("app_leer_voz", activo ? "1" : "0");
+  const sw = document.getElementById("leer-voz-switch");
+  if (sw) sw.classList.toggle("on", activo);
+  if (!document.getElementById("tab-mural").classList.contains("oculto")) cargarMural();
+}
+
+function leerTexto(texto) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(texto);
+  utterance.lang = "es-AR";
+  window.speechSynthesis.speak(utterance);
+}
+
+// ── Perfil del empleado (foto + usuario) -- el nombre no se edita aca
+// (ver la nota del endpoint en appController.js). ──
+function pintarAvatarApp(perfil) {
+  const iniciales = inicialesDeNombre(perfil?.nombre || "");
+  const btn = document.getElementById("avatar-btn");
+  if (btn) {
+    if (perfil?.foto) btn.innerHTML = `<img src="${perfil.foto}" alt="Foto de perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else btn.textContent = iniciales;
+  }
+  const preview = document.getElementById("perfil-avatar-preview");
+  if (preview) {
+    if (perfil?.foto) preview.innerHTML = `<img src="${perfil.foto}" alt="Foto de perfil">`;
+    else preview.textContent = iniciales;
+  }
+  const cuentaAvatar = document.getElementById("cuenta-avatar");
+  if (cuentaAvatar) {
+    if (perfil?.foto) cuentaAvatar.innerHTML = `<img src="${perfil.foto}" alt="Foto de perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    else cuentaAvatar.textContent = iniciales;
+  }
+  const fotoBtn = document.getElementById("perfil-foto-btn");
+  if (fotoBtn) fotoBtn.textContent = perfil?.foto ? "Cambiar foto" : "Agregar foto";
+}
+
+let perfilFotoPendienteApp = null;
+
+async function cargarPerfilApp() {
+  try {
+    const { perfil } = await apiFetch("/app/api/perfil");
+    const nombreInput = document.getElementById("perfil-nombre");
+    const usuarioInput = document.getElementById("perfil-usuario");
+    if (nombreInput) nombreInput.value = perfil?.nombre || "";
+    if (usuarioInput) usuarioInput.value = perfil?.usuario || "";
+    perfilFotoPendienteApp = null;
+    pintarAvatarApp(perfil);
+  } catch (err) { /* si falla, se deja como esta */ }
+}
+
+document.getElementById("perfil-foto-btn").addEventListener("click", () => {
+  document.getElementById("perfil-foto-input").click();
+});
+document.getElementById("perfil-foto-input").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) { alert("La foto no puede pesar más de 8MB"); e.target.value = ""; return; }
+  const lector = new FileReader();
+  lector.onload = () => abrirRecorteFoto(lector.result);
+  lector.readAsDataURL(file);
+});
+
+// ── Recorte de foto de perfil (canvas, sin librerias externas) -- mismo
+// codigo que ya usa el panel. Arrastrar mueve la imagen, el slider
+// acerca/aleja; al guardar se exporta solo lo que se ve dentro del
+// circulo, en un cuadrado de mayor resolucion. ──
+const CROP_VIEWPORT = 260;
+const CROP_SALIDA = 480;
+let cropImg = null;
+let cropBaseScale = 1;
+let cropScale = 1;
+let cropOffsetX = 0;
+let cropOffsetY = 0;
+let cropArrastrando = false;
+let cropArrastreInicio = null;
+let cropOffsetInicio = null;
+
+async function abrirRecorteFoto(dataUrl) {
+  let imagen;
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    imagen = await createImageBitmap(blob, { imageOrientation: "from-image" });
+  } catch (err) {
+    imagen = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = dataUrl;
+    });
+  }
+  cropImg = imagen;
+  cropBaseScale = Math.max(CROP_VIEWPORT / imagen.width, CROP_VIEWPORT / imagen.height);
+  cropScale = cropBaseScale;
+  cropOffsetX = 0; cropOffsetY = 0;
+  document.getElementById("crop-zoom").value = "1";
+  document.getElementById("crop-overlay").classList.remove("oculto");
+  dibujarRecorte();
+}
+
+function clampearOffsetCrop() {
+  const iw = cropImg.width * cropScale;
+  const ih = cropImg.height * cropScale;
+  const maxX = Math.max(0, (iw - CROP_VIEWPORT) / 2);
+  const maxY = Math.max(0, (ih - CROP_VIEWPORT) / 2);
+  cropOffsetX = Math.max(-maxX, Math.min(maxX, cropOffsetX));
+  cropOffsetY = Math.max(-maxY, Math.min(maxY, cropOffsetY));
+}
+
+function dibujarRecorte() {
+  if (!cropImg) return;
+  const canvas = document.getElementById("crop-canvas");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  clampearOffsetCrop();
+  ctx.clearRect(0, 0, W, H);
+  const iw = cropImg.width * cropScale;
+  const ih = cropImg.height * cropScale;
+  const cx = W / 2 + cropOffsetX;
+  const cy = H / 2 + cropOffsetY;
+  ctx.drawImage(cropImg, cx - iw / 2, cy - ih / 2, iw, ih);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  const radio = Math.min(W, H) / 2 - 4;
+  ctx.moveTo(W / 2 + radio, H / 2);
+  ctx.arc(W / 2, H / 2, radio, 0, Math.PI * 2, true);
+  ctx.fill("evenodd");
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(W / 2, H / 2, radio, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function posicionPuntero(evento) {
+  const punto = evento.touches ? evento.touches[0] : evento;
+  return { x: punto.clientX, y: punto.clientY };
+}
+
+function iniciarDragCrop(evento) {
+  if (!cropImg) return;
+  evento.preventDefault();
+  cropArrastrando = true;
+  cropArrastreInicio = posicionPuntero(evento);
+  cropOffsetInicio = { x: cropOffsetX, y: cropOffsetY };
+}
+
+function moverDragCrop(evento) {
+  if (!cropArrastrando) return;
+  evento.preventDefault();
+  const p = posicionPuntero(evento);
+  cropOffsetX = cropOffsetInicio.x + (p.x - cropArrastreInicio.x);
+  cropOffsetY = cropOffsetInicio.y + (p.y - cropArrastreInicio.y);
+  dibujarRecorte();
+}
+
+function terminarDragCrop() { cropArrastrando = false; }
+
+const cropCanvasEl = document.getElementById("crop-canvas");
+cropCanvasEl.addEventListener("mousedown", iniciarDragCrop);
+window.addEventListener("mousemove", moverDragCrop);
+window.addEventListener("mouseup", terminarDragCrop);
+cropCanvasEl.addEventListener("touchstart", iniciarDragCrop, { passive: false });
+cropCanvasEl.addEventListener("touchmove", moverDragCrop, { passive: false });
+cropCanvasEl.addEventListener("touchend", terminarDragCrop);
+
+document.getElementById("crop-zoom").addEventListener("input", (e) => {
+  cropScale = cropBaseScale * parseFloat(e.target.value);
+  dibujarRecorte();
+});
+
+document.getElementById("crop-cancelar-btn").addEventListener("click", () => {
+  document.getElementById("crop-overlay").classList.add("oculto");
+  document.getElementById("perfil-foto-input").value = "";
+  cropImg = null;
+});
+
+document.getElementById("crop-guardar-btn").addEventListener("click", async () => {
+  const salida = document.createElement("canvas");
+  salida.width = CROP_SALIDA; salida.height = CROP_SALIDA;
+  const ctx = salida.getContext("2d");
+  const factor = CROP_SALIDA / CROP_VIEWPORT;
+  const iw = cropImg.width * cropScale * factor;
+  const ih = cropImg.height * cropScale * factor;
+  const cx = CROP_SALIDA / 2 + cropOffsetX * factor;
+  const cy = CROP_SALIDA / 2 + cropOffsetY * factor;
+  ctx.drawImage(cropImg, cx - iw / 2, cy - ih / 2, iw, ih);
+  perfilFotoPendienteApp = salida.toDataURL("image/jpeg", 0.88);
+  pintarAvatarApp({ nombre: document.getElementById("perfil-nombre").value, foto: perfilFotoPendienteApp });
+  document.getElementById("crop-overlay").classList.add("oculto");
+  document.getElementById("perfil-foto-input").value = "";
+  cropImg = null;
+  try {
+    await guardarPerfilActualApp();
+  } catch (err) {
+    alert(err.message || "No se pudo guardar la foto");
+  }
+});
+
+async function guardarPerfilActualApp() {
+  const { perfil } = await apiFetch("/app/api/perfil", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      usuario: document.getElementById("perfil-usuario").value,
+      foto: perfilFotoPendienteApp,
+    }),
+  });
+  perfilFotoPendienteApp = null;
+  pintarAvatarApp(perfil);
+  return perfil;
+}
+
+document.getElementById("perfil-guardar-btn").addEventListener("click", async () => {
+  const okEl = document.getElementById("perfil-ok");
+  okEl.textContent = "";
+  try {
+    await guardarPerfilActualApp();
+    okEl.textContent = "Perfil guardado.";
+  } catch (err) {
+    alert(err.message || "No se pudo guardar el perfil");
+  }
+});
+
+// --- Notificaciones push (Web Push) ---------------------------------
+
+function esIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function esStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+function notifSoportadas() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+// Nucleo de la suscripcion push (permiso + pushManager.subscribe + avisar
+// al backend) -- sin tocar ningun elemento de UI especifico, asi lo puede
+// llamar tanto el boton de Configuracion como el banner del Mural.
+async function suscribirsePush() {
+  if (!notifSoportadas()) {
+    throw new Error(esIOS() && !esStandalone()
+      ? "Primero agregá la app a tu pantalla de inicio (botón Compartir → Agregar a inicio)."
+      : "Tu navegador no soporta notificaciones push.");
+  }
+  const permiso = await Notification.requestPermission();
+  if (permiso !== "granted") throw new Error("No diste permiso para las notificaciones.");
+  const { key } = await apiFetch("/app/api/push/vapid-public-key");
+  const registro = await navigator.serviceWorker.ready;
+  let sub = await registro.pushManager.getSubscription();
+  if (!sub) {
+    sub = await registro.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key),
+    });
+  }
+  await apiFetch("/app/api/push/suscribirse", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(sub.toJSON()),
+  });
+}
+
+async function activarNotificaciones() {
+  const btn = document.getElementById("btn-activar-notif");
+  const estadoEl = document.getElementById("config-notif-estado");
+  btn.disabled = true;
+  try {
+    await suscribirsePush();
+    actualizarEstadoNotifConfig();
+    actualizarBannerMural();
+    return true;
+  } catch (err) {
+    console.error(err);
+    estadoEl.textContent = err.message || "No se pudieron activar las notificaciones.";
+    btn.disabled = false;
+    return false;
+  }
+}
+
+// ── Banner de notificaciones del Mural (estilo ATERYM: inline, con ✕) ──
+function actualizarBannerMural() {
+  const banner = document.getElementById("mural-banner-notif");
+  if (!banner) return;
+  const cerrado = localStorage.getItem("app_mural_banner_cerrado") === "1";
+  const yaActivas = notifSoportadas() && Notification.permission === "granted";
+  banner.classList.toggle("oculto", cerrado || yaActivas);
+}
+
+function cerrarBannerMural() {
+  localStorage.setItem("app_mural_banner_cerrado", "1");
+  const banner = document.getElementById("mural-banner-notif");
+  if (banner) banner.classList.add("oculto");
+}
+
+async function activarNotifDesdeBannerMural(btn) {
+  btn.disabled = true;
+  const estadoEl = document.getElementById("mural-banner-estado");
+  estadoEl.textContent = "";
+  try {
+    await suscribirsePush();
+    actualizarEstadoNotifConfig();
+    cerrarBannerMural();
+  } catch (err) {
+    estadoEl.textContent = err.message || "No se pudieron activar las notificaciones.";
+    btn.disabled = false;
+  }
+}
+
+function actualizarEstadoNotifConfig() {
+  const btn = document.getElementById("btn-activar-notif");
+  const estadoEl = document.getElementById("config-notif-estado");
+  if (!notifSoportadas()) {
+    btn.disabled = true;
+    estadoEl.textContent = esIOS() && !esStandalone()
+      ? "Agregá la app a tu pantalla de inicio para poder activarlas."
+      : "Tu navegador no soporta notificaciones push.";
+    return;
+  }
+  if (Notification.permission === "granted") {
+    btn.textContent = "🔔 Notificaciones activadas";
+    btn.disabled = true;
+    estadoEl.textContent = "";
+  } else if (Notification.permission === "denied") {
+    btn.disabled = true;
+    estadoEl.textContent = "Las bloqueaste desde el navegador -- para activarlas de nuevo, cambiá el permiso de notificaciones del sitio.";
+  } else {
+    btn.textContent = "🔔 Activar notificaciones";
+    btn.disabled = false;
+    estadoEl.textContent = "";
+  }
 }
 
 async function cargarSolicitudes() {
@@ -1026,7 +2242,7 @@ async function cargarSolicitudes() {
   const miNombre = localStorage.getItem("app_nombre") || "";
   try {
     const data = await apiFetch("/app/api/mis-solicitudes");
-    const items = [
+    ULTIMAS_SOLICITUDES = [
       ...(data.correcciones || []).map((s) => {
         const { antesTxt, pedisteTxt } = detalleSolicitudCorreccion(s);
         return {
@@ -1036,84 +2252,130 @@ async function cargarSolicitudes() {
       }),
       ...(data.cambios || []).map((s) => ({
         tipo: "Cambio de turno", resumenFecha: `${formatearFecha(s.fecha_a)} ↔ ${formatearFecha(s.fecha_b)}`,
-        detalleCambio: detalleSolicitudCambio(s, miNombre),
+        detalle: detalleSolicitudCambio(s, miNombre),
+        estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
+      })),
+      ...(data.licencias || []).map((s) => ({
+        tipo: "Licencia", resumenFecha: `${formatearFecha(s.fecha_desde)} al ${formatearFecha(s.fecha_hasta)} · ${s.tipo}`,
+        detalle: s.mensaje || `Pediste ${s.tipo.toLowerCase()} del ${s.fecha_desde.split("-").reverse().join("/")} al ${s.fecha_hasta.split("-").reverse().join("/")}`,
+        motivoRechazo: s.motivo_rechazo,
         estado: s.estado, creadoEn: s.creado_en, resueltoEn: s.resuelto_en,
       })),
     ].sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
-
-    if (items.length === 0) {
-      el.innerHTML = `<div class="vacio">Todavía no hiciste ningún pedido</div>`;
-      return;
-    }
-    el.innerHTML = items.map((s) => {
-      const fechas = s.resueltoEn
-        ? `Pedido el ${formatearFechaHora(s.creadoEn)} · Resuelto el ${formatearFechaHora(s.resueltoEn)}`
-        : `Pedido el ${formatearFechaHora(s.creadoEn)}`;
-
-      const cuerpoDetalle = s.tipo === "Corrección"
-        ? `<div class="solicitud-cambio-linea"><span class="solicitud-cambio-label">Antes</span><span>${s.antesTxt}</span></div>
-           <div class="solicitud-cambio-linea"><span class="solicitud-cambio-label">Pediste</span><span>${s.pedisteTxt}</span></div>`
-        : `<div class="solicitud-detalle">${s.detalleCambio}</div>`;
-
-      return `<div class="solicitud-item">
-        <div class="solicitud-top">
-          <div class="solicitud-top-izq">
-            <span class="solicitud-tipo">${s.tipo}</span>
-            <span class="solicitud-resumen-fecha">${s.resumenFecha}</span>
-          </div>
-          <div class="solicitud-top-der">
-            ${badgeEstadoSolicitud(s.estado)}
-            <button class="solicitud-toggle-btn" onclick="toggleDetalleSolicitud(this)">
-              Más detalles
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="solicitud-detalle-panel oculto">
-          ${cuerpoDetalle}
-          <div class="solicitud-fechas">${fechas}</div>
-        </div>
-      </div>`;
-    }).join("");
+    filtroSolicitudesActual = "todas";
+    document.querySelectorAll(".filtro-chip").forEach((c) => c.classList.toggle("activo", c.dataset.filtro === "todas"));
+    renderizarSolicitudes();
   } catch (err) {
     if (err.message === "Sesión vencida") return;
     el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
   }
 }
 
-// Recorrido diario -- PROTOTIPO visual (pedido explicito: dejar la logica
-// real de escaneo de QR para mas adelante). El cronometro y las
-// observaciones cargadas SI son reales (quedan en memoria durante el
-// recorrido); lo unico simulado es la lectura del QR en si -- cuando se
-// arme eso, simularEscaneoRecorrido() es el unico lugar a reemplazar por
-// la lectura real de la camara.
-//
-// PLACEHOLDER: solo el primer punto tiene nombre/checklist reales (el que
-// dio el admin de ejemplo). Los otros 14 quedan "a definir" hasta que
-// pase la lista completa de puntos del recorrido -- ahi se completa este
-// array nada mas, no hace falta tocar el resto de la logica.
+// Badge de "pendientes" en la barra inferior -- se calcula al entrar a la
+// app y despues de cada pedido nuevo, sin esperar a que se visite la
+// pestaña de Solicitudes.
+async function cargarBadgeSolicitudes() {
+  try {
+    const data = await apiFetch("/app/api/mis-solicitudes");
+    const pendientes = [...(data.correcciones || []), ...(data.cambios || []), ...(data.licencias || [])]
+      .filter((s) => s.estado === "pendiente").length;
+    const badge = document.getElementById("nav-badge-solicitudes");
+    badge.textContent = pendientes;
+    badge.classList.toggle("oculto", pendientes === 0);
+  } catch (err) { /* silencioso -- no es critico para el resto de la app */ }
+}
+
+// Recorrido diario -- cronometro, checklist, escaneo real de QR (camara +
+// jsQR) y observaciones (texto + foto), todo real. Los 10 puntos son los
+// 10 QR fisicos definidos con el admin (agrupados por cercania para no
+// esparcir un QR por cada tablero individual).
 const PUNTOS_RECORRIDO = [
-  { nombre: "SALA DE MAQUINAS -1", checklist: ["Revisar bombas", "Revisar tableros"] },
-  { nombre: "Punto 2 (a definir)", checklist: [] },
-  { nombre: "Punto 3 (a definir)", checklist: [] },
-  { nombre: "Punto 4 (a definir)", checklist: [] },
-  { nombre: "Punto 5 (a definir)", checklist: [] },
-  { nombre: "Punto 6 (a definir)", checklist: [] },
-  { nombre: "Punto 7 (a definir)", checklist: [] },
-  { nombre: "Punto 8 (a definir)", checklist: [] },
-  { nombre: "Punto 9 (a definir)", checklist: [] },
-  { nombre: "Punto 10 (a definir)", checklist: [] },
-  { nombre: "Punto 11 (a definir)", checklist: [] },
-  { nombre: "Punto 12 (a definir)", checklist: [] },
-  { nombre: "Punto 13 (a definir)", checklist: [] },
-  { nombre: "Punto 14 (a definir)", checklist: [] },
-  { nombre: "Punto 15 (a definir)", checklist: [] },
+  {
+    nombre: "Nivel 0 — Sala de tanques de recupero",
+    checklist: [
+      "Agua en el tanque",
+      "Bombas del tanque",
+      "Tablero de ventilación: todo en automático",
+      "Sector de portón (entrada y salida)",
+      "Turno tarde: luces de servicios generales (fachada, canteros, etc.) todas prendidas",
+    ],
+  },
+  {
+    nombre: "Nivel -1 — Riego/Pileta, Sala de Ventilación, Medidores, TGBT",
+    checklist: [
+      "Bombas de llenado de pileta y riego",
+      "Boya del tanque de riego/pileta",
+      "Tablero de sala de ventilación 1: todo en automático",
+      "Tablero termomecánica C: todo en automático",
+      "Sala de medidores: que haya luz",
+      "Tableros de sala de rack/TGBT: todo OK",
+      "Tablero TCE: iluminación, tomas y carteles de emergencia",
+    ],
+  },
+  {
+    nombre: "Nivel -1 — Tablero (otra mitad) + Ventilación 2",
+    checklist: [
+      "Tablero de la otra mitad del nivel -1: todo OK",
+      "Tablero de sala de ventilación 2: todo en automático",
+    ],
+  },
+  {
+    nombre: "Nivel -1 — Sala de máquinas -1",
+    checklist: [
+      "UTA prendida y en funcionamiento",
+      "Flotador del tanque de agua potable",
+      "Tablero de electrocorrosión: todo ON",
+      "TE 07 — tablero de control de ventilación: todo en automático",
+    ],
+  },
+  {
+    nombre: "Nivel -2 — Sala de máquinas + Tablero de pileta",
+    checklist: [
+      "Bombas multietapas: nivel bajo, medio y alto",
+      "Tablero de incendio (ON)",
+      "Termotanque del sistema bajo",
+      "Calderas de pileta",
+      "Jacuzzi",
+      "Tablero de pileta: térmicas subidas, todo ON",
+    ],
+  },
+  {
+    nombre: "Nivel -2 — Bombas cloacales canal central + Tablero A/B",
+    checklist: [
+      "Bombas cloacales del canal central",
+      "Tablero A (núcleo 3): servicios generales ON",
+      "Tablero B (núcleo 4): servicios generales ON",
+    ],
+  },
+  {
+    nombre: "Nivel -2 — Bombas cloacales, pluviales y depresora",
+    checklist: [
+      "Bombas cloacales",
+      "Bombas pluviales",
+      "Depresora de napa",
+      "Pozos relentizadores",
+    ],
+  },
+  {
+    nombre: "Nivel -2 — Grupo electrógeno",
+    checklist: ["Verificar que esté en automático y prendido"],
+  },
+  {
+    nombre: "Nivel -2 — Sala de Daikin",
+    checklist: ["Verificar sala de Daikin"],
+  },
+  {
+    nombre: "Azotea",
+    checklist: ["Verificar azotea"],
+  },
 ];
 const TOTAL_PUNTOS_RECORRIDO = PUNTOS_RECORRIDO.length;
 let recorridoTimerId = null;
 let recorridoInicioMs = null;
 let recorridoPuntoActual = 0;
 let recorridoObservaciones = [];
+let recorridoFotosActuales = [];
+const MAX_FOTOS_RECORRIDO = 5;
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -1123,6 +2385,13 @@ function escapeHtml(str) {
 
 function abrirRecorrido() {
   document.getElementById("recorrido-overlay").classList.remove("oculto");
+  document.getElementById("recorrido-cant-puntos").textContent = TOTAL_PUNTOS_RECORRIDO;
+  document.getElementById("recorrido-resumen-puntos").innerHTML = PUNTOS_RECORRIDO.map((p, i) => `
+    <div class="recorrido-resumen-punto-item">
+      <div class="recorrido-resumen-punto-num">${i + 1}</div>
+      <div class="recorrido-resumen-punto-nombre">${escapeHtml(p.nombre)}</div>
+    </div>
+  `).join("");
   mostrarEstadoRecorrido("confirmar");
 }
 
@@ -1137,12 +2406,27 @@ function detenerTimerRecorrido() {
 
 function cerrarRecorrido() {
   detenerTimerRecorrido();
+  pararCamaraQR();
   document.getElementById("recorrido-overlay").classList.add("oculto");
+  ocultarConfirmCancelarRecorrido();
 }
 
+// El boton "Cancelar recorrido" ya no cancela directo -- primero pide
+// confirmacion (modal aparte) para no perder el progreso con un toque
+// accidental durante el recorrido fisico por el edificio.
 function cancelarRecorrido() {
+  document.getElementById("recorrido-cancelar-confirm").classList.remove("oculto");
+}
+
+function ocultarConfirmCancelarRecorrido() {
+  document.getElementById("recorrido-cancelar-confirm").classList.add("oculto");
+}
+
+function confirmarCancelarRecorrido() {
+  ocultarConfirmCancelarRecorrido();
   detenerTimerRecorrido();
-  cerrarRecorrido();
+  pararCamaraQR();
+  document.getElementById("recorrido-overlay").classList.add("oculto");
 }
 
 function actualizarTimerRecorrido() {
@@ -1158,10 +2442,46 @@ function actualizarProgresoRecorrido() {
   document.getElementById("recorrido-barra-fill").style.width = `${(recorridoPuntoActual / TOTAL_PUNTOS_RECORRIDO) * 100}%`;
 }
 
-// Muestra el punto actual en la pantalla previa al escaneo (nombre nada
-// mas) -- el checklist recien se revela despues de "escanear", junto con
-// el campo de observaciones.
+function renderFotosRecorrido() {
+  document.getElementById("recorrido-fotos-grid").innerHTML = recorridoFotosActuales.map((foto, i) => `
+    <div class="recorrido-foto-thumb">
+      <img src="${foto}" alt="Foto ${i + 1}">
+      <button type="button" onclick="quitarFotoRecorrido(${i})" aria-label="Quitar foto">✕</button>
+    </div>
+  `).join("");
+  const btn = document.getElementById("recorrido-foto-btn");
+  btn.disabled = recorridoFotosActuales.length >= MAX_FOTOS_RECORRIDO;
+  btn.textContent = recorridoFotosActuales.length >= MAX_FOTOS_RECORRIDO
+    ? `Máximo ${MAX_FOTOS_RECORRIDO} fotos`
+    : `📷 Agregar foto${recorridoFotosActuales.length ? ` (${recorridoFotosActuales.length}/${MAX_FOTOS_RECORRIDO})` : ""}`;
+}
+
+function quitarFotoRecorrido(indice) {
+  recorridoFotosActuales.splice(indice, 1);
+  renderFotosRecorrido();
+}
+
+// Se puede cargar mas de una foto por punto (hasta MAX_FOTOS_RECORRIDO) --
+// cada seleccion (una o varias, si el celular lo permite) se agrega a la
+// lista en vez de reemplazar la anterior.
+function onFotoRecorridoSeleccionada(event) {
+  const archivos = Array.from(event.target.files || []).slice(0, MAX_FOTOS_RECORRIDO - recorridoFotosActuales.length);
+  event.target.value = "";
+  archivos.forEach((archivo) => {
+    const lector = new FileReader();
+    lector.onload = () => {
+      recorridoFotosActuales.push(lector.result);
+      renderFotosRecorrido();
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+// Muestra el punto actual en la pantalla previa al escaneo -- el
+// checklist se ve ANTES de escanear (para revisar todo en el lugar);
+// despues de "escanear" solo queda cargar observaciones (texto + foto).
 function mostrarPuntoActual() {
+  pararCamaraQR();
   const punto = PUNTOS_RECORRIDO[recorridoPuntoActual];
   document.getElementById("recorrido-punto-nombre-pre").textContent = punto.nombre;
   document.getElementById("recorrido-punto-nombre-post").textContent = punto.nombre;
@@ -1170,8 +2490,22 @@ function mostrarPuntoActual() {
     ? punto.checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
     : `<li>Sin checklist cargado para este punto todavía</li>`;
   document.getElementById("recorrido-observaciones").value = "";
+  recorridoFotosActuales = [];
+  renderFotosRecorrido();
   document.getElementById("recorrido-pre-escaneo").classList.remove("oculto");
   document.getElementById("recorrido-post-escaneo").classList.add("oculto");
+  document.getElementById("btn-punto-anterior").disabled = recorridoPuntoActual === 0;
+}
+
+// Por si alguien se olvida de revisar algo del punto anterior -- vuelve
+// un punto atras y descarta la observacion que se le habia cargado a ese
+// punto (se vuelve a completar desde cero al re-confirmarlo).
+function volverPuntoAnterior() {
+  if (recorridoPuntoActual === 0) return;
+  recorridoPuntoActual--;
+  recorridoObservaciones.pop();
+  actualizarProgresoRecorrido();
+  mostrarPuntoActual();
 }
 
 function iniciarRecorrido() {
@@ -1185,33 +2519,139 @@ function iniciarRecorrido() {
   recorridoTimerId = setInterval(actualizarTimerRecorrido, 1000);
 }
 
-// "Escanear" el QR revela el checklist de ese punto + el campo de
-// observaciones -- todavía no avanza al siguiente (eso lo hace
-// confirmarPuntoRecorrido, despues de que cargue lo que encontró).
-function simularEscaneoRecorrido() {
+// "Escanear" el QR pasa a la pantalla de observaciones (texto + foto) --
+// el checklist de este punto ya se revisó antes de escanear, no se repite
+// aca. Todavia no avanza al siguiente punto (eso lo hace
+// confirmarPuntoRecorrido, despues de cargar lo que se encontró).
+function codigoEsperadoPuntoRecorrido(indice) {
+  return `MC3333-RECORRIDO-P${indice + 1}`;
+}
+
+let recorridoStreamQR = null;
+let recorridoScanRAF = null;
+let recorridoUltimoQrInvalidoMs = 0;
+
+async function iniciarEscaneoQR() {
+  const idle = document.getElementById("recorrido-viewfinder-idle");
+  const cam = document.getElementById("recorrido-viewfinder-cam");
+  const msg = document.getElementById("recorrido-scan-msg");
+  const errorIdle = document.getElementById("recorrido-cam-error");
+  msg.textContent = "";
+  errorIdle.classList.add("oculto");
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  } catch (err) {
+    errorIdle.textContent = "No se pudo acceder a la cámara — revisá los permisos y tocá de nuevo para reintentar.";
+    errorIdle.classList.remove("oculto");
+    return;
+  }
+  recorridoStreamQR = stream;
+  const video = document.getElementById("recorrido-video");
+  video.srcObject = stream;
+  await video.play();
+  idle.classList.add("oculto");
+  cam.classList.remove("oculto");
+  loopEscaneoQR();
+}
+
+function pararCamaraQR() {
+  if (recorridoScanRAF) { cancelAnimationFrame(recorridoScanRAF); recorridoScanRAF = null; }
+  if (recorridoStreamQR) { recorridoStreamQR.getTracks().forEach((t) => t.stop()); recorridoStreamQR = null; }
+  const idle = document.getElementById("recorrido-viewfinder-idle");
+  const cam = document.getElementById("recorrido-viewfinder-cam");
+  const ok = document.getElementById("recorrido-viewfinder-ok");
+  if (idle) idle.classList.remove("oculto");
+  if (cam) cam.classList.add("oculto");
+  if (ok) ok.classList.add("oculto");
+}
+
+function loopEscaneoQR() {
+  const video = document.getElementById("recorrido-video");
+  const canvas = document.getElementById("recorrido-canvas");
+  if (!video || !recorridoStreamQR) return;
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    recorridoScanRAF = requestAnimationFrame(loopEscaneoQR);
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const resultado = jsQR(imagen.data, imagen.width, imagen.height);
+  if (resultado && resultado.data) {
+    onQrLeidoRecorrido(resultado.data.trim());
+  }
+  recorridoScanRAF = requestAnimationFrame(loopEscaneoQR);
+}
+
+function onQrLeidoRecorrido(texto) {
+  const esperado = codigoEsperadoPuntoRecorrido(recorridoPuntoActual);
+  if (texto === esperado) {
+    pararCamaraQR();
+    document.getElementById("recorrido-viewfinder-idle").classList.add("oculto");
+    document.getElementById("recorrido-viewfinder-ok").classList.remove("oculto");
+    setTimeout(avanzarAPostEscaneo, 900);
+    return;
+  }
+  if (/^MC3333-RECORRIDO-P\d+$/.test(texto)) {
+    const ahora = Date.now();
+    if (ahora - recorridoUltimoQrInvalidoMs > 1500) {
+      recorridoUltimoQrInvalidoMs = ahora;
+      const msg = document.getElementById("recorrido-scan-msg");
+      if (msg) msg.textContent = "Ese QR no es de este punto — fijate que sea el correcto.";
+    }
+  }
+}
+
+function avanzarAPostEscaneo() {
+  document.getElementById("recorrido-viewfinder-ok").classList.add("oculto");
+  document.getElementById("recorrido-viewfinder-idle").classList.remove("oculto");
   document.getElementById("recorrido-pre-escaneo").classList.add("oculto");
   document.getElementById("recorrido-post-escaneo").classList.remove("oculto");
 }
 
 function confirmarPuntoRecorrido() {
   const observaciones = document.getElementById("recorrido-observaciones").value.trim();
-  recorridoObservaciones.push({ punto: PUNTOS_RECORRIDO[recorridoPuntoActual].nombre, observaciones });
+  recorridoObservaciones.push({ punto: PUNTOS_RECORRIDO[recorridoPuntoActual].nombre, observaciones, fotos: recorridoFotosActuales.slice() });
   recorridoPuntoActual++;
   if (recorridoPuntoActual >= TOTAL_PUNTOS_RECORRIDO) {
     const tiempoFinal = actualizarTimerRecorrido();
     detenerTimerRecorrido();
     document.getElementById("recorrido-tiempo-final").textContent = tiempoFinal;
+    const nombreCompleto = localStorage.getItem("app_nombre") || "";
+    document.getElementById("recorrido-gracias").textContent = `¡Gracias, ${nombreCompleto.split(" ")[0] || nombreCompleto}!`;
     mostrarResumenRecorrido();
     mostrarEstadoRecorrido("completo");
+    enviarNovedadesRecorrido();
     return;
   }
   actualizarProgresoRecorrido();
   mostrarPuntoActual();
 }
 
+// Manda al servidor lo que se cargo durante el recorrido (texto y/o foto
+// por punto) para que aparezca en la pestaña "Novedades" -- se llama una
+// sola vez, al terminar. Si falla (sin conexion, etc.) no bloquea nada:
+// el recorrido ya se completo del lado del usuario, solo se pierde el
+// registro para la pestaña de novedades.
+async function enviarNovedadesRecorrido() {
+  const conAlgo = recorridoObservaciones.filter((o) => o.observaciones || (o.fotos && o.fotos.length));
+  if (conAlgo.length === 0) return;
+  try {
+    await apiFetch("/app/api/recorrido/novedades", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fecha: fechaISO(new Date()), observaciones: conAlgo }),
+    });
+  } catch (err) {
+    console.error("No se pudieron guardar las novedades del recorrido:", err);
+  }
+}
+
 function mostrarResumenRecorrido() {
   const el = document.getElementById("recorrido-resumen-obs");
-  const conObservaciones = recorridoObservaciones.filter((o) => o.observaciones);
+  const conObservaciones = recorridoObservaciones.filter((o) => o.observaciones || (o.fotos && o.fotos.length));
   if (conObservaciones.length === 0) {
     el.innerHTML = `<div class="vacio">Sin observaciones cargadas</div>`;
     return;
@@ -1219,28 +2659,60 @@ function mostrarResumenRecorrido() {
   el.innerHTML = conObservaciones.map((o) => `
     <div class="recorrido-resumen-item">
       <div class="recorrido-resumen-punto">${escapeHtml(o.punto)}</div>
-      <div class="recorrido-resumen-texto">${escapeHtml(o.observaciones)}</div>
+      ${o.observaciones ? `<div class="recorrido-resumen-texto">${escapeHtml(o.observaciones)}</div>` : ""}
+      ${(o.fotos || []).map((f) => `<img src="${f}" class="recorrido-resumen-foto" alt="Foto adjunta">`).join("")}
     </div>
   `).join("");
 }
 
-// Pestaña "Mis fichadas" -- historial del período elegido, con ausencias
+// Pestaña "Mis horas" -- historial del período elegido, con ausencias
 // intercaladas (mismo criterio que usa el panel de admin) y el resumen de
-// horas extra.
+// horas normales/extra.
+let mishorasPeriodo = periodoActual();
+
+function cargarPeriodosMisHoras() {
+  const periodos = periodosRecientesCliente(6);
+  const cont = document.getElementById("mishoras-periodos");
+  cont.innerHTML = periodos.map((p) => {
+    const mes = capitalizar(MESES[Number(p.slice(5, 7)) - 1]);
+    return `<div class="periodo-pill ${p === mishorasPeriodo ? "activo" : ""}" data-periodo="${p}" onclick="seleccionarPeriodoMisHoras('${p}')">${mes}</div>`;
+  }).join("");
+}
+
+function seleccionarPeriodoMisHoras(periodo) {
+  mishorasPeriodo = periodo;
+  document.querySelectorAll(".periodo-pill").forEach((el) => el.classList.toggle("activo", el.dataset.periodo === periodo));
+  cargarFichadas();
+}
+
 async function cargarFichadas() {
-  const periodo = document.getElementById("fichadas-periodo").value || periodoActual();
+  const periodo = mishorasPeriodo || periodoActual();
   try {
     const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodo);
 
     document.getElementById("fichadas-rango").textContent = data.rango ? `Período real: ${data.rango.desde} al ${data.rango.hasta}` : "";
 
     const resumenEl = document.getElementById("resumen-contenido");
-    if (data.resumen) {
+    if (data.resumen && data.resumen.dias > 0) {
+      const total = data.resumen.totalHs;
+      const extra = data.resumen.h50 + data.resumen.h100;
+      const normal = Math.max(0, total - extra);
+      const pctNormal = total > 0 ? (normal / total) * 100 : 0;
+      const pctExtra = total > 0 ? (extra / total) * 100 : 0;
       resumenEl.innerHTML = `
-        <div class="stat-grid">
-          <div class="stat"><div class="num">${data.resumen.dias}</div><div class="label">Días</div></div>
-          <div class="stat"><div class="num">${data.resumen.h50}</div><div class="label">Hs 50%</div></div>
-          <div class="stat"><div class="num">${data.resumen.h100}</div><div class="label">Hs 100%</div></div>
+        <div class="resumen-horas-total"><span class="num">${formatearHoras(total)}</span><span class="unidad">hs</span></div>
+        <div class="resumen-horas-barra">
+          <div style="width:${pctNormal}%;background:linear-gradient(90deg,var(--accent),var(--accent-2))"></div>
+          <div style="width:${pctExtra}%;background:var(--warn)"></div>
+        </div>
+        <div class="resumen-horas-leyenda">
+          <span><i style="background:var(--accent)"></i>Normales ${formatearHoras(normal)}</span>
+          <span><i style="background:var(--warn)"></i>Extra ${formatearHoras(extra)}</span>
+        </div>
+        <div class="resumen-horas-stats">
+          <div><div class="num">${data.resumen.dias}</div><div class="label">días</div></div>
+          <div><div class="num" style="color:var(--warn)">${formatearHoras(data.resumen.h50)}</div><div class="label">extra 50%</div></div>
+          <div><div class="num" style="color:var(--accent-2)">${formatearHoras(data.resumen.h100)}</div><div class="label">extra 100%</div></div>
         </div>`;
     } else {
       resumenEl.innerHTML = `<div class="vacio">Todavía no hay resumen de este período</div>`;
@@ -1256,34 +2728,40 @@ async function cargarFichadas() {
       diasEl.innerHTML = `<div class="vacio">Sin datos en este período</div>`;
     } else {
       diasEl.innerHTML = filas.map((d) => {
+        const fechaHtml = formatearFecha(d.fecha);
         if (d.ausente && d.compensado) {
-          return `<div class="fila-hora">
-            <div class="fecha">${formatearFecha(d.fecha)}</div>
-            <div class="horas"><span class="badge badge-ok">Sábado compensado</span></div>
-          </div>`;
+          return `<div class="dia-row"><div class="dia-fecha">${fechaHtml}</div><div class="dia-detalle">Sábado compensado trabajando de más</div></div>`;
         }
         if (d.ausente) {
-          return `<div class="fila-hora">
-            <div class="fecha">${formatearFecha(d.fecha)}</div>
-            <div class="horas"><span class="badge" style="background:rgba(229,72,77,0.15);color:var(--danger)">Ausente</span></div>
+          return `<div class="dia-row"><div class="dia-fecha">${fechaHtml}</div><div class="dia-detalle"></div><div class="dia-derecha"><span class="badge badge-danger">Ausente</span></div></div>`;
+        }
+        if (d.licencia_tipo) {
+          return `<div class="dia-row"><div class="dia-fecha">${fechaHtml}</div><div class="dia-detalle">${escapeHtml(d.licencia_tipo)}</div><div class="dia-derecha"><span class="badge badge-muted">Licencia</span></div></div>`;
+        }
+        if (d.alerta) {
+          const sinEgreso = !d.egreso || d.egreso === "—";
+          const detalle = sinEgreso ? `${d.ingreso || "—"} → falta egreso` : `${d.ingreso || "—"} → ${d.egreso} · ${d.alerta}`;
+          return `<div class="dia-row con-problema" onclick="irACorregirDesde('${d.fecha}','${sinEgreso ? d.ingreso || "" : ""}','${sinEgreso ? "" : d.egreso || ""}')">
+            <div class="dia-fecha">${fechaHtml}</div>
+            <div class="dia-detalle" style="color:var(--warn)">${escapeHtml(detalle)}</div>
+            <div class="dia-derecha link">Corregir</div>
           </div>`;
         }
-        const tarde = d.llegadaTarde ? `<br><span class="badge badge-warn">Llegó ${d.minutosTarde >= 60 ? Math.floor(d.minutosTarde/60) + "h " + (d.minutosTarde%60) + "min" : d.minutosTarde + "min"} tarde</span>` : "";
-        const alerta = d.alerta ? `<br><span class="badge badge-warn">${d.alerta}</span>` : "";
-        const detalleHoras = [];
-        if (d.total_hs) detalleHoras.push(`${formatearHoras(d.total_hs)} total`);
-        if (d.h50 > 0) detalleHoras.push(`${formatearHoras(d.h50)} al 50%`);
-        if (d.h100 > 0) detalleHoras.push(`${formatearHoras(d.h100)} al 100%`);
-        const horasTxt = detalleHoras.length ? `<br><span class="dia-semana">${detalleHoras.join(" · ")}</span>` : "";
-        return `<div class="fila-hora">
-          <div class="fecha">${formatearFecha(d.fecha)}</div>
-          <div class="horas">${d.ingreso || "—"} · ${d.egreso || "—"}${horasTxt}${tarde}${alerta}</div>
+        const tarde = d.llegadaTarde ? ` · llegó ${d.minutosTarde >= 60 ? Math.floor(d.minutosTarde / 60) + "h" + (d.minutosTarde % 60) + "m" : d.minutosTarde + "m"} tarde` : "";
+        return `<div class="dia-row">
+          <div class="dia-fecha">${fechaHtml}</div>
+          <div class="dia-detalle">${d.ingreso || "—"} → ${d.egreso || "—"}${tarde}</div>
+          <div class="dia-derecha" style="${d.llegadaTarde ? "color:var(--warn)" : ""}">${d.total_hs ? formatearHoras(d.total_hs) : ""}</div>
         </div>`;
       }).join("");
     }
   } catch (err) {
     if (err.message === "Sesión vencida") return;
   }
+}
+
+function irACorregirDesde(fecha, ingreso, egreso) {
+  abrirCorregir("mishoras", { fecha, ingreso, egreso });
 }
 
 async function guardarPasswordDesdeConfig() {
@@ -1313,14 +2791,18 @@ async function guardarPasswordDesdeConfig() {
 async function cargarHorario() {
   try {
     const data = await apiFetch("/app/api/mi-horario");
-    const saludoTurnoEl = document.getElementById("saludo-turno");
+    const sub = document.getElementById("saludo-sector-turno");
+    const cuentaSector = document.getElementById("cuenta-sector");
+    let texto;
     if (data.turnoHoy && data.turnoHoy.horario) {
-      saludoTurnoEl.innerHTML = `Hoy tenés turno de <strong>${data.turnoHoy.horario.in} a ${data.turnoHoy.horario.out}hs</strong> — ${fechaLargaDeHoy()}`;
+      texto = `Turno ${data.turnoHoy.horario.in} a ${data.turnoHoy.horario.out}hs`;
     } else if (data.turnoHoy && (data.turnoHoy.tipo === "franco" || data.turnoHoy.tipo === "descanso")) {
-      saludoTurnoEl.innerHTML = `Hoy es tu <strong>franco</strong> — ${fechaLargaDeHoy()}`;
+      texto = "Franco hoy";
     } else {
-      saludoTurnoEl.innerHTML = `Sin turno asignado para hoy — ${fechaLargaDeHoy()}`;
+      texto = "Sin turno asignado hoy";
     }
+    sub.textContent = texto;
+    cuentaSector.textContent = texto;
   } catch (err) {
     if (err.message === "Sesión vencida") return;
   }

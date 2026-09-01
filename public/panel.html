@@ -701,6 +701,11 @@
         <div id="lista-cancelaciones"><div class="vacio">Cargando…</div></div>
         <div id="historial-cancelaciones" class="historial-mini"></div>
       </div>
+      <div class="seccion-pendiente" style="--accent-seccion:#3ecf8e">
+        <h3>🏖️ Licencias pedidas desde la app <span id="badge-licencias"></span></h3>
+        <div id="lista-licencias-solicitud"><div class="vacio">Cargando…</div></div>
+        <div id="historial-licencias-solicitud" class="historial-mini"></div>
+      </div>
     </section>
 
     <section id="tab-empleados" style="display:none">
@@ -1699,6 +1704,7 @@ async function cargarPendientes() {
     renderCorrecciones(data.correcciones);
     renderCambios(data.cambios);
     renderCancelaciones(data.cancelaciones);
+    renderLicenciasSolicitud(data.licencias);
   } catch (e) { mostrarToast(e.message); }
   cargarHistorialMini();
 }
@@ -1720,6 +1726,11 @@ async function cargarHistorialMini() {
     });
     renderHistorialMini("historial-cancelaciones", data.cancelaciones, (s) => {
       return `#${s.id} — ${s.empleado} · deshacer ${s.tipo} #${s.solicitud_id}`;
+    });
+    renderHistorialMini("historial-licencias-solicitud", data.licencias, (s) => {
+      const fechaDesde = s.fecha_desde.split("-").reverse().join("/");
+      const fechaHasta = s.fecha_hasta.split("-").reverse().join("/");
+      return `#${s.id} — ${s.empleado} · ${s.tipo} ${fechaDesde} al ${fechaHasta}`;
     });
   } catch (e) { /* no tapar el error de pendientes con el de este panel secundario */ }
 }
@@ -1817,6 +1828,45 @@ function renderCancelaciones(lista) {
       </div>
     </div>`;
   }).join("");
+}
+
+function renderLicenciasSolicitud(lista) {
+  const cont = document.getElementById("lista-licencias-solicitud");
+  document.getElementById("badge-licencias").innerHTML = lista.length > 0 ? `<span class="badge-count">${lista.length}</span>` : "";
+  if (lista.length === 0) { cont.innerHTML = '<div class="vacio-ok">✅ No hay pedidos de licencia pendientes</div>'; return; }
+  cont.innerHTML = lista.map((s) => {
+    const fechaDesde = s.fecha_desde.split("-").reverse().join("/");
+    const fechaHasta = s.fecha_hasta.split("-").reverse().join("/");
+    return `<div class="card" data-id="${s.id}" style="--card-accent:#3ecf8e">
+      <div class="card-row">
+        <div>
+          <div class="card-titulo">🏖️ #${s.id} — ${s.empleado}</div>
+          <div class="card-sub">${s.tipo} · ${fechaDesde} al ${fechaHasta}</div>
+          ${s.mensaje ? `<div class="card-sub">"${s.mensaje}"</div>` : ""}
+        </div>
+        <div class="card-acciones">
+          <button class="btn btn-ok" onclick="accionLicenciaSolicitud(${s.id},'aprobar',this)">Aprobar</button>
+          <button class="btn btn-danger" onclick="accionLicenciaSolicitud(${s.id},'rechazar',this)">Rechazar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function accionLicenciaSolicitud(id, accion, btn) {
+  btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = true));
+  let motivo;
+  if (accion === "rechazar") {
+    motivo = prompt("Motivo del rechazo (opcional, lo ve el empleado):") || "";
+  }
+  try {
+    await api(`/licencia-solicitud/${id}/${accion}`, { method: "POST", body: JSON.stringify({ motivo }) });
+    mostrarToast(accion === "aprobar" ? "Licencia aprobada" : "Pedido rechazado");
+    cargarPendientes();
+  } catch (e) {
+    mostrarToast(e.message);
+    btn.closest(".card-acciones").querySelectorAll("button").forEach((b) => (b.disabled = false));
+  }
 }
 
 async function accionCorreccion(id, accion, btn) {

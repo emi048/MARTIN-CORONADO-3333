@@ -1593,3 +1593,65 @@ function actualizarPerfilEmpleadoApp(id, { usuario, foto }) {
 }
 
 module.exports.actualizarPerfilEmpleadoApp = actualizarPerfilEmpleadoApp;
+// ── Pedidos de licencia hechos por el empleado desde la app (a diferencia
+// de "licencias", que el admin carga directo y ya queda aplicada, esto pasa
+// primero por aprobacion -- mismo circuito que solicitudes_correccion). Al
+// aprobarse, el panel llama a crearLicencia con estos mismos datos. ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS solicitudes_licencia (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empleado TEXT NOT NULL,
+    numero_whatsapp TEXT,
+    fecha_desde TEXT NOT NULL,
+    fecha_hasta TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    mensaje TEXT,
+    estado TEXT NOT NULL DEFAULT 'pendiente',
+    motivo_rechazo TEXT,
+    creado_en TEXT NOT NULL,
+    resuelto_en TEXT
+  );
+`);
+
+// Compartido entre el panel (que la carga directo) y la app (que la pide) --
+// una sola lista para que no se desincronicen.
+const TIPOS_LICENCIA = ["Vacaciones", "Licencia médica", "Estudio", "Otro"];
+
+function crearSolicitudLicencia({ empleado, numeroWhatsapp, fechaDesde, fechaHasta, tipo, mensaje }) {
+  const info = db.prepare(`
+    INSERT INTO solicitudes_licencia (empleado, numero_whatsapp, fecha_desde, fecha_hasta, tipo, mensaje, estado, creado_en)
+    VALUES (?, ?, ?, ?, ?, ?, 'pendiente', ?)
+  `).run(empleado, numeroWhatsapp || null, fechaDesde, fechaHasta, tipo, mensaje || "", new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function obtenerSolicitudLicencia(id) {
+  return db.prepare("SELECT * FROM solicitudes_licencia WHERE id = ?").get(id);
+}
+
+function resolverSolicitudLicencia(id, estado, motivoRechazo) {
+  db.prepare(`
+    UPDATE solicitudes_licencia SET estado = ?, motivo_rechazo = ?, resuelto_en = ? WHERE id = ?
+  `).run(estado, motivoRechazo || null, new Date().toISOString(), id);
+}
+
+function solicitudesLicenciaPendientes() {
+  return db.prepare(`SELECT * FROM solicitudes_licencia WHERE estado = 'pendiente' ORDER BY id ASC`).all();
+}
+
+function todasLasSolicitudesLicencia(limite = 200) {
+  return db.prepare(`SELECT * FROM solicitudes_licencia ORDER BY id DESC LIMIT ?`).all(limite);
+}
+
+function solicitudesLicenciaDeEmpleado(empleado, limite = 10) {
+  return db.prepare(`SELECT * FROM solicitudes_licencia WHERE empleado = ? ORDER BY id DESC LIMIT ?`).all(empleado, limite);
+}
+
+module.exports.TIPOS_LICENCIA = TIPOS_LICENCIA;
+module.exports.crearSolicitudLicencia = crearSolicitudLicencia;
+module.exports.obtenerSolicitudLicencia = obtenerSolicitudLicencia;
+module.exports.resolverSolicitudLicencia = resolverSolicitudLicencia;
+module.exports.solicitudesLicenciaPendientes = solicitudesLicenciaPendientes;
+module.exports.todasLasSolicitudesLicencia = todasLasSolicitudesLicencia;
+module.exports.solicitudesLicenciaDeEmpleado = solicitudesLicenciaDeEmpleado;
+

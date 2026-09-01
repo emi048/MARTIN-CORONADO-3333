@@ -14,6 +14,7 @@ const {
   crearComentarioMural,
   listarNotificacionesApp, contarNotificacionesNoLeidasApp, marcarNotificacionesLeidasApp,
   actualizarPerfilEmpleadoApp,
+  TIPOS_LICENCIA, crearSolicitudLicencia, solicitudesLicenciaDeEmpleado,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -234,9 +235,43 @@ router.post("/api/solicitar-cambio", requerirAuthEmpleado, (req, res) => {
   res.json({ ok: true, id });
 });
 
-// Historial de pedidos propios (correcciones + cambios de turno), con su
-// estado -- para que el empleado pueda ver si ya se lo resolvieron sin
-// tener que preguntarle al admin.
+// Pide licencia/vacaciones -- a diferencia de la carga del panel (que ya
+// queda aplicada), esto queda "pendiente" hasta que el admin la aprueba
+// (mismo circuito que solicitar-correccion). Al aprobarse, el panel llama a
+// crearLicencia con estos mismos datos.
+router.post("/api/solicitar-licencia", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  const { fechaDesde, fechaHasta, tipo, mensaje } = req.body || {};
+  if (!fechaDesde || !RE_FECHA.test(fechaDesde) || !fechaHasta || !RE_FECHA.test(fechaHasta)) {
+    return res.status(400).json({ ok: false, error: "Elegí las dos fechas" });
+  }
+  if (fechaHasta < fechaDesde) {
+    return res.status(400).json({ ok: false, error: "La fecha hasta no puede ser anterior a la fecha desde" });
+  }
+  const dias = Math.round((new Date(fechaHasta + "T00:00:00") - new Date(fechaDesde + "T00:00:00")) / 86400000) + 1;
+  if (dias > 90) {
+    return res.status(400).json({ ok: false, error: "El rango no puede superar los 90 días" });
+  }
+  if (!tipo || !TIPOS_LICENCIA.includes(tipo)) {
+    return res.status(400).json({ ok: false, error: "Elegí un tipo válido" });
+  }
+  const id = crearSolicitudLicencia({
+    empleado: nombre,
+    numeroWhatsapp: numeroDeEmpleado(nombre) || "",
+    fechaDesde, fechaHasta, tipo,
+    mensaje: mensaje ? String(mensaje).trim().slice(0, 300) : "",
+  });
+  enviarPushATodoElPanel({
+    titulo: "Nuevo pedido de licencia",
+    cuerpo: `${nombre} pidió licencia del ${fechaDesde} al ${fechaHasta}`,
+    url: "/panel/",
+  });
+  res.json({ ok: true, id });
+});
+
+// Historial de pedidos propios (correcciones + cambios de turno + licencia),
+// con su estado -- para que el empleado pueda ver si ya se lo resolvieron
+// sin tener que preguntarle al admin.
 router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
   const { nombre } = req.empleadoApp;
   // "antes": como estaba ese dia antes de esta correccion, para que el
@@ -259,6 +294,7 @@ router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
     ok: true,
     correcciones,
     cambios: solicitudesCambioDeEmpleado(nombre, 20),
+    licencias: solicitudesLicenciaDeEmpleado(nombre, 20),
   });
 });
 
