@@ -92,6 +92,7 @@
     background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
     display: flex; align-items: center; justify-content: center;
     font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    cursor: pointer;
   }
   .notif-dot {
     position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px;
@@ -174,6 +175,7 @@
   .recorrido-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--accent-2); letter-spacing: 0.06em; text-transform: uppercase; }
   .recorrido-card-titulo { font: 700 18px/1.25 Unbounded, sans-serif; margin-top: 8px; }
   .recorrido-card-sub { font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 4px; }
+  .recorrido-card-fecha { font: 400 11px/1.3 Inter, sans-serif; color: var(--text-muted); margin-top: 2px; opacity: 0.8; }
   .recorrido-card-icono {
     width: 38px; height: 38px; border-radius: 10px; background: rgba(124,108,240,0.22);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -214,6 +216,7 @@
     cursor: pointer; white-space: nowrap;
   }
   .periodo-pill.activo { border-color: rgba(124,108,240,0.5); background: rgba(124,108,240,0.16); color: var(--text); font-weight: 600; }
+  .periodo-pill-mas { opacity: 0.75; }
 
   .resumen-horas-card { border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(150deg, rgba(124,108,240,0.14), var(--surface) 62%); padding: 18px 16px 16px; margin-bottom: 12px; }
   .resumen-horas-total { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
@@ -550,6 +553,32 @@
   }
   .novedad-comentario-form input:focus { outline: none; border-color: var(--accent); }
 
+  .onboard-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .onboard-box {
+    position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: 18px;
+    padding: 30px 24px 22px; max-width: 340px; width: 100%; text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .onboard-cerrar {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface2); border: none; color: var(--text-muted); font-size: 14px; cursor: pointer;
+  }
+  .onboard-logo { height: 42px; width: auto; margin-bottom: 16px; }
+  .onboard-titulo { font-family: var(--font-display); font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+  .onboard-sub { color: var(--text-muted); font-size: 13.5px; line-height: 1.45; margin-bottom: 4px; }
+  .onboard-pasos { text-align: left; margin: 18px 0; }
+  .onboard-pasos:empty { margin: 0; }
+  .onboard-paso { display: flex; gap: 10px; margin-bottom: 12px; font-size: 13.5px; line-height: 1.4; color: var(--text); }
+  .onboard-paso:last-child { margin-bottom: 0; }
+  .onboard-paso-num {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); color: var(--accent-2);
+    font-weight: 700; font-size: 11.5px; display: flex; align-items: center; justify-content: center;
+  }
+  .onboard-mas-tarde { width: 100%; background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 700; padding: 8px; cursor: pointer; }
+
   .lightbox-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200;
     display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -657,7 +686,7 @@
 
 <div id="app-screen">
   <header id="header-inicio">
-    <div class="avatar-btn" id="avatar-btn">--</div>
+    <div class="avatar-btn" id="avatar-btn" onclick="cambiarTab('cuenta')">--</div>
     <div class="header-titulo">
       <h1 id="saludo-nombre-usuario">—</h1>
       <span id="saludo-sector-turno">Cargando…</span>
@@ -699,6 +728,7 @@
             <div class="recorrido-card-eyebrow">Recorrido diario</div>
             <div class="recorrido-card-titulo" id="recorrido-card-titulo">15 puntos de control</div>
             <div class="recorrido-card-sub" id="recorrido-card-sub">Cargando…</div>
+            <div class="recorrido-card-fecha" id="recorrido-card-fecha">—</div>
           </div>
           <div class="recorrido-card-icono">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3"/><path d="M14 20h3"/><path d="M20 20h.01"/></svg>
@@ -909,6 +939,18 @@
   <div class="lightbox-overlay oculto" id="lightbox-overlay" onclick="cerrarLightbox()">
     <button class="lightbox-cerrar" onclick="cerrarLightbox(event)" aria-label="Cerrar">✕</button>
     <img id="lightbox-img" alt="Foto ampliada" onclick="event.stopPropagation()">
+  </div>
+
+  <div class="onboard-overlay oculto" id="onboard-notif-overlay">
+    <div class="onboard-box">
+      <button class="onboard-cerrar" onclick="cerrarOnboardNotif()" aria-label="Cerrar">✕</button>
+      <img src="/panel/logo-cr.png" class="onboard-logo" alt="CR">
+      <div class="onboard-titulo">No te pierdas de nada 🔔</div>
+      <div class="onboard-sub" id="onboard-sub"></div>
+      <div class="onboard-pasos" id="onboard-pasos"></div>
+      <button class="btn-listo oculto" id="onboard-btn-accion" style="width:100%" onclick="onboardAccionPrincipal()">🔔 Activar notificaciones</button>
+      <button class="onboard-mas-tarde" id="onboard-btn-cerrar" onclick="cerrarOnboardNotif()">MÁS TARDE</button>
+    </div>
   </div>
 
   <div class="crop-overlay oculto" id="crop-overlay">
@@ -1225,7 +1267,7 @@ function periodoActual() {
 function periodosRecientesCliente(n) {
   const hoy = new Date();
   const out = [];
-  for (let i = n - 1; i >= 0; i--) {
+  for (let i = 0; i < n; i++) {
     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
     out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
@@ -1260,13 +1302,16 @@ function mostrarApp() {
   cargarPerfilApp();
   actualizarEstadoNotifConfig();
   actualizarBannerMural();
+  setTimeout(mostrarOnboardNotifSiCorresponde, 600);
 }
 
 function actualizarTarjetaRecorridoInicio() {
   const titulo = document.getElementById("recorrido-card-titulo");
   const sub = document.getElementById("recorrido-card-sub");
+  const fecha = document.getElementById("recorrido-card-fecha");
   if (titulo) titulo.textContent = `${PUNTOS_RECORRIDO.length} puntos de control`;
   if (sub) sub.textContent = "Recordá todo el edificio antes de terminar tu turno";
+  if (fecha) fecha.textContent = fechaLargaDeHoy();
 }
 
 function fechaCortaDeHoy() {
@@ -1422,8 +1467,13 @@ function cerrarModal() {
 // motor de calculo. Se comparte entre la tarjeta ambar de Inicio (2 nomas)
 // y la pantalla de Corregir horas (todos), para no calcular esto dos veces
 // con criterios distintos.
-async function obtenerProblemasCorreccion() {
-  const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
+function periodoAnteriorA(periodo) {
+  const [y, m] = periodo.split("-").map(Number);
+  const d = new Date(y, m - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function extraerProblemasDePeriodo(data) {
   return [
     ...(data.ausencias || []).filter((a) => !a.compensado).map((a) => ({ fecha: a.fecha, motivo: "Sin fichada", ingreso: "", egreso: "" })),
     ...(data.dias || []).filter((d) => d.alerta).map((d) => {
@@ -1435,7 +1485,23 @@ async function obtenerProblemasCorreccion() {
       }
       return { fecha: d.fecha, motivo: d.alerta, ingreso: d.ingreso || "", egreso: d.egreso && d.egreso !== "—" ? d.egreso : "" };
     }),
-  ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  ];
+}
+
+async function obtenerProblemasCorreccion() {
+  const anterior = periodoAnteriorA(periodoActual());
+  const [actual, previo, misSolicitudes] = await Promise.all([
+    apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual()),
+    apiFetch("/app/api/mis-fichadas?periodo=" + anterior),
+    apiFetch("/app/api/mis-solicitudes"),
+  ]);
+  const pendientes = new Set(
+    (misSolicitudes.correcciones || []).filter((c) => c.estado === "pendiente").map((c) => c.fecha)
+  );
+  const vistos = new Set();
+  return [...extraerProblemasDePeriodo(previo), ...extraerProblemasDePeriodo(actual)]
+    .filter((p) => !pendientes.has(p.fecha) && !vistos.has(p.fecha) && vistos.add(p.fecha))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
 }
 
 async function cargarProblemasInicio() {
@@ -2269,6 +2335,49 @@ function actualizarEstadoNotifConfig() {
   }
 }
 
+// Cartel de bienvenida -- aparece una unica vez por dispositivo (o hasta
+// que el permiso vuelva a "default", ej. si lo resetean a mano). En iOS
+// Safari sin instalar como PWA, Web Push no funciona todavia -- ahi se
+// muestran los pasos para agregarla a inicio en vez del boton directo.
+function mostrarOnboardNotifSiCorresponde() {
+  if (localStorage.getItem("app_onboard_notif_visto")) return;
+  if (!notifSoportadas()) return;
+  if (Notification.permission !== "default") {
+    localStorage.setItem("app_onboard_notif_visto", "1");
+    return;
+  }
+
+  const subEl = document.getElementById("onboard-sub");
+  const pasosEl = document.getElementById("onboard-pasos");
+  const btnAccion = document.getElementById("onboard-btn-accion");
+
+  if (esIOS() && !esStandalone()) {
+    subEl.textContent = "Para recibir avisos en el celular primero agregá la app a tu pantalla de inicio.";
+    pasosEl.innerHTML = `
+      <div class="onboard-paso"><div class="onboard-paso-num">1</div><div>Tocá el botón Compartir (el cuadrado con la flecha hacia arriba ⬆), abajo en el centro.</div></div>
+      <div class="onboard-paso"><div class="onboard-paso-num">2</div><div>Bajá y elegí «Agregar a inicio».</div></div>
+      <div class="onboard-paso"><div class="onboard-paso-num">3</div><div>Confirmá tocando «Agregar», y abrí la app desde el ícono nuevo.</div></div>
+    `;
+    btnAccion.classList.add("oculto");
+  } else {
+    subEl.textContent = "Activá las notificaciones y enterate al toque cuando el administrador apruebe tus pedidos o haya novedades del recorrido.";
+    pasosEl.innerHTML = "";
+    btnAccion.classList.remove("oculto");
+  }
+
+  document.getElementById("onboard-notif-overlay").classList.remove("oculto");
+}
+
+function cerrarOnboardNotif() {
+  localStorage.setItem("app_onboard_notif_visto", "1");
+  document.getElementById("onboard-notif-overlay").classList.add("oculto");
+}
+
+async function onboardAccionPrincipal() {
+  const ok = await activarNotificaciones();
+  if (ok) cerrarOnboardNotif();
+}
+
 function tarjetaComentario(c) {
   return `<div class="novedad-comentario"><b>${escapeHtml(c.usuario_nombre)}:</b> <span>${escapeHtml(c.texto)}</span></div>`;
 }
@@ -2799,13 +2908,21 @@ function mostrarResumenRecorrido() {
 // horas normales/extra.
 let mishorasPeriodo = periodoActual();
 
+let mishorasPeriodosExpandido = false;
+
 function cargarPeriodosMisHoras() {
   const periodos = periodosRecientesCliente(6);
   const cont = document.getElementById("mishoras-periodos");
-  cont.innerHTML = periodos.map((p) => {
+  const visibles = mishorasPeriodosExpandido ? periodos : periodos.slice(0, 3);
+  const pills = visibles.map((p) => {
     const mes = capitalizar(MESES[Number(p.slice(5, 7)) - 1]);
     return `<div class="periodo-pill ${p === mishorasPeriodo ? "activo" : ""}" data-periodo="${p}" onclick="seleccionarPeriodoMisHoras('${p}')">${mes}</div>`;
   }).join("");
+  const restantes = periodos.length - visibles.length;
+  const masPill = restantes > 0
+    ? `<div class="periodo-pill periodo-pill-mas" onclick="mishorasPeriodosExpandido=true;cargarPeriodosMisHoras()">+${restantes} mes${restantes === 1 ? "" : "es"}</div>`
+    : "";
+  cont.innerHTML = pills + masPill;
 }
 
 function seleccionarPeriodoMisHoras(periodo) {

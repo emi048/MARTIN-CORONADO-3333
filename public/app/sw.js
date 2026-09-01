@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v41"; // v41: nombre MARTIN CORONADO en login, tarjeta Corregir horas de vuelta
+const CACHE = "fich-coronado-v42"; // v42: onboarding notif, fecha en tarjeta recorrido, avatar->cuenta, meses recientes primero, dias pendientes cruzan de periodo
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
