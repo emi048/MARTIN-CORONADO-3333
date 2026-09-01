@@ -1593,3 +1593,172 @@ function actualizarPerfilEmpleadoApp(id, { usuario, foto }) {
 }
 
 module.exports.actualizarPerfilEmpleadoApp = actualizarPerfilEmpleadoApp;
+
+// ── Pedidos de licencia hechos por el empleado desde la app (a diferencia
+// de "licencias", que el admin carga directo y ya queda aplicada, esto pasa
+// primero por aprobacion -- mismo circuito que solicitudes_correccion). Al
+// aprobarse, el panel llama a crearLicencia con estos mismos datos. ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS solicitudes_licencia (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empleado TEXT NOT NULL,
+    numero_whatsapp TEXT,
+    fecha_desde TEXT NOT NULL,
+    fecha_hasta TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    mensaje TEXT,
+    estado TEXT NOT NULL DEFAULT 'pendiente',
+    motivo_rechazo TEXT,
+    creado_en TEXT NOT NULL,
+    resuelto_en TEXT
+  );
+`);
+
+// Compartido entre el panel (que la carga directo) y la app (que la pide) --
+// una sola lista para que no se desincronicen.
+const TIPOS_LICENCIA = ["Vacaciones", "Licencia médica", "Estudio", "Otro"];
+
+function crearSolicitudLicencia({ empleado, numeroWhatsapp, fechaDesde, fechaHasta, tipo, mensaje }) {
+  const info = db.prepare(`
+    INSERT INTO solicitudes_licencia (empleado, numero_whatsapp, fecha_desde, fecha_hasta, tipo, mensaje, estado, creado_en)
+    VALUES (?, ?, ?, ?, ?, ?, 'pendiente', ?)
+  `).run(empleado, numeroWhatsapp || null, fechaDesde, fechaHasta, tipo, mensaje || "", new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function obtenerSolicitudLicencia(id) {
+  return db.prepare("SELECT * FROM solicitudes_licencia WHERE id = ?").get(id);
+}
+
+function resolverSolicitudLicencia(id, estado, motivoRechazo) {
+  db.prepare(`
+    UPDATE solicitudes_licencia SET estado = ?, motivo_rechazo = ?, resuelto_en = ? WHERE id = ?
+  `).run(estado, motivoRechazo || null, new Date().toISOString(), id);
+}
+
+function solicitudesLicenciaPendientes() {
+  return db.prepare(`SELECT * FROM solicitudes_licencia WHERE estado = 'pendiente' ORDER BY id ASC`).all();
+}
+
+function todasLasSolicitudesLicencia(limite = 200) {
+  return db.prepare(`SELECT * FROM solicitudes_licencia ORDER BY id DESC LIMIT ?`).all(limite);
+}
+
+function solicitudesLicenciaDeEmpleado(empleado, limite = 10) {
+  return db.prepare(`SELECT * FROM solicitudes_licencia WHERE empleado = ? ORDER BY id DESC LIMIT ?`).all(empleado, limite);
+}
+
+module.exports.TIPOS_LICENCIA = TIPOS_LICENCIA;
+module.exports.crearSolicitudLicencia = crearSolicitudLicencia;
+module.exports.obtenerSolicitudLicencia = obtenerSolicitudLicencia;
+module.exports.resolverSolicitudLicencia = resolverSolicitudLicencia;
+module.exports.solicitudesLicenciaPendientes = solicitudesLicenciaPendientes;
+module.exports.todasLasSolicitudesLicencia = todasLasSolicitudesLicencia;
+module.exports.solicitudesLicenciaDeEmpleado = solicitudesLicenciaDeEmpleado;
+
+// ── Recorrido diario (mantenimiento, con QR por punto) -- registra el
+// intento real del empleado: hora de inicio/fin y, por cada punto
+// confirmado, que items del checklist tildo, la observacion que escribio y
+// hasta 3 fotos. puntos_json es un array que se va completando punto por
+// punto (ver agregarPuntoRecorrido) en vez de mandarse entero al final, asi
+// no se pierde nada si el celular se queda sin batería a mitad de recorrido. ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS recorridos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empleado TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    iniciado_en TEXT NOT NULL,
+    finalizado_en TEXT,
+    duracion_seg INTEGER,
+    puntos_json TEXT NOT NULL DEFAULT '[]'
+  );
+`);
+
+// Definicion de los puntos de control -- PLACEHOLDER: solo el primero tiene
+// nombre/checklist reales (el que dio el admin de ejemplo). Cuando pase la
+// lista completa de los 15 puntos, esto es lo unico que hay que completar.
+const PUNTOS_RECORRIDO = [
+  { nombre: "SALA DE MAQUINAS -1", checklist: ["Tablero eléctrico encendido", "Sin pérdidas de agua", "Bomba presurizadora sin ruido", "Puerta cerrada al salir"] },
+  { nombre: "Punto 2 (a definir)", checklist: [] },
+  { nombre: "Punto 3 (a definir)", checklist: [] },
+  { nombre: "Punto 4 (a definir)", checklist: [] },
+  { nombre: "Punto 5 (a definir)", checklist: [] },
+  { nombre: "Punto 6 (a definir)", checklist: [] },
+  { nombre: "Punto 7 (a definir)", checklist: [] },
+  { nombre: "Punto 8 (a definir)", checklist: [] },
+  { nombre: "Punto 9 (a definir)", checklist: [] },
+  { nombre: "Punto 10 (a definir)", checklist: [] },
+  { nombre: "Punto 11 (a definir)", checklist: [] },
+  { nombre: "Punto 12 (a definir)", checklist: [] },
+  { nombre: "Punto 13 (a definir)", checklist: [] },
+  { nombre: "Punto 14 (a definir)", checklist: [] },
+  { nombre: "Punto 15 (a definir)", checklist: [] },
+];
+
+function fechaISOHoy() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Si ya hay un recorrido de hoy sin terminar, lo retoma en vez de crear uno
+// nuevo -- si el empleado cierra la app a mitad de camino y vuelve a entrar
+// a "Recorrido diario", sigue donde lo dejo en vez de perder los puntos ya
+// confirmados.
+function recorridoDeHoyEnCurso(empleado) {
+  return db.prepare(`
+    SELECT * FROM recorridos WHERE empleado = ? AND fecha = ? AND finalizado_en IS NULL ORDER BY id DESC LIMIT 1
+  `).get(empleado, fechaISOHoy());
+}
+
+// Ultimo recorrido de hoy (terminado o no) -- para la tarjeta de Inicio,
+// que necesita saber si mostrar "sin empezar", "en curso" o "completado".
+function recorridoDeHoy(empleado) {
+  return db.prepare(`
+    SELECT * FROM recorridos WHERE empleado = ? AND fecha = ? ORDER BY id DESC LIMIT 1
+  `).get(empleado, fechaISOHoy());
+}
+
+function crearRecorrido(empleado) {
+  const info = db.prepare(`
+    INSERT INTO recorridos (empleado, fecha, iniciado_en, puntos_json) VALUES (?, ?, ?, '[]')
+  `).run(empleado, fechaISOHoy(), new Date().toISOString());
+  return info.lastInsertRowid;
+}
+
+function recorridoPorId(id) {
+  return db.prepare("SELECT * FROM recorridos WHERE id = ?").get(id);
+}
+
+// Agrega la confirmacion de un punto -- checklist como array de {item, ok},
+// fotos limitado a 3 (mismo criterio de fotos_cierre del Mural).
+function agregarPuntoRecorrido(id, { nombre, checklist, observaciones, fotos }) {
+  const recorrido = recorridoPorId(id);
+  if (!recorrido) return null;
+  const fotosLimpias = Array.isArray(fotos)
+    ? fotos.filter((f) => typeof f === "string" && f.startsWith("data:image/")).slice(0, 3)
+    : [];
+  const puntos = JSON.parse(recorrido.puntos_json || "[]");
+  puntos.push({
+    nombre,
+    checklist: Array.isArray(checklist) ? checklist.slice(0, 20) : [],
+    observaciones: observaciones ? String(observaciones).trim().slice(0, 500) : "",
+    fotos: fotosLimpias,
+    confirmadoEn: new Date().toISOString(),
+  });
+  db.prepare("UPDATE recorridos SET puntos_json = ? WHERE id = ?").run(JSON.stringify(puntos), id);
+  return puntos.length;
+}
+
+function finalizarRecorrido(id, duracionSeg) {
+  db.prepare(`
+    UPDATE recorridos SET finalizado_en = ?, duracion_seg = ? WHERE id = ?
+  `).run(new Date().toISOString(), Math.max(0, Math.round(duracionSeg || 0)), id);
+}
+
+module.exports.PUNTOS_RECORRIDO = PUNTOS_RECORRIDO;
+module.exports.recorridoDeHoyEnCurso = recorridoDeHoyEnCurso;
+module.exports.recorridoDeHoy = recorridoDeHoy;
+module.exports.crearRecorrido = crearRecorrido;
+module.exports.recorridoPorId = recorridoPorId;
+module.exports.agregarPuntoRecorrido = agregarPuntoRecorrido;
+module.exports.finalizarRecorrido = finalizarRecorrido;

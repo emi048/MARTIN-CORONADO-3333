@@ -14,6 +14,9 @@ const {
   crearComentarioMural,
   listarNotificacionesApp, contarNotificacionesNoLeidasApp, marcarNotificacionesLeidasApp,
   actualizarPerfilEmpleadoApp,
+  TIPOS_LICENCIA, crearSolicitudLicencia, solicitudesLicenciaDeEmpleado,
+  PUNTOS_RECORRIDO, recorridoDeHoy, recorridoDeHoyEnCurso, crearRecorrido, recorridoPorId,
+  agregarPuntoRecorrido, finalizarRecorrido,
 } = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
@@ -234,9 +237,43 @@ router.post("/api/solicitar-cambio", requerirAuthEmpleado, (req, res) => {
   res.json({ ok: true, id });
 });
 
-// Historial de pedidos propios (correcciones + cambios de turno), con su
-// estado -- para que el empleado pueda ver si ya se lo resolvieron sin
-// tener que preguntarle al admin.
+// Pide licencia/vacaciones -- a diferencia de la carga del panel (que ya
+// queda aplicada), esto queda "pendiente" hasta que el admin la aprueba
+// (mismo circuito que solicitar-correccion). Al aprobarse, el panel llama a
+// crearLicencia con estos mismos datos.
+router.post("/api/solicitar-licencia", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  const { fechaDesde, fechaHasta, tipo, mensaje } = req.body || {};
+  if (!fechaDesde || !RE_FECHA.test(fechaDesde) || !fechaHasta || !RE_FECHA.test(fechaHasta)) {
+    return res.status(400).json({ ok: false, error: "Elegí las dos fechas" });
+  }
+  if (fechaHasta < fechaDesde) {
+    return res.status(400).json({ ok: false, error: "La fecha hasta no puede ser anterior a la fecha desde" });
+  }
+  const dias = Math.round((new Date(fechaHasta + "T00:00:00") - new Date(fechaDesde + "T00:00:00")) / 86400000) + 1;
+  if (dias > 90) {
+    return res.status(400).json({ ok: false, error: "El rango no puede superar los 90 días" });
+  }
+  if (!tipo || !TIPOS_LICENCIA.includes(tipo)) {
+    return res.status(400).json({ ok: false, error: "Elegí un tipo válido" });
+  }
+  const id = crearSolicitudLicencia({
+    empleado: nombre,
+    numeroWhatsapp: numeroDeEmpleado(nombre) || "",
+    fechaDesde, fechaHasta, tipo,
+    mensaje: mensaje ? String(mensaje).trim().slice(0, 300) : "",
+  });
+  enviarPushATodoElPanel({
+    titulo: "Nuevo pedido de licencia",
+    cuerpo: `${nombre} pidió licencia del ${fechaDesde} al ${fechaHasta}`,
+    url: "/panel/",
+  });
+  res.json({ ok: true, id });
+});
+
+// Historial de pedidos propios (correcciones + cambios de turno + licencia),
+// con su estado -- para que el empleado pueda ver si ya se lo resolvieron
+// sin tener que preguntarle al admin.
 router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
   const { nombre } = req.empleadoApp;
   // "antes": como estaba ese dia antes de esta correccion, para que el
@@ -259,7 +296,67 @@ router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
     ok: true,
     correcciones,
     cambios: solicitudesCambioDeEmpleado(nombre, 20),
+    licencias: solicitudesLicenciaDeEmpleado(nombre, 20),
   });
+});
+
+// ── Recorrido diario (mantenimiento, con QR por punto) -- el checklist y
+// las observaciones ya son reales (quedan guardadas en cuanto se confirma
+// cada punto); lo unico simulado por ahora es la lectura del QR en si. ──
+router.get("/api/recorrido/puntos", requerirAuthEmpleado, (req, res) => {
+  res.json({ ok: true, puntos: PUNTOS_RECORRIDO });
+});
+
+// Recorrido de hoy (si lo hay) -- para que la tarjeta de Inicio sepa si
+// mostrar "sin empezar", "en curso" o "completado, terminó en X".
+router.get("/api/recorrido/hoy", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  res.json({ ok: true, recorrido: recorridoDeHoy(nombre) || null });
+});
+
+// Si ya habia uno de hoy sin terminar lo retoma (mismo empleado no puede
+// pisar el de otro: se valida el dueño en cada endpoint de abajo tambien).
+router.post("/api/recorrido/iniciar", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  const enCurso = recorridoDeHoyEnCurso(nombre);
+  if (enCurso) return res.json({ ok: true, id: enCurso.id, puntosHechos: JSON.parse(enCurso.puntos_json || "[]").length });
+  const id = crearRecorrido(nombre);
+  res.json({ ok: true, id, puntosHechos: 0 });
+});
+
+function recorridoPropio(req, res) {
+  const recorrido = recorridoPorId(Number(req.params.id));
+  if (!recorrido || recorrido.empleado !== req.empleadoApp.nombre) {
+    res.status(404).json({ ok: false, error: "No encontrado" });
+    return null;
+  }
+  if (recorrido.finalizado_en) {
+    res.status(409).json({ ok: false, error: "Ese recorrido ya está cerrado" });
+    return null;
+  }
+  return recorrido;
+}
+
+router.post("/api/recorrido/:id/punto", requerirAuthEmpleado, (req, res) => {
+  const recorrido = recorridoPropio(req, res);
+  if (!recorrido) return;
+  const { nombre, checklist, observaciones, fotos } = req.body || {};
+  if (!nombre) return res.status(400).json({ ok: false, error: "Falta el nombre del punto" });
+  const total = agregarPuntoRecorrido(recorrido.id, { nombre, checklist, observaciones, fotos });
+  res.json({ ok: true, puntosHechos: total });
+});
+
+router.post("/api/recorrido/:id/finalizar", requerirAuthEmpleado, (req, res) => {
+  const recorrido = recorridoPropio(req, res);
+  if (!recorrido) return;
+  const { duracionSeg } = req.body || {};
+  finalizarRecorrido(recorrido.id, Number(duracionSeg) || 0);
+  enviarPushATodoElPanel({
+    titulo: "Recorrido diario completado",
+    cuerpo: `${req.empleadoApp.nombre} terminó el recorrido de hoy`,
+    url: "/panel/",
+  });
+  res.json({ ok: true });
 });
 
 // ── Mural de tareas -- ve solo lo que le corresponde segun su sector, si
