@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v42"; // v42: onboarding notif, fecha en tarjeta recorrido, avatar->cuenta, meses recientes primero, dias pendientes cruzan de periodo
+const CACHE = "fich-coronado-v43"; // v43: fix boton Guardar foto de perfil (referenciaba un input que ya no existe)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

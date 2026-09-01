@@ -2183,7 +2183,7 @@ document.getElementById("crop-guardar-btn").addEventListener("click", async () =
   const cy = CROP_SALIDA / 2 + cropOffsetY * factor;
   ctx.drawImage(cropImg, cx - iw / 2, cy - ih / 2, iw, ih);
   perfilFotoPendienteApp = salida.toDataURL("image/jpeg", 0.88);
-  pintarAvatarApp({ nombre: document.getElementById("perfil-nombre").value, foto: perfilFotoPendienteApp });
+  pintarAvatarApp({ nombre: localStorage.getItem("app_nombre") || "", foto: perfilFotoPendienteApp });
   document.getElementById("crop-overlay").classList.add("oculto");
   document.getElementById("perfil-foto-input").value = "";
   cropImg = null;
