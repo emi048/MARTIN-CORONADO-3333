@@ -728,6 +728,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <span>Pedir licencia</span>
         </div>
+        <div class="acceso-tile" onclick="abrirNovedades()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Novedades</span>
+        </div>
       </div>
     </section>
 
@@ -793,6 +797,15 @@
         <button onclick="document.getElementById('mural-periodo').value='';cargarMural()">Ver todo</button>
       </div>
       <div id="mural-contenido"><div class="vacio">Cargando…</div></div>
+    </section>
+
+    <section id="tab-novedades" class="oculto">
+      <div class="periodo-selector">
+        <input type="month" id="novedades-periodo" onchange="cargarNovedades()">
+        <button onclick="document.getElementById('novedades-periodo').value='';cargarNovedades()">Ver todo</button>
+      </div>
+      <div id="novedades-contenido"><div class="vacio">Cargando…</div></div>
+    </section>
 
     <section id="tab-cuenta" class="oculto">
       <div class="card cuenta-perfil">
@@ -1263,13 +1276,14 @@ const TITULOS_TAB = {
   solicitudes: ["Solicitudes", "Estado de tus pedidos"],
   mural: ["Mural", "Tareas y comunicados del equipo"],
   cuenta: ["Cuenta", "Tu perfil y tu contraseña"],
+  novedades: ["Novedades", "Lo cargado en los recorridos diarios"],
 };
 
 let pantallaOrigenCorregir = "inicio";
 
 function cambiarTab(tab) {
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.toggle("activo", b.dataset.nav === tab));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== tab);
   });
   document.getElementById("header-inicio").classList.toggle("oculto", tab !== "inicio");
@@ -1296,7 +1310,7 @@ function cambiarTab(tab) {
 async function abrirCorregir(origen, prefill) {
   pantallaOrigenCorregir = origen || "inicio";
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== "corregir");
   });
   document.getElementById("header-inicio").classList.add("oculto");
@@ -1311,6 +1325,19 @@ async function abrirCorregir(origen, prefill) {
   // (ej: "Corregir" en un día puntual de Mis horas).
   await cargarProblemasCorreccion();
   if (prefill) usarProblemaEnFormulario(prefill.fecha, prefill.ingreso, prefill.egreso);
+}
+
+async function abrirNovedades() {
+  document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
+    document.getElementById("tab-" + t).classList.toggle("oculto", t !== "novedades");
+  });
+  document.getElementById("header-inicio").classList.add("oculto");
+  document.getElementById("header-generico").classList.remove("oculto");
+  const [titulo, subtitulo] = TITULOS_TAB.novedades;
+  document.getElementById("header-titulo-txt").textContent = titulo;
+  document.getElementById("header-subtitulo-txt").textContent = subtitulo;
+  cargarNovedades();
 }
 
 function volverAInicio() {
@@ -2235,6 +2262,102 @@ function actualizarEstadoNotifConfig() {
     btn.textContent = "🔔 Activar notificaciones";
     btn.disabled = false;
     estadoEl.textContent = "";
+  }
+}
+
+function tarjetaComentario(c) {
+  return `<div class="novedad-comentario"><b>${escapeHtml(c.usuario_nombre)}:</b> <span>${escapeHtml(c.texto)}</span></div>`;
+}
+
+function tarjetaNovedad(n) {
+  const fotos = fotosDeNovedad(n.foto);
+  return `
+    <div class="novedad-item">
+      <div class="novedad-top">
+        <span class="novedad-punto">${escapeHtml(n.punto)}</span>
+        <span class="novedad-hora">${horaDeISO(n.creado_en)}</span>
+      </div>
+      ${n.observacion ? `<div class="novedad-texto">${escapeHtml(n.observacion)}${leerVozActiva() ? `<button class="btn-leer-voz" data-texto="${escapeHtml(n.observacion)}" onclick="leerTexto(this.dataset.texto)" aria-label="Escuchar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>` : ""}</div>` : ""}
+      ${fotos.length ? `
+        <div class="novedad-fotos${fotos.length === 1 ? " una-foto" : ""}">
+          ${fotos.map((f) => `<img src="${f}" class="novedad-foto" alt="Foto adjunta" onclick="abrirLightbox(this.src)">`).join("")}
+        </div>
+      ` : ""}
+      <div class="novedad-usuario">Cargado por ${escapeHtml(n.usuario_nombre)}</div>
+      <div class="novedad-comentarios">
+        ${n.comentarios.map(tarjetaComentario).join("")}
+        <div class="novedad-comentario-form">
+          <input type="text" placeholder="Escribir un comentario…" id="comentario-input-${n.id}" onkeydown="if(event.key==='Enter') enviarComentarioNovedad(${n.id})">
+          <button onclick="enviarComentarioNovedad(${n.id})">Enviar</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+// Mural agrupado por dia -- cada grupo lleva un header con la fecha
+// completa, y las tarjetas adentro solo muestran la hora (la fecha ya
+// esta dicha por el header del grupo, repetirla en cada tarjeta era
+// redundante y hacia mas dificil ubicarse rapido en la lista).
+// Cada dia es un acordeon: arranca plegado salvo el mas reciente, asi con
+// el correr de los dias la lista no se hace un choclo interminable --
+// tocando el header de un dia se despliega/pliega ese grupo nada mas.
+async function cargarNovedades() {
+  const el = document.getElementById("novedades-contenido");
+  const periodoInput = document.getElementById("novedades-periodo");
+  if (!periodoInput.value) periodoInput.value = periodoActual();
+  // Si ya habia dias desplegados a mano (por ej. antes de mandar un
+  // comentario, que recarga todo), se respeta esa eleccion en vez de
+  // volver todo al estado por defecto.
+  const expandidosPrevios = new Set(
+    Array.from(el.querySelectorAll('.novedades-dia-header[aria-expanded="true"]')).map((h) => h.dataset.fecha)
+  );
+  el.innerHTML = `<div class="vacio">Cargando…</div>`;
+  try {
+    const data = await apiFetch("/app/api/novedades?periodo=" + periodoInput.value);
+    if (!data.novedades.length) {
+      el.innerHTML = `<div class="vacio">Sin novedades en este período</div>`;
+      return;
+    }
+    const grupos = [];
+    data.novedades.forEach((n) => {
+      let grupo = grupos.find((g) => g.fecha === n.fecha);
+      if (!grupo) { grupo = { fecha: n.fecha, items: [] }; grupos.push(grupo); }
+      grupo.items.push(n);
+    });
+    el.innerHTML = grupos.map((g, i) => {
+      const expandido = expandidosPrevios.size ? expandidosPrevios.has(g.fecha) : i === 0;
+      return `
+        <div class="novedades-dia-grupo">
+          <button type="button" class="novedades-dia-header" data-fecha="${g.fecha}" onclick="toggleDiaNovedades(this)" aria-expanded="${expandido}">
+            <span class="novedades-dia-titulo">${fechaLarga(g.fecha)}</span>
+            <span class="novedades-dia-cant">${g.items.length}</span>
+            <svg class="novedades-dia-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="novedades-dia-items${expandido ? "" : " oculto"}">
+            ${g.items.map(tarjetaNovedad).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+    el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
+  }
+}
+async function enviarComentarioNovedad(novedadId) {
+  const input = document.getElementById("comentario-input-" + novedadId);
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.disabled = true;
+  try {
+    await apiFetch(`/app/api/novedades/${novedadId}/comentarios`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto }),
+    });
+    await cargarNovedades();
+  } catch (err) {
+    input.disabled = false;
+    alert(err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : "No se pudo enviar el comentario");
   }
 }
 
