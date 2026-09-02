@@ -13,7 +13,7 @@
   :root {
     --bg: #0a0c12; --surface: #12151f; --surface2: #171b28; --border: #242a3b;
     --text: #eef0f6; --text-muted: #8b90a8; --accent: #7c6cf0; --accent-hover: #6c5ce0; --accent-2: #4f8cff;
-    --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d;
+    --ok: #3ecf8e; --warn: #f5a623; --danger: #e5484d; --mural-accent: #22b8cf;
     --header-bg-1: rgba(10,12,18,0.92); --header-bg-2: rgba(10,12,18,0.82);
     --overlay-bg: rgba(0,0,0,0.55); --nav-bg: #0d1019; --nav-inactive: #8b90a8;
     --font-display: 'Unbounded', sans-serif; --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -27,7 +27,7 @@
     --text: #14161f; --text-muted: #6b7086;
     --header-bg-1: rgba(255,255,255,0.92); --header-bg-2: rgba(255,255,255,0.82);
     --overlay-bg: rgba(20,22,31,0.35); --nav-bg: #ffffff; --nav-inactive: #6b7086;
-    --warn: #a86800;
+    --warn: #a86800; --mural-accent: #0d8a9e;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -187,6 +187,39 @@
     box-shadow: 0 6px 20px rgba(124,108,240,0.35);
   }
   .recorrido-card-cta svg { width: 15px; height: 15px; }
+
+  /* Tarjeta del Mural en Inicio -- misma jerarquia que la del Recorrido
+     (es el otro destino "grande" de la app), pero en cyan para que las dos
+     se distingan de un vistazo en vez de leerse como la misma tarjeta
+     repetida. */
+  .mural-card-inicio {
+    border-radius: 16px; border: 1px solid rgba(34,184,207,0.4);
+    background: linear-gradient(135deg, rgba(34,184,207,0.20), rgba(79,140,255,0.12) 65%);
+    padding: 16px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  body.tema-claro .mural-card-inicio { background: linear-gradient(135deg, rgba(13,138,158,0.10), rgba(79,140,255,0.06) 65%); box-shadow: none; }
+  .mural-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--mural-accent); letter-spacing: 0.06em; text-transform: uppercase; }
+  .mural-card-titulo { font: 700 18px/1.25 Unbounded, sans-serif; margin-top: 8px; }
+  .mural-card-sub { font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 4px; }
+  .mural-card-icono {
+    position: relative;
+    width: 38px; height: 38px; border-radius: 10px; background: rgba(34,184,207,0.22);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .mural-card-icono svg { width: 20px; height: 20px; color: var(--mural-accent); }
+  /* Globito con la cantidad de tareas sin tomar -- solo aparece si hay. */
+  .mural-card-badge {
+    position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 999px; background: var(--danger); color: #fff;
+    font: 700 11px/20px Inter, sans-serif; text-align: center;
+    border: 2px solid var(--bg);
+  }
+  .mural-card-cta {
+    min-height: 48px; margin-top: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, var(--mural-accent), var(--accent-2)); color: #fff; font: 700 15px/1 Inter, sans-serif;
+    box-shadow: 0 6px 20px rgba(34,184,207,0.3);
+  }
+  .mural-card-cta svg { width: 15px; height: 15px; }
 
   .amber-card { border-radius: 16px; border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07); padding: 14px 16px; margin-bottom: 12px; }
   body.tema-claro .amber-card { border-color: rgba(168,104,0,0.3); background: rgba(168,104,0,0.06); }
@@ -740,6 +773,24 @@
         </div>
       </div>
 
+      <div class="mural-card-inicio" onclick="cambiarTab('mural')">
+        <div class="recorrido-card-top">
+          <div>
+            <div class="mural-card-eyebrow">Mural del equipo</div>
+            <div class="mural-card-titulo" id="mural-card-titulo">Tareas y comunicados</div>
+            <div class="mural-card-sub" id="mural-card-sub">Cargando…</div>
+          </div>
+          <div class="mural-card-icono">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span class="mural-card-badge oculto" id="mural-card-badge">0</span>
+          </div>
+        </div>
+        <div class="mural-card-cta">
+          Ver el mural
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
       <div class="amber-card oculto" id="inicio-problemas-card">
         <div class="amber-card-top">
           <span class="amber-card-eyebrow" id="inicio-problemas-titulo">Días para corregir</span>
@@ -826,18 +877,12 @@
         <button class="mural-banner-cerrar" onclick="cerrarBannerMural()" aria-label="Cerrar">✕</button>
       </div>
       <div class="config-notif-estado" id="mural-banner-estado"></div>
-      <div class="periodo-selector">
-        <input type="month" id="mural-periodo" onchange="cargarMural()">
-        <button onclick="document.getElementById('mural-periodo').value='';cargarMural()">Ver todo</button>
-      </div>
+      <div class="periodo-pills" id="mural-periodos"></div>
       <div id="mural-contenido"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-novedades" class="oculto">
-      <div class="periodo-selector">
-        <input type="month" id="novedades-periodo" onchange="cargarNovedades()">
-        <button onclick="document.getElementById('novedades-periodo').value='';cargarNovedades()">Ver todo</button>
-      </div>
+      <div class="periodo-pills" id="novedades-periodos"></div>
       <div id="novedades-contenido"><div class="vacio">Cargando…</div></div>
     </section>
 
@@ -1297,6 +1342,7 @@ function mostrarApp() {
   cargarProblemasInicio();
   cargarCompaneros();
   actualizarTarjetaRecorridoInicio();
+  cargarResumenMuralInicio();
   cargarBadgeSolicitudes();
   cargarNotificaciones();
   cargarPerfilApp();
@@ -1750,6 +1796,64 @@ const ETIQUETA_AUDIENCIA_MURAL_APP = {
   individual: "Para vos",
 };
 
+// Tarjeta grande del Mural en Inicio: lo importante de un vistazo es
+// cuantas tareas siguen sin tomar ("publicada"), que es lo unico que pide
+// una accion. Las que ya estan en proceso se cuentan aparte pero sin
+// globito rojo, y si no queda nada pendiente lo dice en positivo.
+// Al entrar a la app se pide el mural una vez solo para llenar la tarjeta
+// de Inicio (sin pintar la pestaña, que se carga sola al abrirla).
+async function cargarResumenMuralInicio() {
+  try {
+    const data = await apiFetch("/app/api/mural");
+    actualizarTarjetaMuralInicio(data.posts);
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+    document.getElementById("mural-card-sub").textContent = "No se pudo cargar";
+  }
+}
+
+function actualizarTarjetaMuralInicio(posts) {
+  const tituloEl = document.getElementById("mural-card-titulo");
+  const subEl = document.getElementById("mural-card-sub");
+  const badgeEl = document.getElementById("mural-card-badge");
+  if (!tituloEl) return;
+
+  const sinTomar = posts.filter((p) => p.estado === "publicada").length;
+  const enProceso = posts.filter((p) => p.estado === "en_proceso").length;
+
+  badgeEl.classList.toggle("oculto", sinTomar === 0);
+  badgeEl.textContent = sinTomar > 99 ? "99+" : sinTomar;
+
+  if (sinTomar > 0) {
+    tituloEl.textContent = sinTomar === 1 ? "1 tarea sin tomar" : `${sinTomar} tareas sin tomar`;
+  } else if (enProceso > 0) {
+    tituloEl.textContent = enProceso === 1 ? "1 tarea en proceso" : `${enProceso} tareas en proceso`;
+  } else {
+    tituloEl.textContent = "Todo al día";
+  }
+
+  const ultimo = posts[0];
+  if (!ultimo) {
+    subEl.textContent = "Todavía no hay nada publicado";
+  } else if (sinTomar > 0 && enProceso > 0) {
+    subEl.textContent = `${enProceso} más en proceso · última: ${fechaCortaRelativa(ultimo.creado_en)}`;
+  } else {
+    subEl.textContent = `Última publicación: ${fechaCortaRelativa(ultimo.creado_en)}`;
+  }
+}
+
+// "hoy" / "ayer" / "12 de agosto" -- en la tarjeta de Inicio importa mas
+// saber si es de hoy que la fecha exacta.
+function fechaCortaRelativa(iso) {
+  const fecha = iso.slice(0, 10);
+  const hoy = fechaISO(new Date());
+  const ayer = fechaISO(new Date(Date.now() - 86400000));
+  if (fecha === hoy) return "hoy";
+  if (fecha === ayer) return "ayer";
+  const [, m, d] = fecha.split("-").map(Number);
+  return `${d} de ${MESES[m - 1]}`;
+}
+
 function stepperMural(estado) {
   const pasos = ["Publicada", "Reclamada", "En proceso", "Finalizada"];
   const finalizada = estado === "finalizada";
@@ -1824,16 +1928,47 @@ function tarjetaMural(p) {
   `;
 }
 
+// Filtro de mes por pills (mismo componente que "Mis horas") -- el
+// <input type="month"> nativo se veia mal y en vacio mostraba "---- de ----".
+// "Todo" = sin filtro, que es el estado por defecto.
+let muralPeriodo = null;
+let novedadesPeriodo = null;
+
+function pillsPeriodo(contenedorId, seleccionado, onClickNombre) {
+  const cont = document.getElementById(contenedorId);
+  if (!cont) return;
+  const periodos = periodosRecientesCliente(4);
+  const todo = `<div class="periodo-pill ${seleccionado ? "" : "activo"}" onclick="${onClickNombre}(null)">Todo</div>`;
+  const pills = periodos.map((p) => {
+    const mes = capitalizar(MESES[Number(p.slice(5, 7)) - 1]);
+    return `<div class="periodo-pill ${p === seleccionado ? "activo" : ""}" onclick="${onClickNombre}('${p}')">${mes}</div>`;
+  }).join("");
+  cont.innerHTML = todo + pills;
+}
+
+function seleccionarPeriodoMural(periodo) {
+  muralPeriodo = periodo;
+  pillsPeriodo("mural-periodos", muralPeriodo, "seleccionarPeriodoMural");
+  cargarMural();
+}
+
+function seleccionarPeriodoNovedades(periodo) {
+  novedadesPeriodo = periodo;
+  pillsPeriodo("novedades-periodos", novedadesPeriodo, "seleccionarPeriodoNovedades");
+  cargarNovedades();
+}
+
 async function cargarMural() {
   const el = document.getElementById("mural-contenido");
+  pillsPeriodo("mural-periodos", muralPeriodo, "seleccionarPeriodoMural");
   const expandidosPrevios = new Set(
     Array.from(el.querySelectorAll('.novedades-dia-header[aria-expanded="true"]')).map((h) => h.dataset.fecha)
   );
   el.innerHTML = `<div class="vacio">Cargando…</div>`;
   try {
     const data = await apiFetch("/app/api/mural");
-    const periodoInput = document.getElementById("mural-periodo");
-    const mes = periodoInput && periodoInput.value ? periodoInput.value : null;
+    actualizarTarjetaMuralInicio(data.posts);
+    const mes = muralPeriodo;
     const posts = mes ? data.posts.filter((p) => p.creado_en.startsWith(mes)) : data.posts;
     if (!posts.length) {
       el.innerHTML = `<div class="vacio">${mes ? "Nada publicado ese mes" : "Todavía no hay nada publicado"}</div>`;
@@ -2416,8 +2551,7 @@ function tarjetaNovedad(n) {
 // tocando el header de un dia se despliega/pliega ese grupo nada mas.
 async function cargarNovedades() {
   const el = document.getElementById("novedades-contenido");
-  const periodoInput = document.getElementById("novedades-periodo");
-  if (!periodoInput.value) periodoInput.value = periodoActual();
+  pillsPeriodo("novedades-periodos", novedadesPeriodo, "seleccionarPeriodoNovedades");
   // Si ya habia dias desplegados a mano (por ej. antes de mandar un
   // comentario, que recarga todo), se respeta esa eleccion en vez de
   // volver todo al estado por defecto.
@@ -2426,9 +2560,9 @@ async function cargarNovedades() {
   );
   el.innerHTML = `<div class="vacio">Cargando…</div>`;
   try {
-    const data = await apiFetch("/app/api/novedades?periodo=" + periodoInput.value);
+    const data = await apiFetch("/app/api/novedades" + (novedadesPeriodo ? "?periodo=" + novedadesPeriodo : ""));
     if (!data.novedades.length) {
-      el.innerHTML = `<div class="vacio">Sin novedades en este período</div>`;
+      el.innerHTML = `<div class="vacio">${novedadesPeriodo ? "Sin novedades en este período" : "Todavía no hay novedades cargadas"}</div>`;
       return;
     }
     const grupos = [];
