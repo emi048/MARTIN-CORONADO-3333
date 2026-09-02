@@ -16,7 +16,9 @@ const {
   agregarEvento, registrarMensaje,
   obtenerConversacion, guardarConversacion, limpiarConversacion,
   obtenerFichadaHoy, registrarNumero,
+  empleadoAppPorNombre,
 } = require("../services/db");
+const { enviarPushAEmpleado } = require("../services/pushNotifications");
 const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { actualizarEventoDia } = require("../generarCalendarioMantenimiento");
@@ -1046,6 +1048,21 @@ async function avisarResultado(numero, nombreEmpleado, tipo, resultado, textoLib
   }
 }
 
+// Aviso equivalente pero por push a la app propia -- independiente de
+// WhatsApp (sirve aunque el bot este caido o el empleado no tenga numero
+// cargado). Si el empleado no tiene cuenta en la app o nunca activo las
+// notis, enviarPushAEmpleado no hace nada.
+async function avisarResultadoPush(nombreEmpleado, tipo, resultado, cuerpo) {
+  const empleadoApp = empleadoAppPorNombre(nombreEmpleado);
+  if (!empleadoApp) return;
+  const emoji = resultado === "aprobada" ? "✅" : "❌";
+  await enviarPushAEmpleado(empleadoApp.id, {
+    titulo: `${emoji} Tu solicitud de ${tipo} fue ${resultado}`,
+    cuerpo,
+    url: "/app/",
+  });
+}
+
 async function resolverUnaSolicitud(accion, id, periodosTocados) {
   const solicitud = obtenerSolicitud(id);
   if (!solicitud) return `#${id}: no encontrada.`;
@@ -1054,6 +1071,7 @@ async function resolverUnaSolicitud(accion, id, periodosTocados) {
   if (accion === "rechazar") {
     resolverSolicitud(id, "rechazada");
     await avisarResultado(solicitud.numero_whatsapp, solicitud.empleado, "corrección", "rechazada", `Tu solicitud de corrección (#${id}) fue rechazada. Hablá con el administrador si tenés dudas.`);
+    await avisarResultadoPush(solicitud.empleado, "corrección", "rechazada", "Hablá con el administrador si tenés dudas.");
     return `#${id}: rechazada.`;
   }
 
@@ -1062,6 +1080,7 @@ async function resolverUnaSolicitud(accion, id, periodosTocados) {
     periodosTocados.add(periodo);
     resolverSolicitud(id, "aprobada");
     await avisarResultado(solicitud.numero_whatsapp, solicitud.empleado, "corrección", "aprobada", `✅ Solicitud confirmada (#${id}). Tus horas ya están actualizadas.`);
+    await avisarResultadoPush(solicitud.empleado, "corrección", "aprobada", "Tus horas ya están actualizadas.");
     return `#${id}: confirmada.`;
   } catch (err) {
     console.error(`Error aplicando corrección #${id}:`, err);
@@ -1080,6 +1099,7 @@ async function resolverUnaSolicitudCambio(accion, id) {
   if (accion === "rechazar") {
     resolverSolicitudCambio(id, "rechazada");
     await avisarResultado(solicitud.numero_whatsapp_a, solicitud.empleado_a, "cambio de turno", "rechazada", `Tu pedido de cambio de turno (#${id}) fue rechazado. Hablá con el administrador si tenés dudas.`);
+    await avisarResultadoPush(solicitud.empleado_a, "cambio de turno", "rechazada", "Hablá con el administrador si tenés dudas.");
     return `#${id}: rechazada.`;
   }
 
@@ -1129,12 +1149,21 @@ async function resolverUnaSolicitudCambio(accion, id) {
   resolverSolicitudCambio(id, "aprobada");
 
   await avisarResultado(solicitud.numero_whatsapp_a, empleado_a, "cambio de turno", "aprobada", `✅ Cambio confirmado (#${id}). Ya está actualizado.`);
+  await avisarResultadoPush(empleado_a, "cambio de turno", "aprobada", "Ya está actualizado.");
   const numeroB = numeroDeEmpleado(empleado_b);
   if (numeroB) {
     await enviarWhatsapp(
       numeroB,
       `✅ ${empleado_a} y vos intercambiaron turnos (#${id}) — ${formatoDiaMes(fecha_a)} y ${formatoDiaMes(fecha_b)}. Confirmado por el administrador.`
     );
+  }
+  const empleadoAppB = empleadoAppPorNombre(empleado_b);
+  if (empleadoAppB) {
+    await enviarPushAEmpleado(empleadoAppB.id, {
+      titulo: "✅ Cambio de turno confirmado",
+      cuerpo: `${empleado_a} y vos intercambiaron turnos — ${formatoDiaMes(fecha_a)} y ${formatoDiaMes(fecha_b)}.`,
+      url: "/app/",
+    });
   }
 
   return `#${id}: confirmada.`;
@@ -1216,6 +1245,7 @@ async function resolverUnaSolicitudCancelacion(accion, id, periodosTocados) {
   if (accion === "rechazar") {
     resolverSolicitudCancelacion(id, "rechazada");
     await avisarResultado(solicitud.numero_whatsapp, solicitud.empleado, "cancelación", "rechazada", `Tu pedido de cancelación (#${id}) fue rechazado. Hablá con el administrador si tenés dudas.`);
+    await avisarResultadoPush(solicitud.empleado, "cancelación", "rechazada", "Hablá con el administrador si tenés dudas.");
     return `#${id}: rechazada.`;
   }
 
@@ -1225,10 +1255,12 @@ async function resolverUnaSolicitudCancelacion(accion, id, periodosTocados) {
       const periodo = await aplicarCancelacionCorreccion(original);
       if (periodosTocados) periodosTocados.add(periodo);
       await avisarResultado(solicitud.numero_whatsapp, solicitud.empleado, "cancelación", "aprobada", `✅ Cancelación confirmada (#${id}). Tus horas volvieron a como estaban antes.`);
+      await avisarResultadoPush(solicitud.empleado, "cancelación", "aprobada", "Tus horas volvieron a como estaban antes.");
     } else {
       const original = obtenerSolicitudCambio(solicitud.solicitud_id);
       await aplicarCancelacionCambio(original);
       await avisarResultado(solicitud.numero_whatsapp, solicitud.empleado, "cancelación", "aprobada", `✅ Cancelación confirmada (#${id}). El cambio de turno quedó deshecho.`);
+      await avisarResultadoPush(solicitud.empleado, "cancelación", "aprobada", "El cambio de turno quedó deshecho.");
     }
     resolverSolicitudCancelacion(id, "aprobada");
     return `#${id}: confirmada.`;

@@ -9,7 +9,9 @@ const { correrPipelineMensual } = require("./services/pipeline");
 const { registrarNumero } = require("./services/db");
 
 const app = express();
-app.use(express.json());
+// Limite subido de 100kb (default) a 25mb -- el recorrido diario manda
+// hasta 10 fotos en base64 de una sola vez al terminar.
+app.use(express.json({ limit: "25mb" }));
 
 app.use("/whatsapp", whatsappRouter);
 app.use("/panel", panelRouter);

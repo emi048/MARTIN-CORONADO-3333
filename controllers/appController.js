@@ -10,6 +10,9 @@ const {
   cambiarPasswordEmpleadoApp,
   numeroDeEmpleado, crearSolicitud, solicitudesDeEmpleado, crearSolicitudCambio, solicitudesCambioDeEmpleado,
   filaDelDiaPorFecha,
+  crearNovedadRecorrido, listarNovedades,
+  crearComentarioNovedad, comentariosDeNovedades,
+  guardarPushSubscripcion,
   crearPostMural, listarPostsMuralParaEmpleado, reclamarPostMural, finalizarPostMural, postMuralPorId,
   crearComentarioMural,
   listarNotificacionesApp, contarNotificacionesNoLeidasApp, marcarNotificacionesLeidasApp,
@@ -22,7 +25,7 @@ const { calcularAsistencia } = require("../services/asistencia");
 const { enviarPushATodoElPanel } = require("../services/pushNotifications");
 
 const router = express.Router();
-router.use(express.json());
+router.use(express.json({ limit: "25mb" }));
 // Sirve la PWA (index.html, manifest.json, sw.js, icons) desde public/app/ bajo /app/*.
 router.use(express.static(path.join(__dirname, "..", "public", "app")));
 
@@ -130,6 +133,7 @@ function fechaISO(d) {
 }
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const RE_PERIODO = /^\d{4}-\d{2}$/;
 const RE_HORA = /^\d{2}:\d{2}$/;
 
 // Fichadas propias del dia (estado en vivo, via HikCentral) + historial del
@@ -296,6 +300,85 @@ router.get("/api/mis-solicitudes", requerirAuthEmpleado, (req, res) => {
     cambios: solicitudesCambioDeEmpleado(nombre, 20),
     licencias: solicitudesLicenciaDeEmpleado(nombre, 20),
   });
+});
+
+// Guarda las observaciones cargadas durante un recorrido diario (una fila
+// por punto con texto y/o foto) para que aparezcan en la pestaña
+// "Novedades". Se llama una sola vez al terminar el recorrido, con todos
+// los puntos que tuvieron algo cargado.
+router.post("/api/recorrido/novedades", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  const { fecha, observaciones } = req.body || {};
+  if (!fecha || !RE_FECHA.test(fecha)) {
+    return res.status(400).json({ ok: false, error: "Fecha inválida" });
+  }
+  if (!Array.isArray(observaciones)) {
+    return res.status(400).json({ ok: false, error: "Faltan las observaciones" });
+  }
+  for (const o of observaciones) {
+    if (!o || !o.punto) continue;
+    const texto = o.observaciones ? String(o.observaciones).trim().slice(0, 1000) : "";
+    const fotos = Array.isArray(o.fotos)
+      ? o.fotos.filter((f) => typeof f === "string" && f.startsWith("data:image/")).slice(0, 5)
+      : [];
+    if (!texto && fotos.length === 0) continue;
+    crearNovedadRecorrido({
+      fecha,
+      punto: String(o.punto).slice(0, 200),
+      empleadoAppId: req.empleadoApp.id,
+      usuarioNombre: nombre,
+      observacion: texto || null,
+      foto: fotos.length ? JSON.stringify(fotos) : null,
+    });
+  }
+  res.json({ ok: true });
+});
+
+// Ultimas novedades cargadas en recorridos (de todo el equipo, no solo las
+// propias), con sus comentarios agrupados -- se muestran en la pestaña
+// "Novedades" como un mural, mas reciente primero.
+router.get("/api/novedades", requerirAuthEmpleado, (req, res) => {
+  const periodo = RE_PERIODO.test(req.query.periodo || "") ? req.query.periodo : null;
+  const novedades = listarNovedades(periodo);
+  const comentarios = comentariosDeNovedades(novedades.map((n) => n.id));
+  res.json({
+    ok: true,
+    novedades: novedades.map((n) => ({
+      ...n,
+      comentarios: comentarios.filter((c) => c.novedad_id === n.id),
+    })),
+  });
+});
+
+// Comenta una novedad (corregir, aclarar, avisar que ya se soluciono,
+// etc.) -- cualquier empleado logueado puede comentar cualquier novedad,
+// no solo la propia (es un mural compartido).
+router.post("/api/novedades/:id/comentarios", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  const novedadId = Number(req.params.id);
+  const texto = String((req.body || {}).texto || "").trim().slice(0, 500);
+  if (!novedadId || !texto) return res.status(400).json({ ok: false, error: "Escribí un comentario" });
+  crearComentarioNovedad({ novedadId, empleadoAppId: req.empleadoApp.id, usuarioNombre: nombre, texto });
+  res.json({ ok: true });
+});
+
+// Clave publica VAPID -- la necesita el navegador para suscribirse
+// (pushManager.subscribe). No es secreta, pero solo se la damos a un
+// empleado logueado (no tiene sentido exponerla sin auth tampoco).
+router.get("/api/push/vapid-public-key", requerirAuthEmpleado, (req, res) => {
+  res.json({ ok: true, key: process.env.VAPID_PUBLIC_KEY || "" });
+});
+
+// Guarda la suscripcion Push que devuelve pushManager.subscribe() del lado
+// del navegador -- PushSubscription.toJSON() manda exactamente esta forma
+// ({ endpoint, keys: { p256dh, auth } }).
+router.post("/api/push/suscribirse", requerirAuthEmpleado, (req, res) => {
+  const { endpoint, keys } = req.body || {};
+  if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
+    return res.status(400).json({ ok: false, error: "Suscripción inválida" });
+  }
+  guardarPushSubscripcion({ empleadoAppId: req.empleadoApp.id, endpoint, p256dh: keys.p256dh, auth: keys.auth });
+  res.json({ ok: true });
 });
 
 // ── Mural de tareas -- ve solo lo que le corresponde segun su sector, si

@@ -195,6 +195,46 @@ db.exec(`
     intentos INTEGER NOT NULL DEFAULT 0,
     bloqueado_hasta TEXT
   );
+
+  -- Observaciones cargadas durante el recorrido diario (Nivel 0/-1/-2 +
+  -- azotea). Se guarda una fila por punto con algo cargado (texto y/o
+  -- foto en base64) al terminar el recorrido -- la pestaña "Novedades" de
+  -- la app lista estas filas para todo el equipo.
+  CREATE TABLE IF NOT EXISTS novedades_recorrido (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL,
+    punto TEXT NOT NULL,
+    empleado_app_id INTEGER,
+    usuario_nombre TEXT NOT NULL,
+    observacion TEXT,
+    foto TEXT,
+    creado_en TEXT NOT NULL
+  );
+
+  -- Comentarios de otros empleados sobre una novedad del recorrido (por
+  -- ejemplo, corrigiendo o aclarando algo que se cargo) -- se muestran
+  -- debajo de cada tarjeta en la pestaña "Novedades", tipo mural.
+  CREATE TABLE IF NOT EXISTS novedades_recorrido_comentarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    novedad_id INTEGER NOT NULL,
+    empleado_app_id INTEGER,
+    usuario_nombre TEXT NOT NULL,
+    texto TEXT NOT NULL,
+    creado_en TEXT NOT NULL
+  );
+
+  -- Suscripciones a notificaciones push de la app de empleado (Web Push).
+  -- Un empleado puede tener mas de una fila si activa las notis en mas de
+  -- un dispositivo -- por eso el UNIQUE es el endpoint (identifica al
+  -- dispositivo/navegador), no el empleado.
+  CREATE TABLE IF NOT EXISTS push_subscripciones_app (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empleado_app_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    creado_en TEXT NOT NULL
+  );
 `);
 
 // Migracion idempotente: agrega la columna solo si todavia no existe (la
@@ -934,6 +974,13 @@ function empleadoAppPorId(id) {
   return db.prepare(`SELECT * FROM empleados WHERE id = ?`).get(id);
 }
 
+// Para mandar un push cuando se resuelve una solicitud -- ahi solo se tiene
+// el nombre del empleado (como quedo guardado en la solicitud), no su id
+// de cuenta de la app.
+function empleadoAppPorNombre(nombre) {
+  return db.prepare(`SELECT * FROM empleados WHERE nombre = ? AND activo = 1`).get(nombre);
+}
+
 // La usa el ADMIN para (re)emitir una credencial (alta o reset) -- siempre
 // vuelve a marcar debe_cambiar_pin=1, porque lo que se le entrega al
 // empleado en ese momento es predecible (usuario + "1"), nunca definitivo.
@@ -1005,6 +1052,59 @@ function limpiarIntentosLoginApp(usuario) {
   db.prepare(`DELETE FROM intentos_login_app WHERE usuario = ?`).run(usuario);
 }
 
+function crearNovedadRecorrido({ fecha, punto, empleadoAppId, usuarioNombre, observacion, foto }) {
+  db.prepare(`
+    INSERT INTO novedades_recorrido (fecha, punto, empleado_app_id, usuario_nombre, observacion, foto, creado_en)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(fecha, punto, empleadoAppId, usuarioNombre, observacion || null, foto || null, new Date().toISOString());
+}
+
+// periodo = "YYYY-MM" -- filtra por mes (para el selector de periodo de la
+// pestaña Novedades). Sin periodo devuelve todo, mas reciente primero.
+function listarNovedades(periodo, limite = 200) {
+  if (periodo) {
+    return db.prepare(`SELECT * FROM novedades_recorrido WHERE fecha LIKE ? ORDER BY id DESC LIMIT ?`).all(periodo + "%", limite);
+  }
+  return db.prepare(`SELECT * FROM novedades_recorrido ORDER BY id DESC LIMIT ?`).all(limite);
+}
+
+function crearComentarioNovedad({ novedadId, empleadoAppId, usuarioNombre, texto }) {
+  db.prepare(`
+    INSERT INTO novedades_recorrido_comentarios (novedad_id, empleado_app_id, usuario_nombre, texto, creado_en)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(novedadId, empleadoAppId, usuarioNombre, texto, new Date().toISOString());
+}
+
+// Trae los comentarios de varias novedades de una sola consulta (en vez de
+// una consulta por tarjeta) -- se agrupan por novedad_id del lado del
+// controller antes de mandarlos al front.
+function comentariosDeNovedades(idsNovedades) {
+  if (!idsNovedades.length) return [];
+  const placeholders = idsNovedades.map(() => "?").join(",");
+  return db.prepare(`
+    SELECT * FROM novedades_recorrido_comentarios WHERE novedad_id IN (${placeholders}) ORDER BY id ASC
+  `).all(...idsNovedades);
+}
+
+// ON CONFLICT(endpoint) por si el mismo dispositivo se vuelve a suscribir
+// (ej. el navegador rota el endpoint, o el empleado cierra sesion y entra
+// con otra cuenta en el mismo celular -- ahi hay que pisar el dueño).
+function guardarPushSubscripcion({ empleadoAppId, endpoint, p256dh, auth }) {
+  db.prepare(`
+    INSERT INTO push_subscripciones_app (empleado_app_id, endpoint, p256dh, auth, creado_en)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET empleado_app_id = excluded.empleado_app_id, p256dh = excluded.p256dh, auth = excluded.auth
+  `).run(empleadoAppId, endpoint, p256dh, auth, new Date().toISOString());
+}
+
+function eliminarPushSubscripcion(endpoint) {
+  db.prepare(`DELETE FROM push_subscripciones_app WHERE endpoint = ?`).run(endpoint);
+}
+
+function suscripcionesDeEmpleado(empleadoAppId) {
+  return db.prepare(`SELECT * FROM push_subscripciones_app WHERE empleado_app_id = ?`).all(empleadoAppId);
+}
+
 module.exports = {
   db,
   guardarResumenMensual, resumenDelPeriodo, rangoFechasDelPeriodo,
@@ -1034,6 +1134,10 @@ module.exports = {
   actualizarPinEmpleadoApp, cambiarPasswordEmpleadoApp, eliminarEmpleadoApp,
   crearSesionApp, renovarSesionApp, empleadoIdDeSesionApp, eliminarSesionApp, limpiarSesionesAppVencidas,
   estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
+  crearNovedadRecorrido, listarNovedades,
+  crearComentarioNovedad, comentariosDeNovedades,
+  empleadoAppPorNombre,
+  guardarPushSubscripcion, eliminarPushSubscripcion, suscripcionesDeEmpleado,
 };
 
 // Contraseña del panel de admin -- migrada de un simple string en .env
