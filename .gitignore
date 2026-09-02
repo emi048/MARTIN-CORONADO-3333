@@ -5,3 +5,6 @@ data/
 config/gmail_token.json
 .monitor-estado.json
 monitor.log
+backups/
+imports/
+.env.bak*
