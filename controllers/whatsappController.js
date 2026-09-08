@@ -346,6 +346,12 @@ function lineaDia(fila) {
   return `*${fechaDisplay}* — ${fila.ingreso} a ${fila.egreso}\n🕐 *${fila.total_hs}hs*${extraTexto}`;
 }
 
+function mensajeHorasDia(empleado, fecha) {
+  const fila = filaDelDiaPorFecha(empleado, fecha);
+  if (!fila) return `No encontré datos del ${formatoDiaMes(fecha)}.`;
+  return `Hola ${empleado.split(" ")[0]} 👋\n\n${lineaDia(fila)}`;
+}
+
 function mensajeHoras(empleado) {
   const resumen = ultimoResumen(empleado);
   if (!resumen) return `Hola ${empleado.split(" ")[0]}, todavía no hay datos procesados para vos.`;
@@ -580,7 +586,7 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
   if (resultado.intent === "consulta_horas") {
     registrarMensaje(numero, empleado, "consulta_horas");
     guardarConversacion(numero, "menu");
-    return mensajeHoras(empleado);
+    return resultado.fecha ? mensajeHorasDia(empleado, resultado.fecha) : mensajeHoras(empleado);
   }
   guardarConversacion(numero, "menu");
   return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);

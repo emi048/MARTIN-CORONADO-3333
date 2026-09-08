@@ -24,7 +24,7 @@ const TOOL = {
       },
       fecha: {
         type: "string",
-        description: "Solo si intent es solicitud_correccion y completo es true: fecha del dia a corregir, formato YYYY-MM-DD.",
+        description: "Si intent es solicitud_correccion y completo es true: fecha del dia a corregir, formato YYYY-MM-DD. Si intent es consulta_horas y el empleado pregunta puntualmente por un dia (no el total del periodo/mes): la fecha de ese dia, mismo formato -- omitir este campo si pregunta por el total.",
       },
       campo: {
         type: "string",
