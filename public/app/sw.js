@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v28"; // v28: fichado por QR de prueba (tile en Accesos + pantalla con camara + tutorial primera vez)
+const CACHE = "fich-coronado-v29"; // v29: tarjeta Fichar QR primera en Inicio, sin texto de prueba, aviso por WhatsApp al fichar
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

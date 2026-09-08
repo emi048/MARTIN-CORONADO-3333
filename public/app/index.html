@@ -221,6 +221,27 @@
   }
   .mural-card-cta svg { width: 15px; height: 15px; }
 
+  .ficharqr-card-inicio {
+    border-radius: 16px; border: 1px solid rgba(62,207,142,0.4);
+    background: linear-gradient(135deg, rgba(62,207,142,0.20), rgba(79,140,255,0.10) 65%);
+    padding: 16px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  body.tema-claro .ficharqr-card-inicio { background: linear-gradient(135deg, rgba(31,158,110,0.10), rgba(79,140,255,0.06) 65%); box-shadow: none; }
+  .ficharqr-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--ok); letter-spacing: 0.06em; text-transform: uppercase; }
+  .ficharqr-card-titulo { font: 700 18px/1.25 Unbounded, sans-serif; margin-top: 8px; }
+  .ficharqr-card-sub { font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 4px; }
+  .ficharqr-card-icono {
+    width: 38px; height: 38px; border-radius: 10px; background: rgba(62,207,142,0.22);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .ficharqr-card-icono svg { width: 20px; height: 20px; color: var(--ok); }
+  .ficharqr-card-cta {
+    min-height: 48px; margin-top: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, var(--ok), var(--accent-2)); color: #fff; font: 700 15px/1 Inter, sans-serif;
+    box-shadow: 0 6px 20px rgba(62,207,142,0.3);
+  }
+  .ficharqr-card-cta svg { width: 15px; height: 15px; }
+
   .amber-card { border-radius: 16px; border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07); padding: 14px 16px; margin-bottom: 12px; }
   body.tema-claro .amber-card { border-color: rgba(168,104,0,0.3); background: rgba(168,104,0,0.06); }
   .amber-card-top { display: flex; justify-content: space-between; align-items: center; }
@@ -381,7 +402,11 @@
   .recorrido-botones button {
     flex: 1; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; border: none;
   }
-  .btn-listo { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; }
+  .btn-listo {
+    padding: 13px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-size: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white;
+    box-shadow: 0 6px 20px rgba(124,108,240,0.3);
+  }
   .btn-cancelar { background: var(--surface2); border: 1px solid var(--border) !important; color: var(--text); }
 
   .recorrido-header-curso { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; }
@@ -767,6 +792,23 @@
 
   <main>
     <section id="tab-inicio">
+      <div class="ficharqr-card-inicio" onclick="abrirFicharQR()">
+        <div class="recorrido-card-top">
+          <div>
+            <div class="ficharqr-card-eyebrow">Fichar QR</div>
+            <div class="ficharqr-card-titulo" id="ficharqr-card-titulo">Fichá tu ingreso</div>
+            <div class="ficharqr-card-sub" id="ficharqr-card-sub">Escaneá el QR de la entrada</div>
+          </div>
+          <div class="ficharqr-card-icono">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+          </div>
+        </div>
+        <div class="ficharqr-card-cta">
+          Escanear QR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
       <div class="card hoy-card">
         <div class="hoy-card-top">
           <div class="card-titulo" style="margin-bottom:0" id="hoy-fecha">Hoy</div>
@@ -832,10 +874,6 @@
         <div class="acceso-tile" onclick="abrirModal('licencia')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <span>Pedir licencia</span>
-        </div>
-        <div class="acceso-tile" onclick="abrirFicharQR()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-          <span>Fichar QR (prueba)</span>
         </div>
         <div class="acceso-tile" onclick="abrirNovedades()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -911,7 +949,6 @@
     </section>
 
     <section id="tab-ficharqr" class="oculto">
-      <div class="ficharqr-badge-prueba">🧪 Modo prueba — esto no afecta tus horas reales</div>
       <div class="recorrido-viewfinder">
         <div id="ficharqr-viewfinder-idle" role="button" tabindex="0" onclick="iniciarEscaneoFicharQR()" onkeydown="if(event.key==='Enter')iniciarEscaneoFicharQR()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
@@ -931,7 +968,7 @@
       </div>
       <canvas id="ficharqr-canvas" style="display:none"></canvas>
       <div class="ficharqr-resultado oculto" id="ficharqr-resultado"></div>
-      <div class="card-titulo ficharqr-historial-titulo">Tu historial de prueba</div>
+      <div class="card-titulo ficharqr-historial-titulo">Tus fichadas</div>
       <div id="ficharqr-historial"><div class="vacio">Cargando…</div></div>
     </section>
 
@@ -1038,12 +1075,12 @@
   <div class="onboard-overlay oculto" id="tutorial-ficharqr-overlay">
     <div class="onboard-box">
       <button class="onboard-cerrar" onclick="cerrarTutorialFicharQR()" aria-label="Cerrar">✕</button>
-      <div class="onboard-titulo">📷 Fichado por QR (prueba)</div>
-      <div class="onboard-sub">Esto es una prueba: no cuenta como una fichada real ni afecta tus horas trabajadas.</div>
+      <div class="onboard-titulo">📷 Fichado por QR</div>
+      <div class="onboard-sub">Así funciona el fichado escaneando el QR de la entrada.</div>
       <div class="onboard-pasos">
         <div class="onboard-paso"><div class="onboard-paso-num">1</div><div>Escaneá el QR fijo pegado en la entrada.</div></div>
         <div class="onboard-paso"><div class="onboard-paso-num">2</div><div>Se registra solo, alternando ingreso y egreso según tu último escaneo del día.</div></div>
-        <div class="onboard-paso"><div class="onboard-paso-num">3</div><div>Podés ver tu historial de prueba en esta misma pantalla.</div></div>
+        <div class="onboard-paso"><div class="onboard-paso-num">3</div><div>Podés ver tus fichadas más abajo, en esta misma pantalla.</div></div>
       </div>
       <button class="btn-listo" style="width:100%" onclick="cerrarTutorialFicharQR()">Entendido, escanear</button>
     </div>
@@ -1405,6 +1442,7 @@ function mostrarApp() {
   cargarProblemasInicio();
   cargarCompaneros();
   actualizarTarjetaRecorridoInicio();
+  actualizarTarjetaFicharQRInicio();
   cargarResumenMuralInicio();
   cargarBadgeSolicitudes();
   cargarNotificaciones();
@@ -1435,7 +1473,7 @@ const TITULOS_TAB = {
   mural: ["Mural", "Tareas y comunicados del equipo"],
   cuenta: ["Cuenta", "Tu perfil y tu contraseña"],
   novedades: ["Novedades", "Lo cargado en los recorridos diarios"],
-  ficharqr: ["Fichar QR (prueba)", "No afecta tus horas reales"],
+  ficharqr: ["Fichar QR", "Registrá tu ingreso y egreso"],
 };
 
 let pantallaOrigenCorregir = "inicio";
@@ -1517,6 +1555,7 @@ async function abrirFicharQR() {
   document.getElementById("header-subtitulo-txt").textContent = subtitulo;
   document.getElementById("ficharqr-resultado").classList.add("oculto");
   cargarHistorialFicharQrPrueba();
+  actualizarTarjetaFicharQRInicio();
   if (!localStorage.getItem("app_tutorial_ficharqr_visto")) {
     document.getElementById("tutorial-ficharqr-overlay").classList.remove("oculto");
   }
@@ -1610,6 +1649,7 @@ async function onQrLeidoFicharQR(texto) {
     });
     mostrarResultadoFicharQR(data.tipo, data.hora);
     cargarHistorialFicharQrPrueba();
+    actualizarTarjetaFicharQRInicio();
   } catch (err) {
     mostrarResultadoFicharQR(null, null, err.message || "No se pudo registrar el fichado");
   }
@@ -1627,9 +1667,33 @@ function mostrarResultadoFicharQR(tipo, hora, error) {
     return;
   }
   el.innerHTML = `
-    <div class="ficharqr-resultado-tipo">${tipo === "ingreso" ? "✅ Ingreso" : "🚪 Egreso"} de PRUEBA registrado</div>
+    <div class="ficharqr-resultado-tipo">${tipo === "ingreso" ? "✅ Ingreso" : "🚪 Egreso"} registrado</div>
     <div class="ficharqr-resultado-hora">${hora}hs</div>
   `;
+}
+
+async function actualizarTarjetaFicharQRInicio() {
+  const tituloEl = document.getElementById("ficharqr-card-titulo");
+  const subEl = document.getElementById("ficharqr-card-sub");
+  if (!tituloEl) return;
+  try {
+    const data = await apiFetch("/app/api/mis-fichadas-qr-prueba");
+    const hoy = fechaISO(new Date());
+    const ultimaHoy = (data.fichadas || []).find((f) => f.fecha === hoy);
+    if (!ultimaHoy) {
+      tituloEl.textContent = "Fichá tu ingreso";
+      subEl.textContent = "Escaneá el QR de la entrada";
+    } else if (ultimaHoy.tipo === "ingreso") {
+      tituloEl.textContent = `Ingreso registrado · ${ultimaHoy.hora}hs`;
+      subEl.textContent = "Volvé a escanear para tu egreso";
+    } else {
+      tituloEl.textContent = `Egreso registrado · ${ultimaHoy.hora}hs`;
+      subEl.textContent = "Escaneá de nuevo si volvés a entrar";
+    }
+  } catch (err) {
+    tituloEl.textContent = "Fichar QR";
+    subEl.textContent = "Escaneá el QR de la entrada";
+  }
 }
 
 async function cargarHistorialFicharQrPrueba() {

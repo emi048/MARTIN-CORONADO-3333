@@ -26,6 +26,7 @@ const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosManteni
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
 const { calcularAsistencia } = require("../services/asistencia");
 const { enviarPushATodoElPanel } = require("../services/pushNotifications");
+const { enviarWhatsapp } = require("../services/twilioClient");
 
 const router = express.Router();
 router.use(express.json({ limit: "25mb" }));
@@ -458,6 +459,11 @@ router.post("/api/fichar-qr-prueba", requerirAuthEmpleado, (req, res) => {
   const ultimo = ultimaFichadaQrPruebaDeEmpleado(nombre, fecha);
   const tipo = !ultimo || ultimo.tipo === "egreso" ? "ingreso" : "egreso";
   registrarFichadaQrPrueba({ empleado: nombre, fecha, hora, tipo, creadoEn: ahora.toISOString() });
+  const numero = numeroDeEmpleado(nombre);
+  if (numero) {
+    const texto = tipo === "ingreso" ? `✅ Ingreso registrado a las ${hora}hs` : `👋 Egreso registrado a las ${hora}hs`;
+    enviarWhatsapp(numero, texto).catch(() => {});
+  }
   res.json({ ok: true, tipo, hora });
 });
 
