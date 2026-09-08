@@ -562,7 +562,6 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
 
   registrarMensaje(numero, empleado, "audio");
   const resultado = await interpretarMensaje(texto, { fechaHoy: fechaISO(new Date()) });
-  const encabezado = "🎙️ Escuché: \"" + texto + "\"\n\n";
 
   if (resultado.intent === "solicitud_correccion" && resultado.completo) {
     const correccion = {
@@ -570,22 +569,21 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
       ingreso: resultado.campo === "ingreso" ? resultado.valor : null,
       egreso: resultado.campo === "egreso" ? resultado.valor : null,
     };
-    const ids = await crearSolicitudesYNotificar(empleado, numero, [correccion], texto);
+    await crearSolicitudesYNotificar(empleado, numero, [correccion], texto);
     guardarConversacion(numero, "menu");
-    const verbo = resultado.campo === "ingreso" ? "ingresaste" : "saliste";
-    return encabezado + "Entendí que " + verbo + " a las " + resultado.valor + "hs el " + formatoDiaMes(resultado.fecha) + ".\n\n📋 Solicitud pendiente de confirmación (#" + ids[0] + "). Te aviso apenas el administrador la revise.";
+    return "¡Entendido! Solicitud de corrección de fichada pendiente de aprobación. Te aviso apenas el administrador la revise.";
   }
   if (resultado.intent === "solicitud_correccion") {
     guardarConversacion(numero, "menu");
-    return encabezado + (resultado.pregunta || "Me faltó algún dato -- ¿podés escribirlo?");
+    return resultado.pregunta || "Me faltó algún dato -- ¿podés escribirlo?";
   }
   if (resultado.intent === "consulta_horas") {
     registrarMensaje(numero, empleado, "consulta_horas");
     guardarConversacion(numero, "menu");
-    return encabezado + mensajeHoras(empleado);
+    return mensajeHoras(empleado);
   }
   guardarConversacion(numero, "menu");
-  return encabezado + (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
+  return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
 }
 
 // ── Menu paso a paso (sin IA) ─────────────────────────────────────────────
