@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v29"; // v29: tarjeta Fichar QR primera en Inicio, sin texto de prueba, aviso por WhatsApp al fichar
+const CACHE = "fich-coronado-v30"; // v30: tarjeta Hoy mezcla el fichado por QR del dia (no solo HikCentral)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

@@ -1650,6 +1650,7 @@ async function onQrLeidoFicharQR(texto) {
     mostrarResultadoFicharQR(data.tipo, data.hora);
     cargarHistorialFicharQrPrueba();
     actualizarTarjetaFicharQRInicio();
+    cargarHoy();
   } catch (err) {
     mostrarResultadoFicharQR(null, null, err.message || "No se pudo registrar el fichado");
   }
@@ -1730,21 +1731,30 @@ function formatearHoras(n) {
 // Tarjeta "Hoy" en Inicio -- estado en vivo de la fichada de hoy.
 async function cargarHoy() {
   try {
-    const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
+    const [data, qrData] = await Promise.all([
+      apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual()),
+      apiFetch("/app/api/mis-fichadas-qr-prueba").catch(() => ({ fichadas: [] })),
+    ]);
     const hoyEl = document.getElementById("hoy-contenido");
     const badge = document.getElementById("hoy-estado-badge");
-    if (data.hoy && (data.hoy.ingreso_hora || data.hoy.egreso_hora)) {
-      badge.classList.toggle("oculto", !(data.hoy.ingreso_hora && !data.hoy.egreso_hora));
+    const hoyISO = fechaISO(new Date());
+    const fichadasQrHoy = (qrData.fichadas || []).filter((f) => f.fecha === hoyISO);
+    const ingresoQr = fichadasQrHoy.find((f) => f.tipo === "ingreso");
+    const egresoQr = fichadasQrHoy.find((f) => f.tipo === "egreso");
+    const ingresoHora = (ingresoQr && ingresoQr.hora) || (data.hoy && data.hoy.ingreso_hora) || null;
+    const egresoHora = (egresoQr && egresoQr.hora) || (data.hoy && data.hoy.egreso_hora) || null;
+    if (ingresoHora || egresoHora) {
+      badge.classList.toggle("oculto", !(ingresoHora && !egresoHora));
       hoyEl.innerHTML = `
         <div class="hoy-horas">
           <div>
             <div class="label">INGRESO</div>
-            <div class="num">${data.hoy.ingreso_hora || "--:--"}</div>
+            <div class="num">${ingresoHora || "--:--"}</div>
           </div>
           <div class="separador"></div>
           <div>
             <div class="label">EGRESO</div>
-            <div class="num" style="${data.hoy.egreso_hora ? "" : "color:var(--text-muted)"}">${data.hoy.egreso_hora || "--:--"}</div>
+            <div class="num" style="${egresoHora ? "" : "color:var(--text-muted)"}">${egresoHora || "--:--"}</div>
           </div>
         </div>`;
     } else {
