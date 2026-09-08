@@ -565,11 +565,15 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
   const encabezado = "🎙️ Escuché: \"" + texto + "\"\n\n";
 
   if (resultado.intent === "solicitud_correccion" && resultado.completo) {
-    guardarConversacion(numero, "audio:confirmar", {
-      fecha: resultado.fecha, campo: resultado.campo, valor: resultado.valor, textoOriginal: texto,
-    });
+    const correccion = {
+      fecha: resultado.fecha,
+      ingreso: resultado.campo === "ingreso" ? resultado.valor : null,
+      egreso: resultado.campo === "egreso" ? resultado.valor : null,
+    };
+    const ids = await crearSolicitudesYNotificar(empleado, numero, [correccion], texto);
+    guardarConversacion(numero, "menu");
     const verbo = resultado.campo === "ingreso" ? "ingresaste" : "saliste";
-    return encabezado + "Entendí que " + verbo + " a las " + resultado.valor + "hs el " + formatoDiaMes(resultado.fecha) + ". ¿Confirmás el pedido de corrección?\n\nRespondé *sí* o *no*.";
+    return encabezado + "Entendí que " + verbo + " a las " + resultado.valor + "hs el " + formatoDiaMes(resultado.fecha) + ".\n\n📋 Solicitud pendiente de confirmación (#" + ids[0] + "). Te aviso apenas el administrador la revise.";
   }
   if (resultado.intent === "solicitud_correccion") {
     guardarConversacion(numero, "menu");
@@ -873,25 +877,6 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       const fechasCorregidas = correcciones.map((c) => c.fecha);
       const resultado = await finalizarSolicitud(empleado, numero, fechasCorregidas, correcciones, textoOriginal);
       return resultado + avisoNoReconocidas;
-    }
-
-    case "audio:confirmar": {
-      if (["si", "sí", "dale", "ok", "confirmo", "correcto"].includes(textoLower)) {
-        const datos = conv.datos;
-        const correccion = {
-          fecha: datos.fecha,
-          ingreso: datos.campo === "ingreso" ? datos.valor : null,
-          egreso: datos.campo === "egreso" ? datos.valor : null,
-        };
-        return await finalizarSolicitud(empleado, numero, [datos.fecha], [correccion], datos.textoOriginal);
-      }
-      if (["no", "cancelar", "salir"].includes(textoLower)) {
-        guardarConversacion(numero, "menu");
-        return "Bueno, no mandé nada. " + menuTextPara(empleado);
-      }
-      const datos = conv.datos;
-      const verbo = datos.campo === "ingreso" ? "ingresaste" : "saliste";
-      return "No te entendí. Respondé *sí* para confirmar o *no* para cancelar.\n\nEntendí que " + verbo + " a las " + datos.valor + "hs el " + formatoDiaMes(datos.fecha) + ".";
     }
 
     default: {
