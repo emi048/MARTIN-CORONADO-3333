@@ -586,6 +586,18 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
   return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
 }
 
+async function procesarAudioEmpleadoAsync(empleado, numero, mediaUrl) {
+  try {
+    const respuesta = await procesarAudioEmpleado(empleado, numero, mediaUrl);
+    await enviarWhatsapp(numero, respuesta);
+  } catch (err) {
+    console.error("Error procesando audio de WhatsApp:", err.message);
+    try {
+      await enviarWhatsapp(numero, "Hubo un error procesando tu audio. Probá de nuevo o escribí tu pedido en texto.");
+    } catch { /* si tampoco se puede mandar el aviso de error, no hay mas nada que hacer */ }
+  }
+}
+
 // ── Menu paso a paso (sin IA) ─────────────────────────────────────────────
 // Cada numero de WhatsApp tiene, en la base, en que paso del menu esta
 // (conversaciones_whatsapp). Cada mensaje entrante avanza un paso.
@@ -1586,8 +1598,9 @@ router.post("/webhook", express.urlencoded({ extended: false }), async (req, res
     const numMedia = parseInt(req.body.NumMedia || "0", 10);
     const tipoMedia = req.body.MediaContentType0 || "";
     if (numMedia > 0 && tipoMedia.startsWith("audio/")) {
-      twiml.message(await procesarAudioEmpleado(empleado, numero, req.body.MediaUrl0));
+      twiml.message("🎙️ Recibí tu audio, dame un segundo que lo escucho...");
       res.type("text/xml").send(twiml.toString());
+      procesarAudioEmpleadoAsync(empleado, numero, req.body.MediaUrl0);
       return;
     }
 
