@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v27"; // v27: Mural destacado en Inicio y filtro de mes por pills (Mural y Novedades)
+const CACHE = "fich-coronado-v28"; // v28: fichado por QR de prueba (tile en Accesos + pantalla con camara + tutorial primera vez)
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {

@@ -428,6 +428,26 @@
   .recorrido-punto-nombre { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
   .recorrido-checklist { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
   .recorrido-checklist li { margin-bottom: 2px; }
+  .ficharqr-badge-prueba {
+    border-radius: 12px; border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07);
+    color: var(--warn); font: 600 12.5px/1.4 Inter, sans-serif; text-align: center; padding: 10px 14px; margin-bottom: 14px;
+  }
+  body.tema-claro .ficharqr-badge-prueba { border-color: rgba(168,104,0,0.3); background: rgba(168,104,0,0.06); }
+  .ficharqr-resultado {
+    border-radius: 16px; border: 1px solid rgba(62,207,142,0.3); background: rgba(62,207,142,0.08);
+    padding: 16px; text-align: center; margin-top: 14px;
+  }
+  .ficharqr-resultado-tipo { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--ok); }
+  .ficharqr-resultado-hora { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .ficharqr-historial-titulo { margin-top: 18px; }
+  .ficharqr-historial-item {
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 0;
+    border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .ficharqr-historial-item:last-child { border-bottom: none; }
+  .ficharqr-historial-tipo { font-weight: 700; }
+  .ficharqr-historial-tipo.ingreso { color: var(--ok); }
+  .ficharqr-historial-tipo.egreso { color: var(--accent-2); }
   .recorrido-obs-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
   #recorrido-observaciones {
     width: 100%; box-sizing: border-box; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
@@ -813,6 +833,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <span>Pedir licencia</span>
         </div>
+        <div class="acceso-tile" onclick="abrirFicharQR()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+          <span>Fichar QR (prueba)</span>
+        </div>
         <div class="acceso-tile" onclick="abrirNovedades()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>Novedades</span>
@@ -884,6 +908,31 @@
     <section id="tab-novedades" class="oculto">
       <div class="periodo-pills" id="novedades-periodos"></div>
       <div id="novedades-contenido"><div class="vacio">Cargando…</div></div>
+    </section>
+
+    <section id="tab-ficharqr" class="oculto">
+      <div class="ficharqr-badge-prueba">🧪 Modo prueba — esto no afecta tus horas reales</div>
+      <div class="recorrido-viewfinder">
+        <div id="ficharqr-viewfinder-idle" role="button" tabindex="0" onclick="iniciarEscaneoFicharQR()" onkeydown="if(event.key==='Enter')iniciarEscaneoFicharQR()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+          <div class="recorrido-viewfinder-titulo">📷 Tocá para escanear el QR</div>
+          <div class="recorrido-viewfinder-sub">Escaneá el QR fijo pegado en la entrada</div>
+          <div class="recorrido-scan-msg oculto" id="ficharqr-cam-error"></div>
+        </div>
+        <div id="ficharqr-viewfinder-cam" class="oculto">
+          <video id="ficharqr-video" playsinline muted></video>
+          <div class="recorrido-scan-msg" id="ficharqr-scan-msg"></div>
+          <button type="button" class="btn-cancelar-recorrido" onclick="pararCamaraFicharQR()">Detener cámara</button>
+        </div>
+        <div id="ficharqr-viewfinder-ok" class="oculto">
+          <svg class="recorrido-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
+          <div class="recorrido-viewfinder-titulo">Escaneo completado</div>
+        </div>
+      </div>
+      <canvas id="ficharqr-canvas" style="display:none"></canvas>
+      <div class="ficharqr-resultado oculto" id="ficharqr-resultado"></div>
+      <div class="card-titulo ficharqr-historial-titulo">Tu historial de prueba</div>
+      <div id="ficharqr-historial"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-cuenta" class="oculto">
@@ -984,6 +1033,20 @@
   <div class="lightbox-overlay oculto" id="lightbox-overlay" onclick="cerrarLightbox()">
     <button class="lightbox-cerrar" onclick="cerrarLightbox(event)" aria-label="Cerrar">✕</button>
     <img id="lightbox-img" alt="Foto ampliada" onclick="event.stopPropagation()">
+  </div>
+
+  <div class="onboard-overlay oculto" id="tutorial-ficharqr-overlay">
+    <div class="onboard-box">
+      <button class="onboard-cerrar" onclick="cerrarTutorialFicharQR()" aria-label="Cerrar">✕</button>
+      <div class="onboard-titulo">📷 Fichado por QR (prueba)</div>
+      <div class="onboard-sub">Esto es una prueba: no cuenta como una fichada real ni afecta tus horas trabajadas.</div>
+      <div class="onboard-pasos">
+        <div class="onboard-paso"><div class="onboard-paso-num">1</div><div>Escaneá el QR fijo pegado en la entrada.</div></div>
+        <div class="onboard-paso"><div class="onboard-paso-num">2</div><div>Se registra solo, alternando ingreso y egreso según tu último escaneo del día.</div></div>
+        <div class="onboard-paso"><div class="onboard-paso-num">3</div><div>Podés ver tu historial de prueba en esta misma pantalla.</div></div>
+      </div>
+      <button class="btn-listo" style="width:100%" onclick="cerrarTutorialFicharQR()">Entendido, escanear</button>
+    </div>
   </div>
 
   <div class="onboard-overlay oculto" id="onboard-notif-overlay">
@@ -1372,13 +1435,14 @@ const TITULOS_TAB = {
   mural: ["Mural", "Tareas y comunicados del equipo"],
   cuenta: ["Cuenta", "Tu perfil y tu contraseña"],
   novedades: ["Novedades", "Lo cargado en los recorridos diarios"],
+  ficharqr: ["Fichar QR (prueba)", "No afecta tus horas reales"],
 };
 
 let pantallaOrigenCorregir = "inicio";
 
 function cambiarTab(tab) {
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.toggle("activo", b.dataset.nav === tab));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== tab);
   });
   document.getElementById("header-inicio").classList.toggle("oculto", tab !== "inicio");
@@ -1405,7 +1469,7 @@ function cambiarTab(tab) {
 async function abrirCorregir(origen, prefill) {
   pantallaOrigenCorregir = origen || "inicio";
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== "corregir");
   });
   document.getElementById("header-inicio").classList.add("oculto");
@@ -1424,7 +1488,7 @@ async function abrirCorregir(origen, prefill) {
 
 async function abrirNovedades() {
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== "novedades");
   });
   document.getElementById("header-inicio").classList.add("oculto");
@@ -1436,8 +1500,156 @@ async function abrirNovedades() {
 }
 
 function volverAInicio() {
+  if (!document.getElementById("tab-ficharqr").classList.contains("oculto")) { cambiarTab("inicio"); return; }
   const destino = document.getElementById("tab-corregir").classList.contains("oculto") ? "inicio" : pantallaOrigenCorregir;
   cambiarTab(destino === "corregir" ? "inicio" : destino);
+}
+
+async function abrirFicharQR() {
+  document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
+    document.getElementById("tab-" + t).classList.toggle("oculto", t !== "ficharqr");
+  });
+  document.getElementById("header-inicio").classList.add("oculto");
+  document.getElementById("header-generico").classList.remove("oculto");
+  const [titulo, subtitulo] = TITULOS_TAB.ficharqr;
+  document.getElementById("header-titulo-txt").textContent = titulo;
+  document.getElementById("header-subtitulo-txt").textContent = subtitulo;
+  document.getElementById("ficharqr-resultado").classList.add("oculto");
+  cargarHistorialFicharQrPrueba();
+  if (!localStorage.getItem("app_tutorial_ficharqr_visto")) {
+    document.getElementById("tutorial-ficharqr-overlay").classList.remove("oculto");
+  }
+}
+
+function cerrarTutorialFicharQR() {
+  localStorage.setItem("app_tutorial_ficharqr_visto", "1");
+  document.getElementById("tutorial-ficharqr-overlay").classList.add("oculto");
+}
+
+const QR_FICHAR_PRUEBA_TEXTO = "MC3333-FICHAR-ENTRADA";
+let ficharQrStream = null;
+let ficharQrRAF = null;
+let ficharQrUltimoInvalidoMs = 0;
+
+async function iniciarEscaneoFicharQR() {
+  const idle = document.getElementById("ficharqr-viewfinder-idle");
+  const cam = document.getElementById("ficharqr-viewfinder-cam");
+  const msg = document.getElementById("ficharqr-scan-msg");
+  const errorIdle = document.getElementById("ficharqr-cam-error");
+  msg.textContent = "";
+  errorIdle.classList.add("oculto");
+  document.getElementById("ficharqr-resultado").classList.add("oculto");
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+  } catch (err) {
+    errorIdle.textContent = "No se pudo acceder a la cámara — revisá los permisos y tocá de nuevo para reintentar.";
+    errorIdle.classList.remove("oculto");
+    return;
+  }
+  ficharQrStream = stream;
+  const video = document.getElementById("ficharqr-video");
+  video.srcObject = stream;
+  await video.play();
+  idle.classList.add("oculto");
+  cam.classList.remove("oculto");
+  loopEscaneoFicharQR();
+}
+
+function pararCamaraFicharQR() {
+  if (ficharQrRAF) { cancelAnimationFrame(ficharQrRAF); ficharQrRAF = null; }
+  if (ficharQrStream) { ficharQrStream.getTracks().forEach((t) => t.stop()); ficharQrStream = null; }
+  const idle = document.getElementById("ficharqr-viewfinder-idle");
+  const cam = document.getElementById("ficharqr-viewfinder-cam");
+  const ok = document.getElementById("ficharqr-viewfinder-ok");
+  if (idle) idle.classList.remove("oculto");
+  if (cam) cam.classList.add("oculto");
+  if (ok) ok.classList.add("oculto");
+}
+
+function loopEscaneoFicharQR() {
+  const video = document.getElementById("ficharqr-video");
+  const canvas = document.getElementById("ficharqr-canvas");
+  if (!video || !ficharQrStream) return;
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    ficharQrRAF = requestAnimationFrame(loopEscaneoFicharQR);
+    return;
+  }
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const resultado = jsQR(imagen.data, imagen.width, imagen.height);
+  if (resultado && resultado.data) {
+    onQrLeidoFicharQR(resultado.data.trim());
+    return;
+  }
+  ficharQrRAF = requestAnimationFrame(loopEscaneoFicharQR);
+}
+
+async function onQrLeidoFicharQR(texto) {
+  if (texto !== QR_FICHAR_PRUEBA_TEXTO) {
+    const ahora = Date.now();
+    if (ahora - ficharQrUltimoInvalidoMs > 1500) {
+      ficharQrUltimoInvalidoMs = ahora;
+      const msg = document.getElementById("ficharqr-scan-msg");
+      if (msg) msg.textContent = "Ese QR no es el de fichado — fijate que sea el cartel de la entrada.";
+    }
+    ficharQrRAF = requestAnimationFrame(loopEscaneoFicharQR);
+    return;
+  }
+  pararCamaraFicharQR();
+  document.getElementById("ficharqr-viewfinder-idle").classList.add("oculto");
+  document.getElementById("ficharqr-viewfinder-ok").classList.remove("oculto");
+  try {
+    const data = await apiFetch("/app/api/fichar-qr-prueba", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ qr: texto }),
+    });
+    mostrarResultadoFicharQR(data.tipo, data.hora);
+    cargarHistorialFicharQrPrueba();
+  } catch (err) {
+    mostrarResultadoFicharQR(null, null, err.message || "No se pudo registrar el fichado");
+  }
+  setTimeout(() => {
+    document.getElementById("ficharqr-viewfinder-ok").classList.add("oculto");
+    document.getElementById("ficharqr-viewfinder-idle").classList.remove("oculto");
+  }, 900);
+}
+
+function mostrarResultadoFicharQR(tipo, hora, error) {
+  const el = document.getElementById("ficharqr-resultado");
+  el.classList.remove("oculto");
+  if (error) {
+    el.innerHTML = `<div class="ficharqr-resultado-tipo" style="color:var(--danger)">${error}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="ficharqr-resultado-tipo">${tipo === "ingreso" ? "✅ Ingreso" : "🚪 Egreso"} de PRUEBA registrado</div>
+    <div class="ficharqr-resultado-hora">${hora}hs</div>
+  `;
+}
+
+async function cargarHistorialFicharQrPrueba() {
+  const el = document.getElementById("ficharqr-historial");
+  try {
+    const data = await apiFetch("/app/api/mis-fichadas-qr-prueba");
+    const fichadas = data.fichadas || [];
+    if (fichadas.length === 0) {
+      el.innerHTML = `<div class="vacio">Todavía no escaneaste ningún QR de prueba</div>`;
+      return;
+    }
+    el.innerHTML = fichadas.map((f) => `
+      <div class="ficharqr-historial-item">
+        <span>${f.fecha.slice(8, 10)}/${f.fecha.slice(5, 7)} · ${f.hora}hs</span>
+        <span class="ficharqr-historial-tipo ${f.tipo}">${f.tipo === "ingreso" ? "Ingreso" : "Egreso"}</span>
+      </div>
+    `).join("");
+  } catch (err) {
+    el.innerHTML = "";
+  }
 }
 
 function formatearFecha(iso) {
