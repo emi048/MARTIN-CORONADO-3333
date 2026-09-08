@@ -19,6 +19,9 @@ const {
   actualizarPerfilEmpleadoApp,
   TIPOS_LICENCIA, crearSolicitudLicencia, solicitudesLicenciaDeEmpleado,
 } = require("../services/db");
+const {
+  registrarFichadaQrPrueba, ultimaFichadaQrPruebaDeEmpleado, fichadasQrPruebaDeEmpleado,
+} = require("../services/db");
 const { turnoRealDelDia, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia } = require("../services/turnosConserjeria");
 const { calcularAsistencia } = require("../services/asistencia");
@@ -436,6 +439,30 @@ router.get("/api/notificaciones", requerirAuthEmpleado, (req, res) => {
 router.post("/api/notificaciones/leidas", requerirAuthEmpleado, (req, res) => {
   marcarNotificacionesLeidasApp(req.empleadoApp.id);
   res.json({ ok: true });
+});
+
+// ── Fichado por QR de PRUEBA (ver services/db.js -- tabla aparte, no
+// toca la asistencia real). El QR fijo de la entrada solo trae este
+// codigo; si no coincide, se rechaza. ──
+const QR_FICHAR_PRUEBA = "MC3333-FICHAR-ENTRADA";
+
+router.post("/api/fichar-qr-prueba", requerirAuthEmpleado, (req, res) => {
+  const { nombre } = req.empleadoApp;
+  const { qr } = req.body || {};
+  if (qr !== QR_FICHAR_PRUEBA) {
+    return res.status(400).json({ ok: false, error: "Ese QR no es el de fichado" });
+  }
+  const ahora = new Date();
+  const fecha = fechaISO(ahora);
+  const hora = `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+  const ultimo = ultimaFichadaQrPruebaDeEmpleado(nombre, fecha);
+  const tipo = !ultimo || ultimo.tipo === "egreso" ? "ingreso" : "egreso";
+  registrarFichadaQrPrueba({ empleado: nombre, fecha, hora, tipo, creadoEn: ahora.toISOString() });
+  res.json({ ok: true, tipo, hora });
+});
+
+router.get("/api/mis-fichadas-qr-prueba", requerirAuthEmpleado, (req, res) => {
+  res.json({ ok: true, fichadas: fichadasQrPruebaDeEmpleado(req.empleadoApp.nombre, 10) });
 });
 
 router.get("/", (req, res) => {

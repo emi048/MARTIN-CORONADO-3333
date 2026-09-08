@@ -1759,3 +1759,42 @@ module.exports.solicitudesLicenciaPendientes = solicitudesLicenciaPendientes;
 module.exports.todasLasSolicitudesLicencia = todasLasSolicitudesLicencia;
 module.exports.solicitudesLicenciaDeEmpleado = solicitudesLicenciaDeEmpleado;
 
+// ── Fichado por QR de PRUEBA -- escaneo de un QR fijo pegado en la
+// entrada. Va a una tabla completamente aparte de filas_diarias y de
+// fichadas_estado: no toca el calculo de horas ni el pipeline de
+// HikCentral, es solo para probar el flujo de escaneo en la app. Alterna
+// ingreso/egreso segun el ultimo scan del dia, mismo criterio que ya usa
+// HikCentral con los swipes reales (marcarIngresoDetectado/marcarEgresoDetectado).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fichadas_qr_prueba (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empleado TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    hora TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    creado_en TEXT NOT NULL
+  )
+`);
+
+function ultimaFichadaQrPruebaDeEmpleado(empleado, fecha) {
+  return db.prepare(`
+    SELECT * FROM fichadas_qr_prueba WHERE empleado = ? AND fecha = ? ORDER BY id DESC LIMIT 1
+  `).get(empleado, fecha);
+}
+
+function registrarFichadaQrPrueba({ empleado, fecha, hora, tipo, creadoEn }) {
+  db.prepare(`
+    INSERT INTO fichadas_qr_prueba (empleado, fecha, hora, tipo, creado_en) VALUES (?, ?, ?, ?, ?)
+  `).run(empleado, fecha, hora, tipo, creadoEn);
+}
+
+function fichadasQrPruebaDeEmpleado(empleado, limite = 10) {
+  return db.prepare(`
+    SELECT * FROM fichadas_qr_prueba WHERE empleado = ? ORDER BY id DESC LIMIT ?
+  `).all(empleado, limite);
+}
+
+module.exports.ultimaFichadaQrPruebaDeEmpleado = ultimaFichadaQrPruebaDeEmpleado;
+module.exports.registrarFichadaQrPrueba = registrarFichadaQrPrueba;
+module.exports.fichadasQrPruebaDeEmpleado = fichadasQrPruebaDeEmpleado;
+
