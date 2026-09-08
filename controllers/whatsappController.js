@@ -1598,7 +1598,7 @@ router.post("/webhook", express.urlencoded({ extended: false }), async (req, res
     const numMedia = parseInt(req.body.NumMedia || "0", 10);
     const tipoMedia = req.body.MediaContentType0 || "";
     if (numMedia > 0 && tipoMedia.startsWith("audio/")) {
-      twiml.message("🎙️ Recibí tu audio, dame un segundo que lo escucho...");
+      twiml.message("Procesando");
       res.type("text/xml").send(twiml.toString());
       procesarAudioEmpleadoAsync(empleado, numero, req.body.MediaUrl0);
       return;
