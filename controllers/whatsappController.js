@@ -25,7 +25,8 @@ const { actualizarEventoDia } = require("../generarCalendarioMantenimiento");
 const { generarExcel } = require("../services/generarExcel");
 const { enviarFichero } = require("../services/mailer");
 const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana } = require("../services/twilioClient");
-const { respuestaFueraDeMenu, chatConOlivia } = require("../services/asistente");
+const { respuestaFueraDeMenu, chatConOlivia, interpretarMensaje } = require("../services/asistente");
+const { transcribirAudio } = require("../services/transcripcion");
 
 const router = express.Router();
 
@@ -547,6 +548,42 @@ async function crearSolicitudCambioYNotificar(empleadoA, numeroA, empleadoB, fec
   return id;
 }
 
+async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
+  let texto;
+  try {
+    texto = await transcribirAudio(mediaUrl);
+  } catch (err) {
+    console.error("No se pudo transcribir audio de WhatsApp:", err.message);
+    return "No pude escuchar bien el audio. Probá de nuevo o escribí tu pedido en texto.\n\n" + menuTextPara(empleado);
+  }
+  if (!texto) {
+    return "No entendí nada en el audio. Probá de nuevo, más cerca del micrófono, o escribí tu pedido en texto.";
+  }
+
+  registrarMensaje(numero, empleado, "audio");
+  const resultado = await interpretarMensaje(texto, { fechaHoy: fechaISO(new Date()) });
+  const encabezado = "🎙️ Escuché: \"" + texto + "\"\n\n";
+
+  if (resultado.intent === "solicitud_correccion" && resultado.completo) {
+    guardarConversacion(numero, "audio:confirmar", {
+      fecha: resultado.fecha, campo: resultado.campo, valor: resultado.valor, textoOriginal: texto,
+    });
+    const verbo = resultado.campo === "ingreso" ? "ingresaste" : "saliste";
+    return encabezado + "Entendí que " + verbo + " a las " + resultado.valor + "hs el " + formatoDiaMes(resultado.fecha) + ". ¿Confirmás el pedido de corrección?\n\nRespondé *sí* o *no*.";
+  }
+  if (resultado.intent === "solicitud_correccion") {
+    guardarConversacion(numero, "menu");
+    return encabezado + (resultado.pregunta || "Me faltó algún dato -- ¿podés escribirlo?");
+  }
+  if (resultado.intent === "consulta_horas") {
+    registrarMensaje(numero, empleado, "consulta_horas");
+    guardarConversacion(numero, "menu");
+    return encabezado + mensajeHoras(empleado);
+  }
+  guardarConversacion(numero, "menu");
+  return encabezado + (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
+}
+
 // ── Menu paso a paso (sin IA) ─────────────────────────────────────────────
 // Cada numero de WhatsApp tiene, en la base, en que paso del menu esta
 // (conversaciones_whatsapp). Cada mensaje entrante avanza un paso.
@@ -836,6 +873,25 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       const fechasCorregidas = correcciones.map((c) => c.fecha);
       const resultado = await finalizarSolicitud(empleado, numero, fechasCorregidas, correcciones, textoOriginal);
       return resultado + avisoNoReconocidas;
+    }
+
+    case "audio:confirmar": {
+      if (["si", "sí", "dale", "ok", "confirmo", "correcto"].includes(textoLower)) {
+        const datos = conv.datos;
+        const correccion = {
+          fecha: datos.fecha,
+          ingreso: datos.campo === "ingreso" ? datos.valor : null,
+          egreso: datos.campo === "egreso" ? datos.valor : null,
+        };
+        return await finalizarSolicitud(empleado, numero, [datos.fecha], [correccion], datos.textoOriginal);
+      }
+      if (["no", "cancelar", "salir"].includes(textoLower)) {
+        guardarConversacion(numero, "menu");
+        return "Bueno, no mandé nada. " + menuTextPara(empleado);
+      }
+      const datos = conv.datos;
+      const verbo = datos.campo === "ingreso" ? "ingresaste" : "saliste";
+      return "No te entendí. Respondé *sí* para confirmar o *no* para cancelar.\n\nEntendí que " + verbo + " a las " + datos.valor + "hs el " + formatoDiaMes(datos.fecha) + ".";
     }
 
     default: {
@@ -1540,6 +1596,14 @@ router.post("/webhook", express.urlencoded({ extended: false }), async (req, res
       // Numero no registrado -> ve el menu igual que cualquiera, pero al
       // elegir una opcion se corta ahi. Nunca devolvemos datos de nadie.
       twiml.message(procesarMensajeNoRegistrado(numero));
+      res.type("text/xml").send(twiml.toString());
+      return;
+    }
+
+    const numMedia = parseInt(req.body.NumMedia || "0", 10);
+    const tipoMedia = req.body.MediaContentType0 || "";
+    if (numMedia > 0 && tipoMedia.startsWith("audio/")) {
+      twiml.message(await procesarAudioEmpleado(empleado, numero, req.body.MediaUrl0));
       res.type("text/xml").send(twiml.toString());
       return;
     }
