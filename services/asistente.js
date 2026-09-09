@@ -15,8 +15,8 @@ const TOOL = {
     properties: {
       intent: {
         type: "string",
-        enum: ["consulta_horas", "solicitud_correccion", "no_entendido"],
-        description: "consulta_horas: pregunta por horas/dias trabajados. solicitud_correccion: pide agregar/corregir un ingreso o egreso porque se olvido de fichar. no_entendido: cualquier otra cosa.",
+        enum: ["consulta_horas", "solicitud_correccion", "consulta_turnos_mantenimiento", "no_entendido"],
+        description: "consulta_horas: pregunta por horas/dias trabajados (propios). solicitud_correccion: pide agregar/corregir un ingreso o egreso porque se olvido de fichar. consulta_turnos_mantenimiento: pregunta quien del equipo de mantenimiento trabaja/esta de turno un dia o rango de dias (ej. \"quien labura el finde\", \"quien esta el sabado que viene\"). no_entendido: cualquier otra cosa.",
       },
       completo: {
         type: "boolean",
@@ -25,6 +25,14 @@ const TOOL = {
       fecha: {
         type: "string",
         description: "Si intent es solicitud_correccion y completo es true: fecha del dia a corregir, formato YYYY-MM-DD. Si intent es consulta_horas y el empleado pregunta puntualmente por un dia (no el total del periodo/mes): la fecha de ese dia, mismo formato -- omitir este campo si pregunta por el total.",
+      },
+      fecha_desde: {
+        type: "string",
+        description: "Solo si intent es consulta_turnos_mantenimiento: primer dia del rango a consultar, formato YYYY-MM-DD.",
+      },
+      fecha_hasta: {
+        type: "string",
+        description: "Solo si intent es consulta_turnos_mantenimiento: ultimo dia del rango, formato YYYY-MM-DD (mismo valor que fecha_desde si es un solo dia).",
       },
       campo: {
         type: "string",
@@ -65,7 +73,10 @@ async function interpretarMensaje(texto, { fechaHoy } = {}) {
       `Tu unica tarea es clasificar el mensaje de un empleado y extraer datos estructurados — ` +
       `nunca inventes horas, dias ni ningun dato que el empleado no haya dado. Hoy es ${hoy}. ` +
       `Si el empleado menciona una fecha sin año, asumi el año actual. ` +
-      `Si dice "hoy", "ayer" u otra referencia relativa, calculala vos a partir de la fecha de hoy.`,
+      `Si dice "hoy", "ayer" u otra referencia relativa, calculala vos a partir de la fecha de hoy. ` +
+      `Si dice "este fin de semana" o "este finde", usa el sabado y domingo mas proximos desde hoy ` +
+      `(si hoy ya es sabado o domingo, ese mismo es "este finde"). Si dice "el finde que viene" o ` +
+      `"el proximo finde", usa el sabado y domingo siguientes a ese.`,
     tools: [TOOL],
     tool_choice: { type: "tool", name: "interpretar_mensaje" },
     messages: [{ role: "user", content: texto }],

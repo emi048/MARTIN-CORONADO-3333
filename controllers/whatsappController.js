@@ -20,7 +20,7 @@ const {
 } = require("../services/db");
 const { enviarPushAEmpleado } = require("../services/pushNotifications");
 const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
-const { turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B } = require("../services/turnosMantenimiento");
+const { turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B, FIJOS_MANTENIMIENTO } = require("../services/turnosMantenimiento");
 const { actualizarEventoDia } = require("../generarCalendarioMantenimiento");
 const { generarExcel } = require("../services/generarExcel");
 const { enviarFichero } = require("../services/mailer");
@@ -346,6 +346,40 @@ function lineaDia(fila) {
   return `*${fechaDisplay}* — ${fila.ingreso} a ${fila.egreso}\n🕐 *${fila.total_hs}hs*${extraTexto}`;
 }
 
+const EMPLEADOS_MANTENIMIENTO = [...GRUPO_A, ...GRUPO_B, ...Object.keys(FIJOS_MANTENIMIENTO)];
+
+const NOMBRE_TURNO_MANTENIMIENTO = {
+  mañana: "Mañana", tarde: "Tarde", fijo: "Turno fijo",
+  sabado_corto: "Sábado corto", sabado_largo: "Sábado largo", sabado_fijo: "Sábado",
+  domingo: "Domingo",
+};
+
+function etiquetaTurnoMantenimiento(turno) {
+  const nombre = NOMBRE_TURNO_MANTENIMIENTO[turno.tipo] || turno.tipo;
+  return turno.horario ? `${nombre} ${turno.horario.in} a ${turno.horario.out}` : nombre;
+}
+
+function mensajeTurnosMantenimiento(fechaDesdeISO, fechaHastaISO) {
+  const [y1, m1, d1] = fechaDesdeISO.split("-").map(Number);
+  const [y2, m2, d2] = (fechaHastaISO || fechaDesdeISO).split("-").map(Number);
+  const desde = new Date(y1, m1 - 1, d1);
+  const hasta = new Date(y2, m2 - 1, d2);
+
+  const bloques = [];
+  for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
+    const fecha = new Date(f);
+    const iso = fechaISO(fecha);
+    const lineas = EMPLEADOS_MANTENIMIENTO.map((emp) => {
+      const turno = turnoRealDelDia(emp, fecha);
+      if (!turno || turno.tipo === "franco" || turno.tipo === "descanso") return null;
+      return `• ${emp.split(" ")[0]} — ${etiquetaTurnoMantenimiento(turno)}`;
+    }).filter(Boolean);
+    const encabezado = `*${abrevDiaSemana(iso)} ${formatoDiaMes(iso)}*`;
+    bloques.push(lineas.length > 0 ? `${encabezado}\n${lineas.join("\n")}` : `${encabezado}\nNadie de mantenimiento trabaja este día.`);
+  }
+  return `👷 *Turnos de mantenimiento*\n\n${bloques.join("\n\n")}`;
+}
+
 function mensajeHorasDia(empleado, fecha) {
   const fila = filaDelDiaPorFecha(empleado, fecha);
   if (!fila) return `No encontré datos del ${formatoDiaMes(fecha)}.`;
@@ -587,6 +621,11 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
     registrarMensaje(numero, empleado, "consulta_horas");
     guardarConversacion(numero, "menu");
     return resultado.fecha ? mensajeHorasDia(empleado, resultado.fecha) : mensajeHoras(empleado);
+  }
+  if (resultado.intent === "consulta_turnos_mantenimiento" && resultado.fecha_desde) {
+    registrarMensaje(numero, empleado, "consulta_turnos");
+    guardarConversacion(numero, "menu");
+    return mensajeTurnosMantenimiento(resultado.fecha_desde, resultado.fecha_hasta);
   }
   guardarConversacion(numero, "menu");
   return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
