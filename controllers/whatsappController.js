@@ -795,7 +795,7 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
   const texto = textoOriginal.trim();
   const textoLower = texto.toLowerCase();
 
-  if (["menu", "menú", "cancelar", "salir", "0"].includes(textoLower)) {
+  if (["menu", "menú", "cancelar", "salir", "0", "hola", "buenas"].includes(textoLower)) {
     guardarConversacion(numero, "menu");
     return (await enviarMenuPrincipal(numero)) ? null : menuTextPara(empleado);
   }
