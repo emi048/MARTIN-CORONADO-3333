@@ -18,7 +18,7 @@ const {
   obtenerFichadaHoy, registrarNumero,
   empleadoAppPorNombre,
   listarPostsMuralParaEmpleado,
-  crearSolicitudLicencia, TIPOS_LICENCIA,
+  crearSolicitudLicencia, TIPOS_LICENCIA, solicitudesLicenciaDeEmpleado,
 } = require("../services/db");
 const { enviarPushAEmpleado, enviarPushATodoElPanel } = require("../services/pushNotifications");
 const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
@@ -474,38 +474,36 @@ function mensajeFichadaHoy(empleado) {
 const ICONO_ESTADO = { pendiente: "🕓", aprobada: "✅", rechazada: "❌" };
 
 function mensajeMisSolicitudes(empleado) {
-  const correcciones = solicitudesDeEmpleado(empleado, 10);
-  const cambios = solicitudesCambioDeEmpleado(empleado, 10);
-  if (correcciones.length === 0 && cambios.length === 0) return "Todavía no hiciste ninguna solicitud.";
+  const correcciones = solicitudesDeEmpleado(empleado, 20).map((s) => ({ ...s, _tipo: "correccion" }));
+  const cambios = solicitudesCambioDeEmpleado(empleado, 20).map((s) => ({ ...s, _tipo: "cambio" }));
+  const licencias = solicitudesLicenciaDeEmpleado(empleado, 20).map((s) => ({ ...s, _tipo: "licencia" }));
+  const todas = [...correcciones, ...cambios, ...licencias];
+  if (todas.length === 0) return "Todavía no hiciste ninguna solicitud.";
 
-  const partes = [];
+  todas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
+  const ultimas = todas.slice(0, 5);
 
-  if (correcciones.length > 0) {
-    const listado = correcciones
-      .map((s) => {
-        const fechaDisplay = s.fecha.split("-").reverse().join("/");
-        const detalle = [];
-        if (s.ingreso_propuesto) detalle.push(`Entrada: ${s.ingreso_propuesto}`);
-        if (s.egreso_propuesto) detalle.push(`Salida: ${s.egreso_propuesto}`);
-        const icono = ICONO_ESTADO[s.estado] || "•";
-        return `${icono} Corrección #${s.id} — ${fechaDisplay} (${detalle.join(", ")}) — ${s.estado}`;
-      })
-      .join("\n");
-    partes.push(listado);
-  }
+  const lineas = ultimas.map((s) => {
+    const icono = ICONO_ESTADO[s.estado] || "•";
+    if (s._tipo === "correccion") {
+      const fechaDisplay = s.fecha.split("-").reverse().join("/");
+      const detalle = [];
+      if (s.ingreso_propuesto) detalle.push(`Entrada: ${s.ingreso_propuesto}`);
+      if (s.egreso_propuesto) detalle.push(`Salida: ${s.egreso_propuesto}`);
+      return `${icono} Corrección #${s.id} — ${fechaDisplay} (${detalle.join(", ")}) — ${s.estado}`;
+    }
+    if (s._tipo === "cambio") {
+      return `${icono} Cambio #${s.id} — ${s.empleado_a} <-> ${s.empleado_b} (${formatoDiaMes(s.fecha_a)} / ${formatoDiaMes(s.fecha_b)}) — ${s.estado}`;
+    }
+    return `${icono} Licencia #${s.id} (${s.tipo}) — ${formatoDiaMes(s.fecha_desde)} al ${formatoDiaMes(s.fecha_hasta)} — ${s.estado}`;
+  });
 
-  if (cambios.length > 0) {
-    const listado = cambios
-      .map((s) => {
-        const icono = ICONO_ESTADO[s.estado] || "•";
-        return `${icono} Cambio #${s.id} — ${s.empleado_a} <-> ${s.empleado_b} (${formatoDiaMes(s.fecha_a)} / ${formatoDiaMes(s.fecha_b)}) — ${s.estado}`;
-      })
-      .join("\n");
-    partes.push(listado);
-  }
+  const nota = todas.length > 5
+    ? `\n\n(mostrando las últimas 5 de ${todas.length})`
+    : "";
 
   return (
-    `📋 Tus últimas solicitudes:\n\n${partes.join("\n\n")}\n\n` +
+    `📋 Tus últimas solicitudes:\n\n${lineas.join("\n")}${nota}\n\n` +
     `Para deshacer una ya aprobada: "cancelar correccion N" o "cancelar cambio N".`
   );
 }
