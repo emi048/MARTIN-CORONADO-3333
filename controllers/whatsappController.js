@@ -757,12 +757,12 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
 
   switch (conv.estado) {
     case "menu": {
-      if (texto === "1") {
+      if (texto === "1" || textoLower === "consultar mis horas") {
         registrarMensaje(numero, empleado, "consulta_horas");
         guardarConversacion(numero, "menu");
         return mensajeHoras(empleado);
       }
-      if (texto === "2") {
+      if (texto === "2" || textoLower === "corrección de fichaje" || textoLower === "correccion de fichaje") {
         registrarMensaje(numero, empleado, "correccion");
         guardarConversacion(numero, "correccion:tipo-fecha", {});
         return (
