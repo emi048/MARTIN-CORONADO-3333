@@ -33,21 +33,31 @@ const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWh
 // WhatsApp no permite mas de 3 por mensaje). P1: Consultar mis horas /
 // Corrección de fichaje / Más opciones. P2 (se manda al tocar "Más
 // opciones"): Fiché hoy? / Mis solicitudes / Cambiar turno.
-const CONTENT_SID_MENU_QR_P1 = "HX7f9dbed437257e851e9b15854c7a8d1d";
-const CONTENT_SID_MENU_QR_P2 = "HXf5fa65d972cbe747f2bb26776a29b57b";
+// Version piloto de 2 botones -- YA APROBADA y confirmada funcionando
+// (Consultar mis horas / Corrección de fichaje). La usamos como default
+// interino mientras se aprueba la version de 3 botones de abajo.
+const CONTENT_SID_MENU_PILOT_2BOTONES = "HXa990d376bf0e842ff5dbdc33ab671a36";
+
+// Version de 3 botones (Consultar mis horas / Corrección de fichaje /
+// Mis solicitudes) + segunda tanda (Fiché hoy? / Cambiar turno) al tocar
+// "más opciones". Enviadas a aprobacion de Meta, todavia pendientes.
+const CONTENT_SID_MENU_QR_P1 = "HXd4b9687441c779b2d1ff1a2bd1adaa3e";
+const CONTENT_SID_MENU_QR_P2 = "HX7397ec37b71690b6879d1eadce224a39";
 
 // OJO: Twilio ACEPTA el envio (no tira excepcion) aunque la plantilla
 // todavia no este aprobada por Meta -- el rechazo llega recien despues,
 // de forma asincronica, como status "failed" del lado de Twilio (nunca
 // como error de este lado). Por eso no alcanza con un try/catch: se
 // necesita este flag manual, prendido a mano una vez confirmada la
-// aprobacion real (ver Content API -- ApprovalRequests).
+// aprobacion real (ver Content API -- ApprovalRequests) -- mientras esta
+// apagado, el menu principal usa el piloto de 2 botones (ya aprobado) en
+// vez de caer directo a texto.
 const MENU_BOTONES_APROBADO = false;
 
 async function enviarMenuPrincipal(numero) {
-  if (!MENU_BOTONES_APROBADO) return false;
+  const contentSid = MENU_BOTONES_APROBADO ? CONTENT_SID_MENU_QR_P1 : CONTENT_SID_MENU_PILOT_2BOTONES;
   try {
-    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_QR_P1);
+    await enviarWhatsappInteractivo(numero, contentSid);
     return true;
   } catch (err) {
     console.error("No se pudo mandar el menu con botones:", err.message);
