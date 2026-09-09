@@ -29,11 +29,43 @@ const { generarExcel } = require("../services/generarExcel");
 const { enviarFichero } = require("../services/mailer");
 const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWhatsappInteractivo } = require("../services/twilioClient");
 
-// Lista con botones del menu principal (Consultar mis horas / Corrección de
-// fichaje / Fiché hoy? / Mis solicitudes / Cambiar turno) -- reemplaza al
-// menu numerado como primera respuesta cuando se arranca de cero.
-const CONTENT_SID_MENU_LISTA = "HX6e4d248ce3e6330f903569185602e891";
-const { respuestaFueraDeMenu, chatConOlivia, interpretarMensaje } = require("../services/asistente");
+// Menu principal partido en dos tandas de 3 botones reales (quick-reply --
+// WhatsApp no permite mas de 3 por mensaje). P1: Consultar mis horas /
+// Corrección de fichaje / Más opciones. P2 (se manda al tocar "Más
+// opciones"): Fiché hoy? / Mis solicitudes / Cambiar turno.
+const CONTENT_SID_MENU_QR_P1 = "HX7f9dbed437257e851e9b15854c7a8d1d";
+const CONTENT_SID_MENU_QR_P2 = "HXf5fa65d972cbe747f2bb26776a29b57b";
+
+// OJO: Twilio ACEPTA el envio (no tira excepcion) aunque la plantilla
+// todavia no este aprobada por Meta -- el rechazo llega recien despues,
+// de forma asincronica, como status "failed" del lado de Twilio (nunca
+// como error de este lado). Por eso no alcanza con un try/catch: se
+// necesita este flag manual, prendido a mano una vez confirmada la
+// aprobacion real (ver Content API -- ApprovalRequests).
+const MENU_BOTONES_APROBADO = false;
+
+async function enviarMenuPrincipal(numero) {
+  if (!MENU_BOTONES_APROBADO) return false;
+  try {
+    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_QR_P1);
+    return true;
+  } catch (err) {
+    console.error("No se pudo mandar el menu con botones:", err.message);
+    return false;
+  }
+}
+
+async function enviarMasOpciones(numero) {
+  if (!MENU_BOTONES_APROBADO) return false;
+  try {
+    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_QR_P2);
+    return true;
+  } catch (err) {
+    console.error("No se pudo mandar la segunda tanda de botones:", err.message);
+    return false;
+  }
+}
+const { chatConOlivia, interpretarMensaje } = require("../services/asistente");
 const { transcribirAudio } = require("../services/transcripcion");
 
 const router = express.Router();
@@ -755,15 +787,13 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
 
   if (["menu", "menú", "cancelar", "salir", "0"].includes(textoLower)) {
     guardarConversacion(numero, "menu");
-    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_LISTA);
-    return null;
+    return (await enviarMenuPrincipal(numero)) ? null : menuTextPara(empleado);
   }
 
   const conv = obtenerConversacion(numero);
   if (!conv) {
     guardarConversacion(numero, "menu");
-    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_LISTA);
-    return null;
+    return (await enviarMenuPrincipal(numero)) ? null : menuTextPara(empleado);
   }
 
   switch (conv.estado) {
@@ -783,6 +813,9 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
           "3️⃣ Detectar automático (días sin fichar)\n" +
           "0️⃣ Salir"
         );
+      }
+      if (textoLower === "más opciones" || textoLower === "mas opciones") {
+        return (await enviarMasOpciones(numero)) ? null : menuTextPara(empleado);
       }
       if (texto === "3" || textoLower === "fiché hoy?" || textoLower === "fiche hoy?") {
         registrarMensaje(numero, empleado, "fichada_hoy");
@@ -815,22 +848,11 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
         const tipo = /^correcci/i.test(matchCancelar[1]) ? "correccion" : "cambio";
         return await manejarPedidoCancelacion(empleado, numero, tipo, Number(matchCancelar[2]));
       }
-      // No matcheo ninguna opcion valida — puede ser una consulta real o una
-      // boludez, respuestaFueraDeMenu distingue y responde acorde (si
-      // Anthropic falla/tarda, devuelve null y caemos al mensaje generico,
-      // nunca se pierde la respuesta). El recordatorio de "menu" del
-      // fallback generico no va en CADA respuesta — solo la primera vez que
-      // se va del menu y despues cada 3 mensajes, para no ser pesado (la
-      // respuesta de la IA ya invita a volver al menu por su cuenta).
+      // No matcheo ninguna opcion valida -- siempre el mismo mensaje corto
+      // con el menu completo, sin intentar adivinar si es una consulta real.
       registrarMensaje(numero, empleado, "otro");
-      const contador = ((conv.datos && conv.datos.mensajesSinMenu) || 0) + 1;
-      const mostrarHint = contador % 3 === 1;
-      guardarConversacion(numero, "menu", { mensajesSinMenu: contador });
-
-      const conRespuesta = await respuestaFueraDeMenu(texto);
-      if (conRespuesta) return conRespuesta;
-      const hint = '\n\n(Escribí "menu" para volver a las opciones)';
-      return mostrarHint ? "No entendí esa opción.\n\n" + menuTextPara(empleado) : "No entendí esa opción." + hint;
+      guardarConversacion(numero, "menu");
+      return "No es una opción correcta, elegí cualquiera de estas opciones:\n\n" + menuTextPara(empleado);
     }
 
     case "cambio:fecha-propia": {
