@@ -27,7 +27,12 @@ const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = requ
 const { actualizarEventoDia } = require("../generarCalendarioMantenimiento");
 const { generarExcel } = require("../services/generarExcel");
 const { enviarFichero } = require("../services/mailer");
-const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana } = require("../services/twilioClient");
+const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWhatsappInteractivo } = require("../services/twilioClient");
+
+// Lista con botones del menu principal (Consultar mis horas / Corrección de
+// fichaje / Fiché hoy? / Mis solicitudes / Cambiar turno) -- reemplaza al
+// menu numerado como primera respuesta cuando se arranca de cero.
+const CONTENT_SID_MENU_LISTA = "HX6e4d248ce3e6330f903569185602e891";
 const { respuestaFueraDeMenu, chatConOlivia, interpretarMensaje } = require("../services/asistente");
 const { transcribirAudio } = require("../services/transcripcion");
 
@@ -750,13 +755,15 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
 
   if (["menu", "menú", "cancelar", "salir", "0"].includes(textoLower)) {
     guardarConversacion(numero, "menu");
-    return menuTextPara(empleado);
+    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_LISTA);
+    return null;
   }
 
   const conv = obtenerConversacion(numero);
   if (!conv) {
     guardarConversacion(numero, "menu");
-    return menuTextPara(empleado);
+    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_LISTA);
+    return null;
   }
 
   switch (conv.estado) {
@@ -777,23 +784,27 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
           "0️⃣ Salir"
         );
       }
-      if (texto === "3") {
+      if (texto === "3" || textoLower === "fiché hoy?" || textoLower === "fiche hoy?") {
         registrarMensaje(numero, empleado, "fichada_hoy");
         guardarConversacion(numero, "menu");
         return mensajeFichadaHoy(empleado);
       }
-      if (texto === "4") {
+      if (texto === "4" || textoLower === "mis solicitudes") {
         registrarMensaje(numero, empleado, "mis_solicitudes");
         guardarConversacion(numero, "menu");
         return mensajeMisSolicitudes(empleado);
       }
-      if (texto === "5" && esDelEquipo(empleado)) {
+      if ((texto === "5" || textoLower === "cambiar turno") && esDelEquipo(empleado)) {
         registrarMensaje(numero, empleado, "cambio_turno");
         guardarConversacion(numero, "cambio:fecha-propia", {});
         return (
           `¿Qué día querés cambiar?\n\n${menuFechaFindeSemana()}` +
           '\n\n(Escribí "salir" para cancelar)'
         );
+      }
+      if (textoLower === "cambiar turno") {
+        guardarConversacion(numero, "menu");
+        return "Esa opción no aplica para vos -- no sos parte del equipo rotativo de mantenimiento.";
       }
       // Deshacer algo ya aprobado (corrección o cambio de turno) -- no es
       // una opción numerada del menú, es un comando de texto libre que se
@@ -1743,7 +1754,8 @@ router.post("/webhook", express.urlencoded({ extended: false }), async (req, res
       return;
     }
 
-    twiml.message(await procesarMensajeEmpleado(empleado, numero, texto));
+    const respuestaEmpleado = await procesarMensajeEmpleado(empleado, numero, texto);
+    if (respuestaEmpleado) twiml.message(respuestaEmpleado);
   } catch (err) {
     console.error("Error en webhook de WhatsApp:", err);
     twiml.message("Hubo un error procesando tu mensaje. Probá de nuevo en unos minutos.");
