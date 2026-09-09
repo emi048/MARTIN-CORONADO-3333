@@ -15,24 +15,31 @@ const TOOL = {
     properties: {
       intent: {
         type: "string",
-        enum: ["consulta_horas", "solicitud_correccion", "consulta_turnos_mantenimiento", "no_entendido"],
-        description: "consulta_horas: pregunta por horas/dias trabajados (propios). solicitud_correccion: pide agregar/corregir un ingreso o egreso porque se olvido de fichar. consulta_turnos_mantenimiento: pregunta quien del equipo de mantenimiento trabaja/esta de turno un dia o rango de dias (ej. \"quien labura el finde\", \"quien esta el sabado que viene\"). no_entendido: cualquier otra cosa.",
+        enum: [
+          "consulta_horas", "solicitud_correccion", "consulta_turnos_equipo",
+          "consulta_solicitudes", "solicitud_licencia", "solicitud_cambio_turno", "consulta_mural", "no_entendido",
+        ],
+        description:
+          "consulta_horas: pregunta por horas/dias trabajados propios. " +
+          "solicitud_correccion: pide agregar/corregir un ingreso o egreso porque se olvido de fichar. " +
+          "consulta_turnos_equipo: pregunta quien de mantenimiento o conserjeria trabaja/esta de turno un dia o rango de dias (ej. \"quien labura el finde\"). " +
+          "consulta_solicitudes: pregunta por el estado de sus propios pedidos ya hechos (correcciones, licencias, cambios de turno). " +
+          "solicitud_licencia: pide licencia o vacaciones para un rango de fechas. " +
+          "solicitud_cambio_turno: pide cambiar su turno de un dia por el de un companero en otro dia. " +
+          "consulta_mural: pregunta que tareas o comunicados hay pendientes/publicados en el Mural del equipo. " +
+          "no_entendido: cualquier otra cosa.",
       },
       completo: {
         type: "boolean",
-        description: "Solo si intent es solicitud_correccion: true si se pudieron extraer fecha, campo y valor; false si falta algun dato.",
+        description: "Para solicitud_correccion, solicitud_licencia o solicitud_cambio_turno: true si se pudieron extraer todos los datos necesarios para esa solicitud puntual; false si falta algun dato.",
+      },
+      pregunta: {
+        type: "string",
+        description: "Si completo es false: pregunta corta en español pidiendo el dato especifico que falta.",
       },
       fecha: {
         type: "string",
         description: "Si intent es solicitud_correccion y completo es true: fecha del dia a corregir, formato YYYY-MM-DD. Si intent es consulta_horas y el empleado pregunta puntualmente por un dia (no el total del periodo/mes): la fecha de ese dia, mismo formato -- omitir este campo si pregunta por el total.",
-      },
-      fecha_desde: {
-        type: "string",
-        description: "Solo si intent es consulta_turnos_mantenimiento: primer dia del rango a consultar, formato YYYY-MM-DD.",
-      },
-      fecha_hasta: {
-        type: "string",
-        description: "Solo si intent es consulta_turnos_mantenimiento: ultimo dia del rango, formato YYYY-MM-DD (mismo valor que fecha_desde si es un solo dia).",
       },
       campo: {
         type: "string",
@@ -43,13 +50,39 @@ const TOOL = {
         type: "string",
         description: "Solo si intent es solicitud_correccion y completo es true: la hora correcta, formato HH:MM (24hs).",
       },
-      pregunta: {
+      fecha_desde: {
         type: "string",
-        description: "Solo si intent es solicitud_correccion y completo es false: pregunta corta en español pidiendo el dato que falta (fecha, si fue entrada o salida, o la hora).",
+        description: "Formato YYYY-MM-DD. Si intent es consulta_turnos_equipo: primer dia del rango a consultar. Si intent es solicitud_licencia y completo es true: primer dia de la licencia.",
+      },
+      fecha_hasta: {
+        type: "string",
+        description: "Formato YYYY-MM-DD. Si intent es consulta_turnos_equipo: ultimo dia del rango (igual a fecha_desde si es un solo dia). Si intent es solicitud_licencia y completo es true: ultimo dia de la licencia (igual a fecha_desde si es un solo dia).",
+      },
+      equipo: {
+        type: "string",
+        enum: ["mantenimiento", "conserjeria"],
+        description: "Solo si intent es consulta_turnos_equipo: de que equipo pregunta.",
+      },
+      tipo_licencia: {
+        type: "string",
+        enum: ["Vacaciones", "Licencia médica", "Estudio", "Otro"],
+        description: "Solo si intent es solicitud_licencia: tipo de licencia. Si no lo menciona explicitamente, usa \"Otro\".",
+      },
+      cambio_companero: {
+        type: "string",
+        description: "Solo si intent es solicitud_cambio_turno y completo es true: nombre completo del companero, tomado EXACTO de la lista de companeros validos que se te dio en las instrucciones -- nunca inventes ni adivines un nombre que no este en esa lista.",
+      },
+      cambio_fecha_propia: {
+        type: "string",
+        description: "Solo si intent es solicitud_cambio_turno y completo es true: fecha propia que el empleado cede, formato YYYY-MM-DD.",
+      },
+      cambio_fecha_companero: {
+        type: "string",
+        description: "Solo si intent es solicitud_cambio_turno y completo es true: fecha del companero que el empleado toma a cambio, formato YYYY-MM-DD.",
       },
       respuesta: {
         type: "string",
-        description: "Solo si intent es no_entendido: respuesta breve en español explicando que el bot puede informar horas trabajadas o recibir un pedido de corrección de fichaje.",
+        description: "Solo si intent es no_entendido: respuesta breve en español explicando que puede pedirle.",
       },
     },
     required: ["intent"],
@@ -60,23 +93,34 @@ const TOOL = {
 // Clasifica un mensaje entrante de WhatsApp. NO redacta respuestas con datos
 // reales (horas, dias) — eso se arma con texto fijo a partir de la base,
 // para que la IA nunca invente un numero. Solo se usa para: decidir la
-// intencion, extraer fecha/campo/valor, y redactar preguntas aclaratorias
-// o el mensaje de "no entendido" (texto sin datos sensibles).
-async function interpretarMensaje(texto, { fechaHoy } = {}) {
+// intencion, extraer los datos de cada caso, y redactar preguntas
+// aclaratorias o el mensaje de "no entendido" (texto sin datos sensibles).
+// companerosValidos (opcional): nombres completos de con quien ESTE
+// empleado puntual puede pedir un cambio de turno (vacio/undefined si no
+// aplica -- ahi la IA sabe que no le puede ofrecer esa opcion).
+async function interpretarMensaje(texto, { fechaHoy, companerosValidos } = {}) {
   const hoy = fechaHoy || new Date().toISOString().slice(0, 10);
+
+  const contextoCambioTurno = companerosValidos && companerosValidos.length
+    ? "Para cambio de turno, este empleado SOLO puede pedirlo con estos companeros (nombres completos exactos): " +
+      companerosValidos.join(", ") + ". Si menciona un nombre que no coincide con ninguno de esa lista, marca " +
+      "intent solicitud_cambio_turno con completo=false y una pregunta pidiendo que aclare con cual de esos companeros."
+    : "Este empleado NO tiene companeros validos para cambio de turno (no es parte del equipo rotativo de mantenimiento). " +
+      "Si pide cambiar de turno, marca intent no_entendido y explicale amablemente que esa opcion no aplica para el.";
 
   const response = await client.messages.create({
     model: "claude-opus-4-8",
     max_tokens: 1024,
     system:
-      `Sos el asistente de WhatsApp de un sistema de fichaje de asistencia laboral. ` +
-      `Tu unica tarea es clasificar el mensaje de un empleado y extraer datos estructurados — ` +
-      `nunca inventes horas, dias ni ningun dato que el empleado no haya dado. Hoy es ${hoy}. ` +
-      `Si el empleado menciona una fecha sin año, asumi el año actual. ` +
-      `Si dice "hoy", "ayer" u otra referencia relativa, calculala vos a partir de la fecha de hoy. ` +
-      `Si dice "este fin de semana" o "este finde", usa el sabado y domingo mas proximos desde hoy ` +
-      `(si hoy ya es sabado o domingo, ese mismo es "este finde"). Si dice "el finde que viene" o ` +
-      `"el proximo finde", usa el sabado y domingo siguientes a ese.`,
+      "Sos el asistente de WhatsApp de un sistema de fichaje de asistencia laboral. " +
+      "Tu unica tarea es clasificar el mensaje de un empleado y extraer datos estructurados — " +
+      "nunca inventes horas, dias, nombres ni ningun dato que el empleado no haya dado. Hoy es " + hoy + ". " +
+      "Si el empleado menciona una fecha sin año, asumi el año actual. " +
+      "Si dice \"hoy\", \"ayer\" u otra referencia relativa, calculala vos a partir de la fecha de hoy. " +
+      "Si dice \"este fin de semana\" o \"este finde\", usa el sabado y domingo mas proximos desde hoy " +
+      "(si hoy ya es sabado o domingo, ese mismo es \"este finde\"). Si dice \"el finde que viene\" o " +
+      "\"el proximo finde\", usa el sabado y domingo siguientes a ese. " +
+      contextoCambioTurno,
     tools: [TOOL],
     tool_choice: { type: "tool", name: "interpretar_mensaje" },
     messages: [{ role: "user", content: texto }],

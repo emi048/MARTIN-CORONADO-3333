@@ -17,10 +17,13 @@ const {
   obtenerConversacion, guardarConversacion, limpiarConversacion,
   obtenerFichadaHoy, registrarNumero,
   empleadoAppPorNombre,
+  listarPostsMuralParaEmpleado,
+  crearSolicitudLicencia, TIPOS_LICENCIA,
 } = require("../services/db");
-const { enviarPushAEmpleado } = require("../services/pushNotifications");
+const { enviarPushAEmpleado, enviarPushATodoElPanel } = require("../services/pushNotifications");
 const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
 const { turnoRealDelDia, esDelEquipo, GRUPO_A, GRUPO_B, FIJOS_MANTENIMIENTO } = require("../services/turnosMantenimiento");
+const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = require("../services/turnosConserjeria");
 const { actualizarEventoDia } = require("../generarCalendarioMantenimiento");
 const { generarExcel } = require("../services/generarExcel");
 const { enviarFichero } = require("../services/mailer");
@@ -380,6 +383,44 @@ function mensajeTurnosMantenimiento(fechaDesdeISO, fechaHastaISO) {
   return `👷 *Turnos de mantenimiento*\n\n${bloques.join("\n\n")}`;
 }
 
+function mensajeTurnosConserjeria(fechaDesdeISO, fechaHastaISO) {
+  const [y1, m1, d1] = fechaDesdeISO.split("-").map(Number);
+  const [y2, m2, d2] = (fechaHastaISO || fechaDesdeISO).split("-").map(Number);
+  const desde = new Date(y1, m1 - 1, d1);
+  const hasta = new Date(y2, m2 - 1, d2);
+  const empleadosConserjeria = Object.keys(EQUIPO_CONSERJERIA);
+
+  const bloques = [];
+  for (let f = new Date(desde); f <= hasta; f.setDate(f.getDate() + 1)) {
+    const fecha = new Date(f);
+    const iso = fechaISO(fecha);
+    const lineas = empleadosConserjeria.map((emp) => {
+      const turno = turnoConserjeriaDelDia(emp, fecha);
+      if (!turno || turno.tipo === "franco") return null;
+      const nombre = turno.tipo === "mañana" ? "Mañana" : turno.tipo === "tarde" ? "Tarde" : "Sábado";
+      const horarioTxt = turno.horario ? ` ${turno.horario.in} a ${turno.horario.out}` : "";
+      return `• ${emp.split(" ")[0]} — ${nombre}${horarioTxt}`;
+    }).filter(Boolean);
+    const encabezado = `*${abrevDiaSemana(iso)} ${formatoDiaMes(iso)}*`;
+    bloques.push(lineas.length > 0 ? `${encabezado}\n${lineas.join("\n")}` : `${encabezado}\nNadie de conserjería trabaja este día.`);
+  }
+  return `🧹 *Turnos de conserjería*\n\n${bloques.join("\n\n")}`;
+}
+
+function mensajeResumenMural(empleado) {
+  const app = empleadoAppPorNombre(empleado);
+  if (!app) return "No pude ver el Mural para tu usuario.";
+  const posts = listarPostsMuralParaEmpleado(app.id, app.sector, app.rol || "empleado");
+  const pendientes = posts.filter((p) => p.estado === "publicada");
+  if (pendientes.length === 0) return "📋 No hay tareas pendientes en el Mural por ahora.";
+  const lineas = pendientes.slice(0, 10).map((p) => {
+    const texto = p.texto.length > 80 ? p.texto.slice(0, 80) + "…" : p.texto;
+    return `• ${texto}`;
+  });
+  const extra = pendientes.length > 10 ? `\n\n(y ${pendientes.length - 10} más — mirá el Mural en la app para verlas todas)` : "";
+  return `📋 *Tareas pendientes en el Mural* (${pendientes.length})\n\n${lineas.join("\n")}${extra}`;
+}
+
 function mensajeHorasDia(empleado, fecha) {
   const fila = filaDelDiaPorFecha(empleado, fecha);
   if (!fila) return `No encontré datos del ${formatoDiaMes(fecha)}.`;
@@ -567,6 +608,21 @@ async function crearSolicitudesYNotificar(empleado, numero, correcciones, mensaj
 }
 
 // empleadoA cede su turno de fechaA y toma el de empleadoB en fechaB.
+async function solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, tipo, mensajeOriginal) {
+  const id = crearSolicitudLicencia({
+    empleado, numeroWhatsapp: numero, fechaDesde, fechaHasta, tipo, mensaje: mensajeOriginal,
+  });
+  if (process.env.ADMIN_WHATSAPP_NUMBER) {
+    await enviarWhatsapp(
+      process.env.ADMIN_WHATSAPP_NUMBER,
+      `📋 Nuevo pedido de licencia\nEmpleado: ${empleado}\n` +
+        `${tipo}, del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)}.\n\n` +
+        `Se aprueba desde el panel (Pendientes → Licencias).`
+    );
+  }
+  return id;
+}
+
 async function crearSolicitudCambioYNotificar(empleadoA, numeroA, empleadoB, fechaA, fechaB) {
   const id = crearSolicitudCambio({ empleadoA, numeroWhatsappA: numeroA, empleadoB, fechaA, fechaB });
 
@@ -601,7 +657,9 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
   }
 
   registrarMensaje(numero, empleado, "audio");
-  const resultado = await interpretarMensaje(texto, { fechaHoy: fechaISO(new Date()) });
+  const enGrupoRotativo = GRUPO_A.includes(empleado) || GRUPO_B.includes(empleado);
+  const companerosValidos = enGrupoRotativo ? [...GRUPO_A, ...GRUPO_B].filter((e) => e !== empleado) : undefined;
+  const resultado = await interpretarMensaje(texto, { fechaHoy: fechaISO(new Date()), companerosValidos });
 
   if (resultado.intent === "solicitud_correccion" && resultado.completo) {
     const correccion = {
@@ -622,10 +680,45 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
     guardarConversacion(numero, "menu");
     return resultado.fecha ? mensajeHorasDia(empleado, resultado.fecha) : mensajeHoras(empleado);
   }
-  if (resultado.intent === "consulta_turnos_mantenimiento" && resultado.fecha_desde) {
+  if (resultado.intent === "consulta_turnos_equipo" && resultado.fecha_desde) {
     registrarMensaje(numero, empleado, "consulta_turnos");
     guardarConversacion(numero, "menu");
-    return mensajeTurnosMantenimiento(resultado.fecha_desde, resultado.fecha_hasta);
+    return resultado.equipo === "conserjeria"
+      ? mensajeTurnosConserjeria(resultado.fecha_desde, resultado.fecha_hasta)
+      : mensajeTurnosMantenimiento(resultado.fecha_desde, resultado.fecha_hasta);
+  }
+  if (resultado.intent === "consulta_solicitudes") {
+    registrarMensaje(numero, empleado, "mis_solicitudes");
+    guardarConversacion(numero, "menu");
+    return mensajeMisSolicitudes(empleado);
+  }
+  if (resultado.intent === "consulta_mural") {
+    registrarMensaje(numero, empleado, "mural");
+    guardarConversacion(numero, "menu");
+    return mensajeResumenMural(empleado);
+  }
+  if (resultado.intent === "solicitud_licencia" && resultado.completo) {
+    registrarMensaje(numero, empleado, "licencia");
+    await solicitarLicenciaYNotificar(
+      empleado, numero, resultado.fecha_desde, resultado.fecha_hasta, resultado.tipo_licencia || "Otro", texto
+    );
+    guardarConversacion(numero, "menu");
+    return "¡Entendido! Pedido de licencia (" + (resultado.tipo_licencia || "Otro") + ") pendiente de aprobación. Te aviso apenas el administrador lo revise.";
+  }
+  if (resultado.intent === "solicitud_licencia") {
+    guardarConversacion(numero, "menu");
+    return resultado.pregunta || "Me faltó algún dato de la licencia -- ¿podés escribirlo?";
+  }
+  if (resultado.intent === "solicitud_cambio_turno" && resultado.completo) {
+    await crearSolicitudCambioYNotificar(
+      empleado, numero, resultado.cambio_companero, resultado.cambio_fecha_propia, resultado.cambio_fecha_companero
+    );
+    guardarConversacion(numero, "menu");
+    return "¡Entendido! Pedido de cambio de turno con " + resultado.cambio_companero.split(" ")[0] + " pendiente de aprobación. Te aviso apenas el administrador lo revise.";
+  }
+  if (resultado.intent === "solicitud_cambio_turno") {
+    guardarConversacion(numero, "menu");
+    return resultado.pregunta || "Me faltó algún dato del cambio de turno -- ¿podés escribirlo?";
   }
   guardarConversacion(numero, "menu");
   return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
