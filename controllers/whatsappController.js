@@ -432,8 +432,12 @@ function mensajeHoras(empleado) {
   if (!resumen) return `Hola ${empleado.split(" ")[0]}, todavía no hay datos procesados para vos.`;
 
   const filas = filasDelPeriodoDeEmpleado(empleado, resumen.periodo);
-  const desde = filas.length > 0 ? filas[0].fecha : null; // ya viene ordenado por fecha
-  const rangoPeriodo = desde ? `${formatoDiaMes(desde)} a ${formatoDiaMes(hoyISO())}` : resumen.periodo;
+  // ya viene ordenado por fecha -- el "hasta" tiene que ser el ultimo dia
+  // que REALMENTE tiene datos cargados, no "hoy" (un periodo cerrado el
+  // 20/8 no llega hasta hoy 9/9, aunque hoy ya haya pasado).
+  const desde = filas.length > 0 ? filas[0].fecha : null;
+  const hasta = filas.length > 0 ? filas[filas.length - 1].fecha : null;
+  const rangoPeriodo = desde && hasta ? `${formatoDiaMes(desde)} a ${formatoDiaMes(hasta)}` : resumen.periodo;
 
   // "\n\n" (no "\n") entre dias: sin la linea en blanco todo se ve pegado en
   // un solo parrafo en el celular y las fechas no se distinguen entre si.
