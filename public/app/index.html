@@ -188,59 +188,15 @@
   }
   .recorrido-card-cta svg { width: 15px; height: 15px; }
 
-  /* Tarjeta del Mural en Inicio -- misma jerarquia que la del Recorrido
-     (es el otro destino "grande" de la app), pero en cyan para que las dos
-     se distingan de un vistazo en vez de leerse como la misma tarjeta
-     repetida. */
-  .mural-card-inicio {
-    border-radius: 16px; border: 1px solid rgba(34,184,207,0.4);
-    background: linear-gradient(135deg, rgba(34,184,207,0.20), rgba(79,140,255,0.12) 65%);
-    padding: 16px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  }
-  body.tema-claro .mural-card-inicio { background: linear-gradient(135deg, rgba(13,138,158,0.10), rgba(79,140,255,0.06) 65%); box-shadow: none; }
-  .mural-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--mural-accent); letter-spacing: 0.06em; text-transform: uppercase; }
-  .mural-card-titulo { font: 700 18px/1.25 Unbounded, sans-serif; margin-top: 8px; }
-  .mural-card-sub { font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 4px; }
-  .mural-card-icono {
-    position: relative;
-    width: 38px; height: 38px; border-radius: 10px; background: rgba(34,184,207,0.22);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .mural-card-icono svg { width: 20px; height: 20px; color: var(--mural-accent); }
-  /* Globito con la cantidad de tareas sin tomar -- solo aparece si hay. */
+  /* Globito con la cantidad de tareas del Mural sin tomar -- se apoya
+     sobre el tile de "Mural" en Accesos (el tile necesita position:relative
+     inline para esto), solo aparece si hay alguna. */
   .mural-card-badge {
     position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
     border-radius: 999px; background: var(--danger); color: #fff;
     font: 700 11px/20px Inter, sans-serif; text-align: center;
     border: 2px solid var(--bg);
   }
-  .mural-card-cta {
-    min-height: 48px; margin-top: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: linear-gradient(135deg, var(--mural-accent), var(--accent-2)); color: #fff; font: 700 15px/1 Inter, sans-serif;
-    box-shadow: 0 6px 20px rgba(34,184,207,0.3);
-  }
-  .mural-card-cta svg { width: 15px; height: 15px; }
-
-  .ficharqr-card-inicio {
-    border-radius: 16px; border: 1px solid rgba(62,207,142,0.4);
-    background: linear-gradient(135deg, rgba(62,207,142,0.20), rgba(79,140,255,0.10) 65%);
-    padding: 16px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  }
-  body.tema-claro .ficharqr-card-inicio { background: linear-gradient(135deg, rgba(31,158,110,0.10), rgba(79,140,255,0.06) 65%); box-shadow: none; }
-  .ficharqr-card-eyebrow { font: 500 11px/1 Unbounded, sans-serif; color: var(--ok); letter-spacing: 0.06em; text-transform: uppercase; }
-  .ficharqr-card-titulo { font: 700 18px/1.25 Unbounded, sans-serif; margin-top: 8px; }
-  .ficharqr-card-sub { font: 400 12.5px/1.4 Inter, sans-serif; color: var(--text-muted); margin-top: 4px; }
-  .ficharqr-card-icono {
-    width: 38px; height: 38px; border-radius: 10px; background: rgba(62,207,142,0.22);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .ficharqr-card-icono svg { width: 20px; height: 20px; color: var(--ok); }
-  .ficharqr-card-cta {
-    min-height: 48px; margin-top: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
-    background: linear-gradient(135deg, var(--ok), var(--accent-2)); color: #fff; font: 700 15px/1 Inter, sans-serif;
-    box-shadow: 0 6px 20px rgba(62,207,142,0.3);
-  }
-  .ficharqr-card-cta svg { width: 15px; height: 15px; }
 
   .amber-card { border-radius: 16px; border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07); padding: 14px 16px; margin-bottom: 12px; }
   body.tema-claro .amber-card { border-color: rgba(168,104,0,0.3); background: rgba(168,104,0,0.06); }
@@ -271,6 +227,55 @@
   }
   .periodo-pill.activo { border-color: rgba(124,108,240,0.5); background: rgba(124,108,240,0.16); color: var(--text); font-weight: 600; }
   .periodo-pill-mas { opacity: 0.75; }
+
+  /* ── Filtro de mes por dropdown (Mural) -- un solo boton compacto en vez
+     de una fila de pills, que ocupaba mucho lugar para algo que casi
+     siempre se deja en "Todo". ── */
+  .periodo-dropdown { position: relative; margin-bottom: 14px; display: inline-block; }
+  .periodo-dropdown-btn {
+    display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; border-radius: 22px;
+    border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer;
+    font: 600 13.5px/1 Inter, sans-serif;
+  }
+  .periodo-dropdown-btn svg:first-child { width: 15px; height: 15px; color: var(--mural-accent); flex-shrink: 0; }
+  .periodo-dropdown-chevron { width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.15s; }
+  .periodo-dropdown-btn[aria-expanded="true"] .periodo-dropdown-chevron { transform: rotate(180deg); }
+  .periodo-dropdown-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 170px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.3); padding: 6px;
+  }
+  .periodo-dropdown-item {
+    padding: 10px 12px; border-radius: 8px; font: 500 13.5px/1 Inter, sans-serif; color: var(--text); cursor: pointer;
+  }
+  .periodo-dropdown-item:hover { background: var(--surface2); }
+  .periodo-dropdown-item.activo { background: rgba(34,184,207,0.15); color: var(--mural-accent); font-weight: 700; }
+
+  /* ── Aviso informativo (usado en Cuenta: cambio de usuario, ayuda con
+     notificaciones) -- misma familia visual que .amber-card pero en el
+     color de acento en vez de ambar, para que no se confunda con una
+     alerta de "algo esta mal". ── */
+  .aviso-info {
+    display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px;
+    background: rgba(124,108,240,0.08); border: 1px solid rgba(124,108,240,0.25);
+    font: 400 12.5px/1.45 Inter, sans-serif; color: var(--text);
+  }
+  .aviso-info svg { width: 16px; height: 16px; color: var(--accent-2); flex-shrink: 0; margin-top: 1px; }
+  .aviso-info b { color: var(--text); }
+
+  /* ── Cuenta: categorias plegables -- antes era una fila larga de
+     tarjetas sueltas sin ningun agrupamiento, dificil de escanear. ── */
+  .cuenta-categoria { margin-bottom: 10px; }
+  .cuenta-categoria-header {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px 4px; cursor: pointer;
+    background: none; border: none; border-bottom: 1px solid var(--border); font-family: inherit; text-align: left;
+  }
+  .cuenta-categoria-header svg:first-child { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+  .cuenta-categoria-titulo { font: 700 14.5px/1 Unbounded, sans-serif; flex: 1; }
+  .cuenta-categoria-chevron { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.15s; }
+  .cuenta-categoria-header[aria-expanded="true"] .cuenta-categoria-chevron { transform: rotate(180deg); }
+  .cuenta-categoria-body { padding-top: 12px; }
+  .cuenta-categoria-body.oculto { display: none; }
 
   .resumen-horas-card { border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(150deg, rgba(124,108,240,0.14), var(--surface) 62%); padding: 18px 16px 16px; margin-bottom: 12px; }
   .resumen-horas-total { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
@@ -453,26 +458,6 @@
   .recorrido-punto-nombre { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
   .recorrido-checklist { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
   .recorrido-checklist li { margin-bottom: 2px; }
-  .ficharqr-badge-prueba {
-    border-radius: 12px; border: 1px solid rgba(245,166,35,0.3); background: rgba(245,166,35,0.07);
-    color: var(--warn); font: 600 12.5px/1.4 Inter, sans-serif; text-align: center; padding: 10px 14px; margin-bottom: 14px;
-  }
-  body.tema-claro .ficharqr-badge-prueba { border-color: rgba(168,104,0,0.3); background: rgba(168,104,0,0.06); }
-  .ficharqr-resultado {
-    border-radius: 16px; border: 1px solid rgba(62,207,142,0.3); background: rgba(62,207,142,0.08);
-    padding: 16px; text-align: center; margin-top: 14px;
-  }
-  .ficharqr-resultado-tipo { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--ok); }
-  .ficharqr-resultado-hora { font-size: 22px; font-weight: 700; margin-top: 4px; }
-  .ficharqr-historial-titulo { margin-top: 18px; }
-  .ficharqr-historial-item {
-    display: flex; justify-content: space-between; align-items: center; padding: 10px 0;
-    border-bottom: 1px solid var(--border); font-size: 13px;
-  }
-  .ficharqr-historial-item:last-child { border-bottom: none; }
-  .ficharqr-historial-tipo { font-weight: 700; }
-  .ficharqr-historial-tipo.ingreso { color: var(--ok); }
-  .ficharqr-historial-tipo.egreso { color: var(--accent-2); }
   .recorrido-obs-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
   #recorrido-observaciones {
     width: 100%; box-sizing: border-box; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
@@ -792,23 +777,6 @@
 
   <main>
     <section id="tab-inicio">
-      <div class="ficharqr-card-inicio" onclick="abrirFicharQR()">
-        <div class="recorrido-card-top">
-          <div>
-            <div class="ficharqr-card-eyebrow">Fichar QR</div>
-            <div class="ficharqr-card-titulo" id="ficharqr-card-titulo">Fichá tu ingreso</div>
-            <div class="ficharqr-card-sub" id="ficharqr-card-sub">Escaneá el QR de la entrada</div>
-          </div>
-          <div class="ficharqr-card-icono">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-          </div>
-        </div>
-        <div class="ficharqr-card-cta">
-          Escanear QR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-
       <div class="card hoy-card">
         <div class="hoy-card-top">
           <div class="card-titulo" style="margin-bottom:0" id="hoy-fecha">Hoy</div>
@@ -831,24 +799,6 @@
         </div>
         <div class="recorrido-card-cta" id="recorrido-card-cta">
           Iniciar recorrido
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-
-      <div class="mural-card-inicio" onclick="cambiarTab('mural')">
-        <div class="recorrido-card-top">
-          <div>
-            <div class="mural-card-eyebrow">Mural del equipo</div>
-            <div class="mural-card-titulo" id="mural-card-titulo">Tareas y comunicados</div>
-            <div class="mural-card-sub" id="mural-card-sub">Cargando…</div>
-          </div>
-          <div class="mural-card-icono">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            <span class="mural-card-badge oculto" id="mural-card-badge">0</span>
-          </div>
-        </div>
-        <div class="mural-card-cta">
-          Ver el mural
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>
       </div>
@@ -878,6 +828,11 @@
         <div class="acceso-tile" onclick="abrirNovedades()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>Novedades</span>
+        </div>
+        <div class="acceso-tile" onclick="cambiarTab('mural')" style="position:relative">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span class="mural-card-badge oculto" id="mural-card-badge">0</span>
+          <span>Mural</span>
         </div>
       </div>
     </section>
@@ -939,37 +894,27 @@
         <button class="mural-banner-cerrar" onclick="cerrarBannerMural()" aria-label="Cerrar">✕</button>
       </div>
       <div class="config-notif-estado" id="mural-banner-estado"></div>
-      <div class="periodo-pills" id="mural-periodos"></div>
+      <div class="periodo-dropdown" id="mural-periodo-dropdown">
+        <button type="button" class="periodo-dropdown-btn" id="mural-periodo-btn" aria-expanded="false" onclick="togglePeriodoDropdown('mural')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="mural-periodo-label">Todo</span>
+          <svg class="periodo-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="periodo-dropdown-menu oculto" id="mural-periodo-menu"></div>
+      </div>
       <div id="mural-contenido"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-novedades" class="oculto">
-      <div class="periodo-pills" id="novedades-periodos"></div>
-      <div id="novedades-contenido"><div class="vacio">Cargando…</div></div>
-    </section>
-
-    <section id="tab-ficharqr" class="oculto">
-      <div class="recorrido-viewfinder">
-        <div id="ficharqr-viewfinder-idle" role="button" tabindex="0" onclick="iniciarEscaneoFicharQR()" onkeydown="if(event.key==='Enter')iniciarEscaneoFicharQR()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-          <div class="recorrido-viewfinder-titulo">📷 Tocá para escanear el QR</div>
-          <div class="recorrido-viewfinder-sub">Escaneá el QR fijo pegado en la entrada</div>
-          <div class="recorrido-scan-msg oculto" id="ficharqr-cam-error"></div>
-        </div>
-        <div id="ficharqr-viewfinder-cam" class="oculto">
-          <video id="ficharqr-video" playsinline muted></video>
-          <div class="recorrido-scan-msg" id="ficharqr-scan-msg"></div>
-          <button type="button" class="btn-cancelar-recorrido" onclick="pararCamaraFicharQR()">Detener cámara</button>
-        </div>
-        <div id="ficharqr-viewfinder-ok" class="oculto">
-          <svg class="recorrido-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
-          <div class="recorrido-viewfinder-titulo">Escaneo completado</div>
-        </div>
+      <div class="periodo-dropdown" id="novedades-periodo-dropdown">
+        <button type="button" class="periodo-dropdown-btn" id="novedades-periodo-btn" aria-expanded="false" onclick="togglePeriodoDropdown('novedades')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span id="novedades-periodo-label">Todo</span>
+          <svg class="periodo-dropdown-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="periodo-dropdown-menu oculto" id="novedades-periodo-menu"></div>
       </div>
-      <canvas id="ficharqr-canvas" style="display:none"></canvas>
-      <div class="ficharqr-resultado oculto" id="ficharqr-resultado"></div>
-      <div class="card-titulo ficharqr-historial-titulo">Tus fichadas</div>
-      <div id="ficharqr-historial"><div class="vacio">Cargando…</div></div>
+      <div id="novedades-contenido"><div class="vacio">Cargando…</div></div>
     </section>
 
     <section id="tab-cuenta" class="oculto">
@@ -980,63 +925,111 @@
           <div class="sub" id="cuenta-sector">—</div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-titulo">Foto y usuario</div>
-        <div style="display:flex;align-items:center;gap:14px;margin:10px 0">
-          <div id="perfil-avatar-preview" class="perfil-avatar">--</div>
-          <input type="file" id="perfil-foto-input" accept="image/*" style="display:none">
-          <button type="button" class="mural-finalizar-foto-btn" id="perfil-foto-btn" style="width:auto;padding:10px 16px">Cambiar foto</button>
-        </div>
-        <div class="form-stack">
-          <input type="text" id="perfil-usuario" placeholder="Usuario">
-          <button type="button" id="perfil-guardar-btn">Guardar perfil</button>
-          <div class="form-ok" id="perfil-ok"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-titulo">Notificaciones</div>
-        <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted);margin-bottom:12px">Enterate al toque cuando el admin publique algo en el Mural o resuelva tus pedidos.</div>
-        <button type="button" class="mural-finalizar-foto-btn" id="btn-activar-notif" style="width:100%" onclick="activarNotificaciones()">🔔 Activar notificaciones</button>
-        <div class="config-notif-estado" id="config-notif-estado"></div>
-      </div>
-      <div class="card">
-        <div class="tema-switch-row">
-          <div>
-            <div class="card-titulo" style="margin-bottom:2px">Tema oscuro</div>
-            <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted)">La preferencia queda guardada en este celular</div>
+
+      <div class="cuenta-categoria">
+        <button type="button" class="cuenta-categoria-header" aria-expanded="true" onclick="toggleCuentaCategoria(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="cuenta-categoria-titulo">Datos personales</span>
+          <svg class="cuenta-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="cuenta-categoria-body">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <div id="perfil-avatar-preview" class="perfil-avatar">--</div>
+              <input type="file" id="perfil-foto-input" accept="image/*" style="display:none">
+              <button type="button" class="mural-finalizar-foto-btn" id="perfil-foto-btn" style="width:auto;padding:10px 16px">Cambiar foto</button>
+            </div>
+            <div class="form-stack">
+              <label>Usuario</label>
+              <input type="text" id="perfil-usuario" placeholder="Usuario">
+              <div class="aviso-info oculto" id="perfil-usuario-aviso">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>De ahora en más vas a iniciar sesión con <b id="perfil-usuario-aviso-valor"></b> en vez de tu usuario actual.</span>
+              </div>
+              <button type="button" id="perfil-guardar-btn">Guardar perfil</button>
+              <div class="form-ok" id="perfil-ok"></div>
+            </div>
           </div>
-          <div class="switch" id="tema-switch" onclick="toggleTema()"><div class="knob"></div></div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-titulo">Tamaño de letra</div>
-        <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted);margin-bottom:12px">Agrandá o achicá toda la app. Se guarda en este dispositivo.</div>
-        <div class="tamano-letra-grupo">
-          <button class="tamano-letra-btn" data-tam="chico" onclick="cambiarTamanoLetra('chico')">Aa<span>Chico</span></button>
-          <button class="tamano-letra-btn" data-tam="mediano" onclick="cambiarTamanoLetra('mediano')">Aa<span>Mediano</span></button>
-          <button class="tamano-letra-btn" data-tam="grande" onclick="cambiarTamanoLetra('grande')">Aa<span>Grande</span></button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="tema-switch-row">
-          <div>
-            <div class="card-titulo" style="margin-bottom:2px">Leer en voz alta</div>
-            <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted)">Muestra un botón 🔊 para escuchar el texto del Mural</div>
+
+      <div class="cuenta-categoria">
+        <button type="button" class="cuenta-categoria-header" aria-expanded="false" onclick="toggleCuentaCategoria(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="cuenta-categoria-titulo">Notificaciones</span>
+          <svg class="cuenta-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="cuenta-categoria-body oculto">
+          <div class="card">
+            <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted);margin-bottom:12px">Enterate al toque cuando el admin publique algo en el Mural o resuelva tus pedidos, aunque tengas la app cerrada.</div>
+            <button type="button" class="mural-finalizar-foto-btn" id="btn-activar-notif" style="width:100%" onclick="activarNotificaciones()">🔔 Activar notificaciones</button>
+            <div class="config-notif-estado" id="config-notif-estado"></div>
+            <div class="aviso-info" id="cuenta-notif-aviso" style="margin-top:12px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span id="cuenta-notif-aviso-texto">Si estás en iPhone, primero agregá la app a tu pantalla de inicio (Compartir → Agregar a inicio) -- recién ahí Safari te deja activar las notificaciones.</span>
+            </div>
           </div>
-          <div class="switch" id="leer-voz-switch" onclick="toggleLeerVoz()"><div class="knob"></div></div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-titulo">Cambiar contraseña</div>
-        <div class="form-stack">
-          <input type="password" id="config-pass-actual" placeholder="Contraseña actual" autocomplete="current-password">
-          <input type="password" id="config-pass-nueva" placeholder="Contraseña nueva (mínimo 6 caracteres)" autocomplete="new-password">
-          <input type="password" id="config-pass-confirmar" placeholder="Repetí la contraseña nueva" autocomplete="new-password">
-          <button onclick="guardarPasswordDesdeConfig()">Guardar</button>
-          <div class="form-error" id="config-pass-error"></div>
-          <div class="form-ok" id="config-pass-ok"></div>
+
+      <div class="cuenta-categoria">
+        <button type="button" class="cuenta-categoria-header" aria-expanded="false" onclick="toggleCuentaCategoria(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="cuenta-categoria-titulo">Accesibilidad</span>
+          <svg class="cuenta-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="cuenta-categoria-body oculto">
+          <div class="card">
+            <div class="tema-switch-row">
+              <div>
+                <div class="card-titulo" style="margin-bottom:2px">Tema oscuro</div>
+                <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted)">La preferencia queda guardada en este celular</div>
+              </div>
+              <div class="switch" id="tema-switch" onclick="toggleTema()"><div class="knob"></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-titulo">Tamaño de letra</div>
+            <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted);margin-bottom:12px">Agrandá o achicá toda la app. Se guarda en este dispositivo.</div>
+            <div class="tamano-letra-grupo">
+              <button class="tamano-letra-btn" data-tam="chico" onclick="cambiarTamanoLetra('chico')">Aa<span>Chico</span></button>
+              <button class="tamano-letra-btn" data-tam="mediano" onclick="cambiarTamanoLetra('mediano')">Aa<span>Mediano</span></button>
+              <button class="tamano-letra-btn" data-tam="grande" onclick="cambiarTamanoLetra('grande')">Aa<span>Grande</span></button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="tema-switch-row">
+              <div>
+                <div class="card-titulo" style="margin-bottom:2px">Leer en voz alta</div>
+                <div style="font:400 12.5px/1.4 Inter,sans-serif;color:var(--text-muted)">Muestra un botón 🔊 para escuchar el texto del Mural</div>
+              </div>
+              <div class="switch" id="leer-voz-switch" onclick="toggleLeerVoz()"><div class="knob"></div></div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="cuenta-categoria">
+        <button type="button" class="cuenta-categoria-header" aria-expanded="false" onclick="toggleCuentaCategoria(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span class="cuenta-categoria-titulo">Seguridad</span>
+          <svg class="cuenta-categoria-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="cuenta-categoria-body oculto">
+          <div class="card">
+            <div class="card-titulo">Cambiar contraseña</div>
+            <div class="form-stack">
+              <input type="password" id="config-pass-actual" placeholder="Contraseña actual" autocomplete="current-password">
+              <input type="password" id="config-pass-nueva" placeholder="Contraseña nueva (mínimo 6 caracteres)" autocomplete="new-password">
+              <input type="password" id="config-pass-confirmar" placeholder="Repetí la contraseña nueva" autocomplete="new-password">
+              <button onclick="guardarPasswordDesdeConfig()">Guardar</button>
+              <div class="form-error" id="config-pass-error"></div>
+              <div class="form-ok" id="config-pass-ok"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
       </div>
@@ -1057,10 +1050,6 @@
       <span>Solicitudes</span>
       <span class="nav-badge oculto" id="nav-badge-solicitudes"></span>
     </button>
-    <button class="nav-item" data-nav="mural" onclick="cambiarTab('mural')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
-      <span>Mural</span>
-    </button>
     <button class="nav-item" data-nav="cuenta" onclick="cambiarTab('cuenta')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
       <span>Cuenta</span>
@@ -1070,20 +1059,6 @@
   <div class="lightbox-overlay oculto" id="lightbox-overlay" onclick="cerrarLightbox()">
     <button class="lightbox-cerrar" onclick="cerrarLightbox(event)" aria-label="Cerrar">✕</button>
     <img id="lightbox-img" alt="Foto ampliada" onclick="event.stopPropagation()">
-  </div>
-
-  <div class="onboard-overlay oculto" id="tutorial-ficharqr-overlay">
-    <div class="onboard-box">
-      <button class="onboard-cerrar" onclick="cerrarTutorialFicharQR()" aria-label="Cerrar">✕</button>
-      <div class="onboard-titulo">📷 Fichado por QR</div>
-      <div class="onboard-sub">Así funciona el fichado escaneando el QR de la entrada.</div>
-      <div class="onboard-pasos">
-        <div class="onboard-paso"><div class="onboard-paso-num">1</div><div>Escaneá el QR fijo pegado en la entrada.</div></div>
-        <div class="onboard-paso"><div class="onboard-paso-num">2</div><div>Se registra solo, alternando ingreso y egreso según tu último escaneo del día.</div></div>
-        <div class="onboard-paso"><div class="onboard-paso-num">3</div><div>Podés ver tus fichadas más abajo, en esta misma pantalla.</div></div>
-      </div>
-      <button class="btn-listo" style="width:100%" onclick="cerrarTutorialFicharQR()">Entendido, escanear</button>
-    </div>
   </div>
 
   <div class="onboard-overlay oculto" id="onboard-notif-overlay">
@@ -1152,6 +1127,14 @@
           <button onclick="enviarLicencia()">Enviar pedido</button>
           <div class="form-error" id="lic-error"></div>
           <div class="form-ok" id="lic-ok"></div>
+        </div>
+      </div>
+      <div id="modal-confirmar-reclamo" class="modal-contenido oculto">
+        <div class="modal-header"><h3>¿Reclamar esta tarea?</h3><button class="modal-cerrar" onclick="cerrarModal()">✕</button></div>
+        <div class="form-stack">
+          <div style="font:400 13.5px/1.45 Inter,sans-serif;color:var(--text-muted)">Vas a quedar asignado a esta tarea y el resto del equipo va a ver que la tomaste vos.</div>
+          <button onclick="confirmarReclamarMural()">Sí, reclamarla</button>
+          <button type="button" class="btn-cancelar-recorrido" onclick="cerrarModal()">Cancelar</button>
         </div>
       </div>
     </div>
@@ -1442,7 +1425,6 @@ function mostrarApp() {
   cargarProblemasInicio();
   cargarCompaneros();
   actualizarTarjetaRecorridoInicio();
-  actualizarTarjetaFicharQRInicio();
   cargarResumenMuralInicio();
   cargarBadgeSolicitudes();
   cargarNotificaciones();
@@ -1473,14 +1455,13 @@ const TITULOS_TAB = {
   mural: ["Mural", "Tareas y comunicados del equipo"],
   cuenta: ["Cuenta", "Tu perfil y tu contraseña"],
   novedades: ["Novedades", "Lo cargado en los recorridos diarios"],
-  ficharqr: ["Fichar QR", "Registrá tu ingreso y egreso"],
 };
 
 let pantallaOrigenCorregir = "inicio";
 
 function cambiarTab(tab) {
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.toggle("activo", b.dataset.nav === tab));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== tab);
   });
   document.getElementById("header-inicio").classList.toggle("oculto", tab !== "inicio");
@@ -1507,7 +1488,7 @@ function cambiarTab(tab) {
 async function abrirCorregir(origen, prefill) {
   pantallaOrigenCorregir = origen || "inicio";
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== "corregir");
   });
   document.getElementById("header-inicio").classList.add("oculto");
@@ -1524,9 +1505,14 @@ async function abrirCorregir(origen, prefill) {
   if (prefill) usarProblemaEnFormulario(prefill.fecha, prefill.ingreso, prefill.egreso);
 }
 
+function volverAInicio() {
+  const destino = document.getElementById("tab-corregir").classList.contains("oculto") ? "inicio" : pantallaOrigenCorregir;
+  cambiarTab(destino === "corregir" ? "inicio" : destino);
+}
+
 async function abrirNovedades() {
   document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
+  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades"].forEach((t) => {
     document.getElementById("tab-" + t).classList.toggle("oculto", t !== "novedades");
   });
   document.getElementById("header-inicio").classList.add("oculto");
@@ -1537,185 +1523,6 @@ async function abrirNovedades() {
   cargarNovedades();
 }
 
-function volverAInicio() {
-  if (!document.getElementById("tab-ficharqr").classList.contains("oculto")) { cambiarTab("inicio"); return; }
-  const destino = document.getElementById("tab-corregir").classList.contains("oculto") ? "inicio" : pantallaOrigenCorregir;
-  cambiarTab(destino === "corregir" ? "inicio" : destino);
-}
-
-async function abrirFicharQR() {
-  document.querySelectorAll(".nav-item[data-nav]").forEach((b) => b.classList.remove("activo"));
-  ["inicio", "mishoras", "corregir", "solicitudes", "mural", "cuenta", "novedades", "ficharqr"].forEach((t) => {
-    document.getElementById("tab-" + t).classList.toggle("oculto", t !== "ficharqr");
-  });
-  document.getElementById("header-inicio").classList.add("oculto");
-  document.getElementById("header-generico").classList.remove("oculto");
-  const [titulo, subtitulo] = TITULOS_TAB.ficharqr;
-  document.getElementById("header-titulo-txt").textContent = titulo;
-  document.getElementById("header-subtitulo-txt").textContent = subtitulo;
-  document.getElementById("ficharqr-resultado").classList.add("oculto");
-  cargarHistorialFicharQrPrueba();
-  actualizarTarjetaFicharQRInicio();
-  if (!localStorage.getItem("app_tutorial_ficharqr_visto")) {
-    document.getElementById("tutorial-ficharqr-overlay").classList.remove("oculto");
-  }
-}
-
-function cerrarTutorialFicharQR() {
-  localStorage.setItem("app_tutorial_ficharqr_visto", "1");
-  document.getElementById("tutorial-ficharqr-overlay").classList.add("oculto");
-}
-
-const QR_FICHAR_PRUEBA_TEXTO = "MC3333-FICHAR-ENTRADA";
-let ficharQrStream = null;
-let ficharQrRAF = null;
-let ficharQrUltimoInvalidoMs = 0;
-
-async function iniciarEscaneoFicharQR() {
-  const idle = document.getElementById("ficharqr-viewfinder-idle");
-  const cam = document.getElementById("ficharqr-viewfinder-cam");
-  const msg = document.getElementById("ficharqr-scan-msg");
-  const errorIdle = document.getElementById("ficharqr-cam-error");
-  msg.textContent = "";
-  errorIdle.classList.add("oculto");
-  document.getElementById("ficharqr-resultado").classList.add("oculto");
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-  } catch (err) {
-    errorIdle.textContent = "No se pudo acceder a la cámara — revisá los permisos y tocá de nuevo para reintentar.";
-    errorIdle.classList.remove("oculto");
-    return;
-  }
-  ficharQrStream = stream;
-  const video = document.getElementById("ficharqr-video");
-  video.srcObject = stream;
-  await video.play();
-  idle.classList.add("oculto");
-  cam.classList.remove("oculto");
-  loopEscaneoFicharQR();
-}
-
-function pararCamaraFicharQR() {
-  if (ficharQrRAF) { cancelAnimationFrame(ficharQrRAF); ficharQrRAF = null; }
-  if (ficharQrStream) { ficharQrStream.getTracks().forEach((t) => t.stop()); ficharQrStream = null; }
-  const idle = document.getElementById("ficharqr-viewfinder-idle");
-  const cam = document.getElementById("ficharqr-viewfinder-cam");
-  const ok = document.getElementById("ficharqr-viewfinder-ok");
-  if (idle) idle.classList.remove("oculto");
-  if (cam) cam.classList.add("oculto");
-  if (ok) ok.classList.add("oculto");
-}
-
-function loopEscaneoFicharQR() {
-  const video = document.getElementById("ficharqr-video");
-  const canvas = document.getElementById("ficharqr-canvas");
-  if (!video || !ficharQrStream) return;
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-    ficharQrRAF = requestAnimationFrame(loopEscaneoFicharQR);
-    return;
-  }
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const resultado = jsQR(imagen.data, imagen.width, imagen.height);
-  if (resultado && resultado.data) {
-    onQrLeidoFicharQR(resultado.data.trim());
-    return;
-  }
-  ficharQrRAF = requestAnimationFrame(loopEscaneoFicharQR);
-}
-
-async function onQrLeidoFicharQR(texto) {
-  if (texto !== QR_FICHAR_PRUEBA_TEXTO) {
-    const ahora = Date.now();
-    if (ahora - ficharQrUltimoInvalidoMs > 1500) {
-      ficharQrUltimoInvalidoMs = ahora;
-      const msg = document.getElementById("ficharqr-scan-msg");
-      if (msg) msg.textContent = "Ese QR no es el de fichado — fijate que sea el cartel de la entrada.";
-    }
-    ficharQrRAF = requestAnimationFrame(loopEscaneoFicharQR);
-    return;
-  }
-  pararCamaraFicharQR();
-  document.getElementById("ficharqr-viewfinder-idle").classList.add("oculto");
-  document.getElementById("ficharqr-viewfinder-ok").classList.remove("oculto");
-  try {
-    const data = await apiFetch("/app/api/fichar-qr-prueba", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qr: texto }),
-    });
-    mostrarResultadoFicharQR(data.tipo, data.hora);
-    cargarHistorialFicharQrPrueba();
-    actualizarTarjetaFicharQRInicio();
-    cargarHoy();
-  } catch (err) {
-    mostrarResultadoFicharQR(null, null, err.message || "No se pudo registrar el fichado");
-  }
-  setTimeout(() => {
-    document.getElementById("ficharqr-viewfinder-ok").classList.add("oculto");
-    document.getElementById("ficharqr-viewfinder-idle").classList.remove("oculto");
-  }, 900);
-}
-
-function mostrarResultadoFicharQR(tipo, hora, error) {
-  const el = document.getElementById("ficharqr-resultado");
-  el.classList.remove("oculto");
-  if (error) {
-    el.innerHTML = `<div class="ficharqr-resultado-tipo" style="color:var(--danger)">${error}</div>`;
-    return;
-  }
-  el.innerHTML = `
-    <div class="ficharqr-resultado-tipo">${tipo === "ingreso" ? "✅ Ingreso" : "🚪 Egreso"} registrado</div>
-    <div class="ficharqr-resultado-hora">${hora}hs</div>
-  `;
-}
-
-async function actualizarTarjetaFicharQRInicio() {
-  const tituloEl = document.getElementById("ficharqr-card-titulo");
-  const subEl = document.getElementById("ficharqr-card-sub");
-  if (!tituloEl) return;
-  try {
-    const data = await apiFetch("/app/api/mis-fichadas-qr-prueba");
-    const hoy = fechaISO(new Date());
-    const ultimaHoy = (data.fichadas || []).find((f) => f.fecha === hoy);
-    if (!ultimaHoy) {
-      tituloEl.textContent = "Fichá tu ingreso";
-      subEl.textContent = "Escaneá el QR de la entrada";
-    } else if (ultimaHoy.tipo === "ingreso") {
-      tituloEl.textContent = `Ingreso registrado · ${ultimaHoy.hora}hs`;
-      subEl.textContent = "Volvé a escanear para tu egreso";
-    } else {
-      tituloEl.textContent = `Egreso registrado · ${ultimaHoy.hora}hs`;
-      subEl.textContent = "Escaneá de nuevo si volvés a entrar";
-    }
-  } catch (err) {
-    tituloEl.textContent = "Fichar QR";
-    subEl.textContent = "Escaneá el QR de la entrada";
-  }
-}
-
-async function cargarHistorialFicharQrPrueba() {
-  const el = document.getElementById("ficharqr-historial");
-  try {
-    const data = await apiFetch("/app/api/mis-fichadas-qr-prueba");
-    const fichadas = data.fichadas || [];
-    if (fichadas.length === 0) {
-      el.innerHTML = `<div class="vacio">Todavía no escaneaste ningún QR de prueba</div>`;
-      return;
-    }
-    el.innerHTML = fichadas.map((f) => `
-      <div class="ficharqr-historial-item">
-        <span>${f.fecha.slice(8, 10)}/${f.fecha.slice(5, 7)} · ${f.hora}hs</span>
-        <span class="ficharqr-historial-tipo ${f.tipo}">${f.tipo === "ingreso" ? "Ingreso" : "Egreso"}</span>
-      </div>
-    `).join("");
-  } catch (err) {
-    el.innerHTML = "";
-  }
-}
 
 function formatearFecha(iso) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -1731,18 +1538,11 @@ function formatearHoras(n) {
 // Tarjeta "Hoy" en Inicio -- estado en vivo de la fichada de hoy.
 async function cargarHoy() {
   try {
-    const [data, qrData] = await Promise.all([
-      apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual()),
-      apiFetch("/app/api/mis-fichadas-qr-prueba").catch(() => ({ fichadas: [] })),
-    ]);
+    const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual());
     const hoyEl = document.getElementById("hoy-contenido");
     const badge = document.getElementById("hoy-estado-badge");
-    const hoyISO = fechaISO(new Date());
-    const fichadasQrHoy = (qrData.fichadas || []).filter((f) => f.fecha === hoyISO);
-    const ingresoQr = fichadasQrHoy.find((f) => f.tipo === "ingreso");
-    const egresoQr = fichadasQrHoy.find((f) => f.tipo === "egreso");
-    const ingresoHora = (ingresoQr && ingresoQr.hora) || (data.hoy && data.hoy.ingreso_hora) || null;
-    const egresoHora = (egresoQr && egresoQr.hora) || (data.hoy && data.hoy.egreso_hora) || null;
+    const ingresoHora = (data.hoy && data.hoy.ingreso_hora) || null;
+    const egresoHora = (data.hoy && data.hoy.egreso_hora) || null;
     if (ingresoHora || egresoHora) {
       badge.classList.toggle("oculto", !(ingresoHora && !egresoHora));
       hoyEl.innerHTML = `
@@ -2073,6 +1873,15 @@ function toggleDiaNovedades(header) {
   header.nextElementSibling.classList.toggle("oculto", expandido);
 }
 
+// ── Cuenta: categorias plegables (Datos personales, Notificaciones,
+// Accesibilidad, Seguridad) -- antes era una fila larga de tarjetas
+// sueltas, dificil de escanear. ──
+function toggleCuentaCategoria(header) {
+  const expandido = header.getAttribute("aria-expanded") === "true";
+  header.setAttribute("aria-expanded", String(!expandido));
+  header.nextElementSibling.classList.toggle("oculto", expandido);
+}
+
 // ── Pestaña Mural ──
 
 const ETIQUETA_AUDIENCIA_MURAL_APP = {
@@ -2093,51 +1902,18 @@ async function cargarResumenMuralInicio() {
     const data = await apiFetch("/app/api/mural");
     actualizarTarjetaMuralInicio(data.posts);
   } catch (err) {
-    if (err.message === "Sesión vencida") return;
-    document.getElementById("mural-card-sub").textContent = "No se pudo cargar";
+    /* si falla, el tile de Mural se queda sin badge nomas */
   }
 }
 
+// Badge con la cantidad de tareas sin tomar sobre el tile "Mural" de
+// Accesos (el tile es chico, no hay lugar para mas que eso).
 function actualizarTarjetaMuralInicio(posts) {
-  const tituloEl = document.getElementById("mural-card-titulo");
-  const subEl = document.getElementById("mural-card-sub");
   const badgeEl = document.getElementById("mural-card-badge");
-  if (!tituloEl) return;
-
+  if (!badgeEl) return;
   const sinTomar = posts.filter((p) => p.estado === "publicada").length;
-  const enProceso = posts.filter((p) => p.estado === "en_proceso").length;
-
   badgeEl.classList.toggle("oculto", sinTomar === 0);
   badgeEl.textContent = sinTomar > 99 ? "99+" : sinTomar;
-
-  if (sinTomar > 0) {
-    tituloEl.textContent = sinTomar === 1 ? "1 tarea sin tomar" : `${sinTomar} tareas sin tomar`;
-  } else if (enProceso > 0) {
-    tituloEl.textContent = enProceso === 1 ? "1 tarea en proceso" : `${enProceso} tareas en proceso`;
-  } else {
-    tituloEl.textContent = "Todo al día";
-  }
-
-  const ultimo = posts[0];
-  if (!ultimo) {
-    subEl.textContent = "Todavía no hay nada publicado";
-  } else if (sinTomar > 0 && enProceso > 0) {
-    subEl.textContent = `${enProceso} más en proceso · última: ${fechaCortaRelativa(ultimo.creado_en)}`;
-  } else {
-    subEl.textContent = `Última publicación: ${fechaCortaRelativa(ultimo.creado_en)}`;
-  }
-}
-
-// "hoy" / "ayer" / "12 de agosto" -- en la tarjeta de Inicio importa mas
-// saber si es de hoy que la fecha exacta.
-function fechaCortaRelativa(iso) {
-  const fecha = iso.slice(0, 10);
-  const hoy = fechaISO(new Date());
-  const ayer = fechaISO(new Date(Date.now() - 86400000));
-  if (fecha === hoy) return "hoy";
-  if (fecha === ayer) return "ayer";
-  const [, m, d] = fecha.split("-").map(Number);
-  return `${d} de ${MESES[m - 1]}`;
 }
 
 function stepperMural(estado) {
@@ -2181,7 +1957,7 @@ function tarjetaMural(p) {
   const laReclameYo = p.reclamado_por_nombre && p.reclamado_por_nombre === miNombre;
   let accion = "";
   if (p.estado === "publicada") {
-    accion = `<button class="mural-reclamar-btn" onclick="reclamarMuralApp(${p.id})">Reclamar esta tarea</button>`;
+    accion = `<button class="mural-reclamar-btn" onclick="abrirConfirmReclamarMural(${p.id})">Reclamar esta tarea</button>`;
   } else if (p.estado === "en_proceso") {
     accion = laReclameYo
       ? `<button class="mural-reclamar-btn" id="mural-btn-marcar-${p.id}" onclick="iniciarFinalizarMuralApp(${p.id})">Marcar como terminada</button>
@@ -2197,7 +1973,7 @@ function tarjetaMural(p) {
   }
   const fotoHtml = p.foto ? `<div class="novedad-fotos una-foto"><img src="${p.foto}" class="novedad-foto" alt="Foto adjunta" onclick="abrirLightbox(this.src)"></div>` : "";
   return `
-    <div class="novedad-item">
+    <div class="novedad-item" id="mural-post-${p.id}">
       ${ETIQUETA_AUDIENCIA_MURAL_APP[p.audiencia] ? `<span class="mural-audiencia-badge">${ETIQUETA_AUDIENCIA_MURAL_APP[p.audiencia]}</span>` : ""}
       <div class="novedad-top">
         <span class="novedad-punto">${escapeHtml(p.autor_nombre)}</span>
@@ -2214,39 +1990,56 @@ function tarjetaMural(p) {
   `;
 }
 
-// Filtro de mes por pills (mismo componente que "Mis horas") -- el
-// <input type="month"> nativo se veia mal y en vacio mostraba "---- de ----".
-// "Todo" = sin filtro, que es el estado por defecto.
+// Filtro de mes por dropdown -- un solo boton compacto ("Todo" por
+// defecto) que despliega la lista de meses recientes al tocarlo, en vez
+// de una fila de pills que ocupaba mucho lugar para algo que casi siempre
+// se deja en "Todo". Reemplaza tambien al <input type="month"> nativo,
+// que se veia mal y en vacio mostraba "---- de ----".
 let muralPeriodo = null;
-let novedadesPeriodo = null;
 
-function pillsPeriodo(contenedorId, seleccionado, onClickNombre) {
-  const cont = document.getElementById(contenedorId);
-  if (!cont) return;
+function pintarPeriodoDropdown(prefix, seleccionado, onClickNombre) {
+  const label = document.getElementById(prefix + "-periodo-label");
+  const menu = document.getElementById(prefix + "-periodo-menu");
+  if (!label || !menu) return;
+  label.textContent = seleccionado ? capitalizar(MESES[Number(seleccionado.slice(5, 7)) - 1]) : "Todo";
   const periodos = periodosRecientesCliente(4);
-  const todo = `<div class="periodo-pill ${seleccionado ? "" : "activo"}" onclick="${onClickNombre}(null)">Todo</div>`;
-  const pills = periodos.map((p) => {
+  const itemTodo = `<div class="periodo-dropdown-item ${seleccionado ? "" : "activo"}" onclick="${onClickNombre}(null)">Todo</div>`;
+  const items = periodos.map((p) => {
     const mes = capitalizar(MESES[Number(p.slice(5, 7)) - 1]);
-    return `<div class="periodo-pill ${p === seleccionado ? "activo" : ""}" onclick="${onClickNombre}('${p}')">${mes}</div>`;
+    return `<div class="periodo-dropdown-item ${p === seleccionado ? "activo" : ""}" onclick="${onClickNombre}('${p}')">${mes}</div>`;
   }).join("");
-  cont.innerHTML = todo + pills;
+  menu.innerHTML = itemTodo + items;
 }
+
+function togglePeriodoDropdown(prefix) {
+  const btn = document.getElementById(prefix + "-periodo-btn");
+  const menu = document.getElementById(prefix + "-periodo-menu");
+  const yaAbierto = btn.getAttribute("aria-expanded") === "true";
+  document.querySelectorAll(".periodo-dropdown-menu").forEach((m) => m.classList.add("oculto"));
+  document.querySelectorAll(".periodo-dropdown-btn").forEach((b) => b.setAttribute("aria-expanded", "false"));
+  if (!yaAbierto) {
+    menu.classList.remove("oculto");
+    btn.setAttribute("aria-expanded", "true");
+  }
+}
+
+// Cierra el dropdown si se toca afuera -- si no, queda abierto colgado
+// hasta que se elija un mes.
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".periodo-dropdown")) return;
+  document.querySelectorAll(".periodo-dropdown-menu").forEach((m) => m.classList.add("oculto"));
+  document.querySelectorAll(".periodo-dropdown-btn").forEach((b) => b.setAttribute("aria-expanded", "false"));
+});
 
 function seleccionarPeriodoMural(periodo) {
   muralPeriodo = periodo;
-  pillsPeriodo("mural-periodos", muralPeriodo, "seleccionarPeriodoMural");
+  pintarPeriodoDropdown("mural", muralPeriodo, "seleccionarPeriodoMural");
   cargarMural();
-}
-
-function seleccionarPeriodoNovedades(periodo) {
-  novedadesPeriodo = periodo;
-  pillsPeriodo("novedades-periodos", novedadesPeriodo, "seleccionarPeriodoNovedades");
-  cargarNovedades();
 }
 
 async function cargarMural() {
   const el = document.getElementById("mural-contenido");
-  pillsPeriodo("mural-periodos", muralPeriodo, "seleccionarPeriodoMural");
+  pintarPeriodoDropdown("mural", muralPeriodo, "seleccionarPeriodoMural");
   const expandidosPrevios = new Set(
     Array.from(el.querySelectorAll('.novedades-dia-header[aria-expanded="true"]')).map((h) => h.dataset.fecha)
   );
@@ -2288,12 +2081,131 @@ async function cargarMural() {
   }
 }
 
-async function reclamarMuralApp(id) {
+// Pide confirmacion antes de reclamar (para evitar misclicks -- una vez
+// reclamada, el resto del equipo ve que quedaste asignado). Al confirmar,
+// pinta solo esa tarjeta con la respuesta del server en vez de recargar
+// todo el mural (quedaba re feo un parpadeo de toda la lista por una sola
+// tarjeta).
+let muralIdAReclamar = null;
+
+function abrirConfirmReclamarMural(id) {
+  muralIdAReclamar = id;
+  abrirModal("confirmar-reclamo");
+}
+
+async function confirmarReclamarMural() {
+  const id = muralIdAReclamar;
+  cerrarModal();
+  if (!id) return;
   try {
-    await apiFetch(`/app/api/mural/${id}/reclamar`, { method: "POST" });
-    cargarMural();
+    const data = await apiFetch(`/app/api/mural/${id}/reclamar`, { method: "POST" });
+    const tarjeta = document.getElementById("mural-post-" + id);
+    if (tarjeta && data.post) tarjeta.outerHTML = tarjetaMural(data.post);
+    cargarResumenMuralInicio();
   } catch (err) {
     alert(err.message || "No se pudo reclamar");
+  }
+}
+
+// ── Pestaña Novedades (recorridos diarios) ──
+
+let novedadesPeriodo = null;
+
+function seleccionarPeriodoNovedades(periodo) {
+  novedadesPeriodo = periodo;
+  pintarPeriodoDropdown("novedades", novedadesPeriodo, "seleccionarPeriodoNovedades");
+  cargarNovedades();
+}
+
+// Agrupado por dia -- cada grupo lleva un header con la fecha completa, y
+// las tarjetas adentro solo muestran la hora. Cada dia es un acordeon:
+// arranca plegado salvo el mas reciente, y si ya habia dias desplegados a
+// mano (por ej. antes de mandar un comentario, que recarga todo) se
+// respeta esa eleccion en vez de volver todo al estado por defecto.
+async function cargarNovedades() {
+  const el = document.getElementById("novedades-contenido");
+  pintarPeriodoDropdown("novedades", novedadesPeriodo, "seleccionarPeriodoNovedades");
+  const expandidosPrevios = new Set(
+    Array.from(el.querySelectorAll('.novedades-dia-header[aria-expanded="true"]')).map((h) => h.dataset.fecha)
+  );
+  el.innerHTML = `<div class="vacio">Cargando…</div>`;
+  try {
+    const data = await apiFetch("/app/api/novedades" + (novedadesPeriodo ? "?periodo=" + novedadesPeriodo : ""));
+    if (!data.novedades.length) {
+      el.innerHTML = `<div class="vacio">${novedadesPeriodo ? "Sin novedades en este período" : "Todavía no hay novedades cargadas"}</div>`;
+      return;
+    }
+    const grupos = [];
+    data.novedades.forEach((n) => {
+      let grupo = grupos.find((g) => g.fecha === n.fecha);
+      if (!grupo) { grupo = { fecha: n.fecha, items: [] }; grupos.push(grupo); }
+      grupo.items.push(n);
+    });
+    el.innerHTML = grupos.map((g, i) => {
+      const expandido = expandidosPrevios.size ? expandidosPrevios.has(g.fecha) : i === 0;
+      return `
+        <div class="novedades-dia-grupo">
+          <button type="button" class="novedades-dia-header" data-fecha="${g.fecha}" onclick="toggleDiaNovedades(this)" aria-expanded="${expandido}">
+            <span class="novedades-dia-titulo">${fechaLarga(g.fecha)}</span>
+            <span class="novedades-dia-cant">${g.items.length}</span>
+            <svg class="novedades-dia-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="novedades-dia-items${expandido ? "" : " oculto"}">
+            ${g.items.map(tarjetaNovedad).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch (err) {
+    if (err.message === "Sesión vencida") return;
+    el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
+  }
+}
+
+function tarjetaComentario(c) {
+  return `<div class="novedad-comentario"><b>${escapeHtml(c.usuario_nombre)}:</b> <span>${escapeHtml(c.texto)}</span></div>`;
+}
+
+function tarjetaNovedad(n) {
+  const fotos = fotosDeNovedad(n.foto);
+  return `
+    <div class="novedad-item">
+      <div class="novedad-top">
+        <span class="novedad-punto">${escapeHtml(n.punto)}</span>
+        <span class="novedad-hora">${horaDeISO(n.creado_en)}</span>
+      </div>
+      ${n.observacion ? `<div class="novedad-texto">${escapeHtml(n.observacion)}${leerVozActiva() ? `<button class="btn-leer-voz" data-texto="${escapeHtml(n.observacion)}" onclick="leerTexto(this.dataset.texto)" aria-label="Escuchar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>` : ""}</div>` : ""}
+      ${fotos.length ? `
+        <div class="novedad-fotos${fotos.length === 1 ? " una-foto" : ""}">
+          ${fotos.map((f) => `<img src="${f}" class="novedad-foto" alt="Foto adjunta" onclick="abrirLightbox(this.src)">`).join("")}
+        </div>
+      ` : ""}
+      <div class="novedad-usuario">Cargado por ${escapeHtml(n.usuario_nombre)}</div>
+      <div class="novedad-comentarios">
+        ${n.comentarios.map(tarjetaComentario).join("")}
+        <div class="novedad-comentario-form">
+          <input type="text" placeholder="Escribir un comentario…" id="comentario-input-${n.id}" onkeydown="if(event.key==='Enter') enviarComentarioNovedad(${n.id})">
+          <button onclick="enviarComentarioNovedad(${n.id})">Enviar</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function enviarComentarioNovedad(novedadId) {
+  const input = document.getElementById("comentario-input-" + novedadId);
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.disabled = true;
+  try {
+    await apiFetch(`/app/api/novedades/${novedadId}/comentarios`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto }),
+    });
+    await cargarNovedades();
+  } catch (err) {
+    input.disabled = false;
+    alert(err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : "No se pudo enviar el comentario");
   }
 }
 
@@ -2453,6 +2365,8 @@ function pintarAvatarApp(perfil) {
 
 let perfilFotoPendienteApp = null;
 
+let usuarioActualApp = "";
+
 async function cargarPerfilApp() {
   try {
     const { perfil } = await apiFetch("/app/api/perfil");
@@ -2460,10 +2374,24 @@ async function cargarPerfilApp() {
     const usuarioInput = document.getElementById("perfil-usuario");
     if (nombreInput) nombreInput.value = perfil?.nombre || "";
     if (usuarioInput) usuarioInput.value = perfil?.usuario || "";
+    usuarioActualApp = perfil?.usuario || "";
+    actualizarAvisoUsuarioApp();
     perfilFotoPendienteApp = null;
     pintarAvatarApp(perfil);
   } catch (err) { /* si falla, se deja como esta */ }
 }
+
+// Avisa antes de guardar que el usuario elegido va a ser la nueva
+// credencial de login -- para que no se lleven la sorpresa despues.
+function actualizarAvisoUsuarioApp() {
+  const input = document.getElementById("perfil-usuario");
+  const aviso = document.getElementById("perfil-usuario-aviso");
+  const valor = input.value.trim();
+  const cambio = valor && valor !== usuarioActualApp;
+  aviso.classList.toggle("oculto", !cambio);
+  if (cambio) document.getElementById("perfil-usuario-aviso-valor").textContent = `«${valor}»`;
+}
+document.getElementById("perfil-usuario").addEventListener("input", actualizarAvisoUsuarioApp);
 
 document.getElementById("perfil-foto-btn").addEventListener("click", () => {
   document.getElementById("perfil-foto-input").click();
@@ -2625,6 +2553,8 @@ async function guardarPerfilActualApp() {
   });
   perfilFotoPendienteApp = null;
   pintarAvatarApp(perfil);
+  usuarioActualApp = perfil?.usuario || "";
+  actualizarAvisoUsuarioApp();
   return perfil;
 }
 
@@ -2781,7 +2711,7 @@ function mostrarOnboardNotifSiCorresponde() {
     `;
     btnAccion.classList.add("oculto");
   } else {
-    subEl.textContent = "Activá las notificaciones y enterate al toque cuando el administrador apruebe tus pedidos o haya novedades del recorrido.";
+    subEl.textContent = "Activá las notificaciones y enterate al toque cuando el admin publique algo en el Mural o resuelva tus pedidos, aunque tengas la app cerrada.";
     pasosEl.innerHTML = "";
     btnAccion.classList.remove("oculto");
   }
@@ -2797,101 +2727,6 @@ function cerrarOnboardNotif() {
 async function onboardAccionPrincipal() {
   const ok = await activarNotificaciones();
   if (ok) cerrarOnboardNotif();
-}
-
-function tarjetaComentario(c) {
-  return `<div class="novedad-comentario"><b>${escapeHtml(c.usuario_nombre)}:</b> <span>${escapeHtml(c.texto)}</span></div>`;
-}
-
-function tarjetaNovedad(n) {
-  const fotos = fotosDeNovedad(n.foto);
-  return `
-    <div class="novedad-item">
-      <div class="novedad-top">
-        <span class="novedad-punto">${escapeHtml(n.punto)}</span>
-        <span class="novedad-hora">${horaDeISO(n.creado_en)}</span>
-      </div>
-      ${n.observacion ? `<div class="novedad-texto">${escapeHtml(n.observacion)}${leerVozActiva() ? `<button class="btn-leer-voz" data-texto="${escapeHtml(n.observacion)}" onclick="leerTexto(this.dataset.texto)" aria-label="Escuchar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>` : ""}</div>` : ""}
-      ${fotos.length ? `
-        <div class="novedad-fotos${fotos.length === 1 ? " una-foto" : ""}">
-          ${fotos.map((f) => `<img src="${f}" class="novedad-foto" alt="Foto adjunta" onclick="abrirLightbox(this.src)">`).join("")}
-        </div>
-      ` : ""}
-      <div class="novedad-usuario">Cargado por ${escapeHtml(n.usuario_nombre)}</div>
-      <div class="novedad-comentarios">
-        ${n.comentarios.map(tarjetaComentario).join("")}
-        <div class="novedad-comentario-form">
-          <input type="text" placeholder="Escribir un comentario…" id="comentario-input-${n.id}" onkeydown="if(event.key==='Enter') enviarComentarioNovedad(${n.id})">
-          <button onclick="enviarComentarioNovedad(${n.id})">Enviar</button>
-        </div>
-      </div>
-    </div>
-  `;
-}
-// Mural agrupado por dia -- cada grupo lleva un header con la fecha
-// completa, y las tarjetas adentro solo muestran la hora (la fecha ya
-// esta dicha por el header del grupo, repetirla en cada tarjeta era
-// redundante y hacia mas dificil ubicarse rapido en la lista).
-// Cada dia es un acordeon: arranca plegado salvo el mas reciente, asi con
-// el correr de los dias la lista no se hace un choclo interminable --
-// tocando el header de un dia se despliega/pliega ese grupo nada mas.
-async function cargarNovedades() {
-  const el = document.getElementById("novedades-contenido");
-  pillsPeriodo("novedades-periodos", novedadesPeriodo, "seleccionarPeriodoNovedades");
-  // Si ya habia dias desplegados a mano (por ej. antes de mandar un
-  // comentario, que recarga todo), se respeta esa eleccion en vez de
-  // volver todo al estado por defecto.
-  const expandidosPrevios = new Set(
-    Array.from(el.querySelectorAll('.novedades-dia-header[aria-expanded="true"]')).map((h) => h.dataset.fecha)
-  );
-  el.innerHTML = `<div class="vacio">Cargando…</div>`;
-  try {
-    const data = await apiFetch("/app/api/novedades" + (novedadesPeriodo ? "?periodo=" + novedadesPeriodo : ""));
-    if (!data.novedades.length) {
-      el.innerHTML = `<div class="vacio">${novedadesPeriodo ? "Sin novedades en este período" : "Todavía no hay novedades cargadas"}</div>`;
-      return;
-    }
-    const grupos = [];
-    data.novedades.forEach((n) => {
-      let grupo = grupos.find((g) => g.fecha === n.fecha);
-      if (!grupo) { grupo = { fecha: n.fecha, items: [] }; grupos.push(grupo); }
-      grupo.items.push(n);
-    });
-    el.innerHTML = grupos.map((g, i) => {
-      const expandido = expandidosPrevios.size ? expandidosPrevios.has(g.fecha) : i === 0;
-      return `
-        <div class="novedades-dia-grupo">
-          <button type="button" class="novedades-dia-header" data-fecha="${g.fecha}" onclick="toggleDiaNovedades(this)" aria-expanded="${expandido}">
-            <span class="novedades-dia-titulo">${fechaLarga(g.fecha)}</span>
-            <span class="novedades-dia-cant">${g.items.length}</span>
-            <svg class="novedades-dia-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="novedades-dia-items${expandido ? "" : " oculto"}">
-            ${g.items.map(tarjetaNovedad).join("")}
-          </div>
-        </div>
-      `;
-    }).join("");
-  } catch (err) {
-    if (err.message === "Sesión vencida") return;
-    el.innerHTML = `<div class="vacio">No se pudo cargar</div>`;
-  }
-}
-async function enviarComentarioNovedad(novedadId) {
-  const input = document.getElementById("comentario-input-" + novedadId);
-  const texto = input.value.trim();
-  if (!texto) return;
-  input.disabled = true;
-  try {
-    await apiFetch(`/app/api/novedades/${novedadId}/comentarios`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texto }),
-    });
-    await cargarNovedades();
-  } catch (err) {
-    input.disabled = false;
-    alert(err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : "No se pudo enviar el comentario");
-  }
 }
 
 async function cargarSolicitudes() {
