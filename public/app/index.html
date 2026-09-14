@@ -1862,6 +1862,14 @@ function fechaLarga(iso) {
   return `${DIAS_SEMANA_LARGO[dt.getDay()]} ${d} de ${MESES[m - 1]}`;
 }
 
+// Header de cada grupo de dia en Novedades -- sin el nombre del dia de la
+// semana (quedaba muy largo para un encabezado que se repite en cada
+// grupo), solo la fecha.
+function fechaCortaDia(iso) {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} de ${MESES[m - 1]}`;
+}
+
 function horaDeISO(iso) {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -2146,7 +2154,7 @@ async function cargarNovedades() {
       return `
         <div class="novedades-dia-grupo">
           <button type="button" class="novedades-dia-header" data-fecha="${g.fecha}" onclick="toggleDiaNovedades(this)" aria-expanded="${expandido}">
-            <span class="novedades-dia-titulo">${fechaLarga(g.fecha)}</span>
+            <span class="novedades-dia-titulo">${fechaCortaDia(g.fecha)}</span>
             <span class="novedades-dia-cant">${g.items.length}</span>
             <svg class="novedades-dia-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
@@ -2192,6 +2200,9 @@ function tarjetaNovedad(n) {
   `;
 }
 
+// Agrega el comentario en el lugar en vez de recargar toda la lista de
+// Novedades -- recargar hacia perder el scroll (volvia todo arriba) y
+// replegaba de nuevo los dias que se habian abierto a mano.
 async function enviarComentarioNovedad(novedadId) {
   const input = document.getElementById("comentario-input-" + novedadId);
   const texto = input.value.trim();
@@ -2202,7 +2213,14 @@ async function enviarComentarioNovedad(novedadId) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ texto }),
     });
-    await cargarNovedades();
+    const miNombre = localStorage.getItem("app_nombre") || "Vos";
+    const div = document.createElement("div");
+    div.className = "novedad-comentario";
+    div.innerHTML = `<b>${escapeHtml(miNombre)}:</b> <span>${escapeHtml(texto)}</span>`;
+    const form = input.closest(".novedad-comentario-form");
+    form.parentElement.insertBefore(div, form);
+    input.value = "";
+    input.disabled = false;
   } catch (err) {
     input.disabled = false;
     alert(err.message === "Sesión vencida" ? "Sesión vencida, volvé a entrar" : "No se pudo enviar el comentario");

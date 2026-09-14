@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v32"; // v32: saca Fichar QR (prueba), Mural pasa a tile chico en Accesos, vuelve Novedades de recorridos
+const CACHE = "fich-coronado-v33"; // v33: Novedades sin dia de semana en el header, comentario sin recargar toda la lista
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
