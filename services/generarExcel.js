@@ -40,7 +40,7 @@ function generarExcel(filas, resumen) {
       data.push([
         c(f.empleado, bgBase, true, true),
         c(f.fecha, f.esFeriado ? C_FD : bgBase, f.esFeriado, false),
-        c(f.turno), c(f.ingreso), c(f.egreso),
+        c(f.turno), c(f.ingreso || "—"), c(f.egreso || "—"),
         c(f.totalHs), c(f.h50), c(f.h100),
         c(f.alerta, f.alerta ? C_REV : bgBase, !!f.alerta, true),
       ]);
