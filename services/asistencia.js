@@ -145,6 +145,7 @@ function calcularAsistencia(empleado, periodoOrRango) {
       const [y, m, day] = d.fecha.split("-").map(Number);
       const turno = turnoEsperadoDelDia(new Date(y, m - 1, day));
       const turnoCorregido = turno ? (ETIQUETA_TURNO[turno.tipo] || turno.tipo) : d.turno;
+      const esEvento = esEventoRegistrado(empleado, d.fecha);
 
       // Dia con una sola marcacion (motorCalculo.js la guarda siempre como
       // "ingreso", con el egreso vacio -- el reloj no distingue entrada de
@@ -168,15 +169,15 @@ function calcularAsistencia(empleado, periodoOrRango) {
         }
       }
 
-      if (!d.ingreso) return { ...d, turno: turnoCorregido, faltante };
+      if (!d.ingreso) return { ...d, turno: turnoCorregido, faltante, esEvento };
       const minEsperado = turno && turno.horario ? minutosDesdeMedianoche(turno.horario.in) : null;
       const minReal = minutosDesdeMedianoche(d.ingreso);
       if (minEsperado == null || minReal == null || minReal <= minEsperado + TOLERANCIA_TARDE_MIN) {
-        return { ...d, turno: turnoCorregido, faltante };
+        return { ...d, turno: turnoCorregido, faltante, esEvento };
       }
-      return { ...d, turno: turnoCorregido, faltante, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
+      return { ...d, turno: turnoCorregido, faltante, esEvento, llegadaTarde: true, minutosTarde: minReal - minEsperado, horarioEsperado: turno.horario.in };
     })
-    : diasCrudos;
+    : diasCrudos.map((d) => ({ ...d, esEvento: esEventoRegistrado(empleado, d.fecha) }));
 
   return { periodo, rango, dias, ausencias, deficitSabado };
 }

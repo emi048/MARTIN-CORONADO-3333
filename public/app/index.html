@@ -151,6 +151,8 @@
   .badge-warn { background: rgba(245,166,35,0.15); color: var(--warn); }
   .badge-danger { background: rgba(229,72,77,0.15); color: var(--danger); }
   .badge-muted { background: var(--surface2); color: var(--text-muted); }
+  .badge-evento { background: rgba(124,108,240,0.15); color: var(--accent); }
+  .dia-fecha .badge-evento { display: block; width: fit-content; margin-top: 3px; padding: 1px 6px; font-size: 9.5px; }
   .vacio { color: var(--text-muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
   /* ── Inicio ── */
@@ -3273,7 +3275,7 @@ async function cargarFichadas() {
       diasEl.innerHTML = `<div class="vacio">Sin datos en este período</div>`;
     } else {
       diasEl.innerHTML = filas.map((d) => {
-        const fechaHtml = formatearFecha(d.fecha);
+        const fechaHtml = formatearFecha(d.fecha) + (d.esEvento ? '<span class="badge badge-evento">Evento</span>' : "");
         if (d.ausente && d.compensado) {
           return `<div class="dia-row"><div class="dia-fecha">${fechaHtml}</div><div class="dia-detalle">Sábado compensado trabajando de más</div></div>`;
         }
