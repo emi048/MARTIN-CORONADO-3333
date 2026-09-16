@@ -1,4 +1,4 @@
-const CACHE = "fich-coronado-v35"; // v35: Mis horas usa ciclo 21-20 en vez de mes calendario
+const CACHE = "fich-coronado-v36"; // v36: arregla el separador gigante de la tarjeta Hoy
 const SHELL = ["/app/", "/app/manifest.json"];
 
 self.addEventListener("install", (event) => {
