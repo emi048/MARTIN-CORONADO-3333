@@ -1402,6 +1402,32 @@ function periodosRecientesCliente(n) {
   return out;
 }
 
+// "Mis horas" muestra el ciclo real de pago (21 de un mes al 20 del
+// siguiente), no el mes calendario -- Mural y Novedades siguen usando
+// periodosRecientesCliente (mes calendario, tiene sentido para filtrar
+// publicaciones). La etiqueta "YYYY-MM" identifica el ciclo por el mes en
+// que cierra (mismo criterio que el servidor en appController.js).
+function cicloActual() {
+  return cicloDeFecha(new Date());
+}
+
+function cicloDeFecha(d) {
+  let y = d.getFullYear(), m = d.getMonth();
+  if (d.getDate() > 20) { m += 1; if (m > 11) { m = 0; y += 1; } }
+  return `${y}-${String(m + 1).padStart(2, "0")}`;
+}
+
+function ciclosRecientesCliente(n) {
+  const actual = cicloActual();
+  const [yAct, mAct] = actual.split("-").map(Number);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(yAct, mAct - 1 - i, 1);
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return out;
+}
+
 function fechaISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -1416,7 +1442,7 @@ function mostrarApp() {
   document.getElementById("cuenta-avatar").textContent = inicialesDeNombre(nombreCompleto);
   document.getElementById("cuenta-nombre").textContent = nombreCompleto;
   document.getElementById("hoy-fecha").textContent = "Hoy · " + fechaCortaDeHoy();
-  mishorasPeriodo = periodoActual();
+  mishorasPeriodo = cicloActual();
   document.getElementById("corr-fecha").value = "";
   cargarHoy();
   cargarHorario();
@@ -1621,9 +1647,9 @@ function extraerProblemasDePeriodo(data) {
 }
 
 async function obtenerProblemasCorreccion() {
-  const anterior = periodoAnteriorA(periodoActual());
+  const anterior = periodoAnteriorA(cicloActual());
   const [actual, previo, misSolicitudes] = await Promise.all([
-    apiFetch("/app/api/mis-fichadas?periodo=" + periodoActual()),
+    apiFetch("/app/api/mis-fichadas?periodo=" + cicloActual()),
     apiFetch("/app/api/mis-fichadas?periodo=" + anterior),
     apiFetch("/app/api/mis-solicitudes"),
   ]);
@@ -2824,7 +2850,7 @@ const PUNTOS_RECORRIDO = [
     ],
   },
   {
-    nombre: "Nivel -1 — Tablero (otra mitad) + Ventilación 2",
+    nombre: "Nivel -1 — Sala de ventilación 2",
     checklist: [
       "Tablero de la otra mitad del nivel -1: todo OK",
       "Tablero de sala de ventilación 2: todo en automático",
@@ -2840,7 +2866,7 @@ const PUNTOS_RECORRIDO = [
     ],
   },
   {
-    nombre: "Nivel -2 — Sala de máquinas + Tablero de pileta",
+    nombre: "Nivel -2 — Sala de máquinas -2",
     checklist: [
       "Bombas multietapas: nivel bajo, medio y alto",
       "Tablero de incendio (ON)",
@@ -2868,12 +2894,12 @@ const PUNTOS_RECORRIDO = [
     ],
   },
   {
-    nombre: "Nivel -2 — Grupo electrógeno",
-    checklist: ["Verificar que esté en automático y prendido"],
-  },
-  {
     nombre: "Nivel -2 — Sala de Daikin",
     checklist: ["Verificar sala de Daikin"],
+  },
+  {
+    nombre: "Nivel -2 — Grupo electrógeno",
+    checklist: ["Verificar que esté en automático y prendido"],
   },
   {
     nombre: "Azotea",
@@ -3179,12 +3205,12 @@ function mostrarResumenRecorrido() {
 // Pestaña "Mis horas" -- historial del período elegido, con ausencias
 // intercaladas (mismo criterio que usa el panel de admin) y el resumen de
 // horas normales/extra.
-let mishorasPeriodo = periodoActual();
+let mishorasPeriodo = cicloActual();
 
 let mishorasPeriodosExpandido = false;
 
 function cargarPeriodosMisHoras() {
-  const periodos = periodosRecientesCliente(6);
+  const periodos = ciclosRecientesCliente(6);
   const cont = document.getElementById("mishoras-periodos");
   const visibles = mishorasPeriodosExpandido ? periodos : periodos.slice(0, 3);
   const pills = visibles.map((p) => {
@@ -3205,7 +3231,7 @@ function seleccionarPeriodoMisHoras(periodo) {
 }
 
 async function cargarFichadas() {
-  const periodo = mishorasPeriodo || periodoActual();
+  const periodo = mishorasPeriodo || cicloActual();
   try {
     const data = await apiFetch("/app/api/mis-fichadas?periodo=" + periodo);
 

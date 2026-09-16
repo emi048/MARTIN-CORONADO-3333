@@ -4,7 +4,10 @@
 // (GET /panel/api/dias) como por la app de empleado (GET /app/api/mis-fichadas),
 // para no duplicar esta logica (ya tuvo varios bugs encontrados y corregidos
 // en un solo lugar -- duplicarla arriesga que se corrija en uno y no en el otro).
-const { filasDelPeriodoDeEmpleado, rangoFechasDelPeriodo, esEventoRegistrado } = require("./db");
+const {
+  filasDelPeriodoDeEmpleado, rangoFechasDelPeriodo, esEventoRegistrado,
+  filasDeEmpleadoPorFecha, rangoFechasPorFecha,
+} = require("./db");
 const { FERIADOS, calcularDeficitSabadoSemanal } = require("./motorCalculo");
 const { turnoRealDelDia, esDelEquipo: esDelEquipoMantenimiento } = require("./turnosMantenimiento");
 const { turnoDelDia: turnoConserjeriaDelDia, EQUIPO: EQUIPO_CONSERJERIA } = require("./turnosConserjeria");
@@ -32,9 +35,21 @@ function distanciaCircularMin(a, b) {
   return Math.min(d, 1440 - d);
 }
 
-function calcularAsistencia(empleado, periodo) {
-  const rango = rangoFechasDelPeriodo(periodo);
-  const diasCrudos = filasDelPeriodoDeEmpleado(empleado, periodo);
+// periodoOrRango: un string "YYYY-MM" (etiqueta de periodo, mes calendario
+// de carga -- lo que sigue usando el panel y el bot), o un objeto
+// {desde, hasta} en fechas ISO para buscar por rango real en vez de por
+// etiqueta (lo que usa la app de empleado para el ciclo 21-a-20).
+function calcularAsistencia(empleado, periodoOrRango) {
+  let periodo, rango, diasCrudos;
+  if (typeof periodoOrRango === "string") {
+    periodo = periodoOrRango;
+    rango = rangoFechasDelPeriodo(periodo);
+    diasCrudos = filasDelPeriodoDeEmpleado(empleado, periodo);
+  } else {
+    periodo = null;
+    rango = rangoFechasPorFecha(periodoOrRango.desde, periodoOrRango.hasta);
+    diasCrudos = filasDeEmpleadoPorFecha(empleado, periodoOrRango.desde, periodoOrRango.hasta);
+  }
 
   const esMantenimiento = esDelEquipoMantenimiento(empleado);
   const esConserjeria = Object.prototype.hasOwnProperty.call(EQUIPO_CONSERJERIA, empleado);

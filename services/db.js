@@ -318,6 +318,37 @@ function rangoFechasDelPeriodo(periodo) {
   return row && row.desde ? { desde: row.desde, hasta: row.hasta } : null;
 }
 
+// ── Variantes por rango de fecha real (no por etiqueta de periodo) --
+// las usa la app de empleado para mostrar el ciclo 21-a-20 sin depender
+// de que cada fila este etiquetada con el periodo "correcto" (la etiqueta
+// sigue siendo el mes calendario de carga, panel y bot no cambian). ──
+function filasDeEmpleadoPorFecha(empleado, desde, hasta) {
+  return db.prepare(`
+    SELECT * FROM filas_diarias WHERE empleado = ? AND fecha >= ? AND fecha <= ? ORDER BY fecha
+  `).all(empleado, desde, hasta);
+}
+
+function rangoFechasPorFecha(desde, hasta) {
+  const row = db.prepare(
+    `SELECT MIN(fecha) as desde, MAX(fecha) as hasta FROM filas_diarias WHERE fecha >= ? AND fecha <= ?`
+  ).get(desde, hasta);
+  return row && row.desde ? { desde: row.desde, hasta: row.hasta } : null;
+}
+
+function resumenPorFecha(empleado, desde, hasta) {
+  const row = db.prepare(`
+    SELECT COUNT(*) as dias, SUM(total_hs) as totalHs, SUM(h50) as h50, SUM(h100) as h100
+    FROM filas_diarias WHERE empleado = ? AND fecha >= ? AND fecha <= ?
+  `).get(empleado, desde, hasta);
+  if (!row || !row.dias) return null;
+  return {
+    empleado, dias: row.dias,
+    totalHs: Math.round(row.totalHs * 100) / 100,
+    h50: Math.round(row.h50 * 100) / 100,
+    h100: Math.round(row.h100 * 100) / 100,
+  };
+}
+
 function empleadoPorNumero(numero) {
   const row = db.prepare("SELECT empleado FROM whatsapp_map WHERE numero = ?").get(numero);
   return row ? row.empleado : null;
@@ -1108,6 +1139,7 @@ function suscripcionesDeEmpleado(empleadoAppId) {
 module.exports = {
   db,
   guardarResumenMensual, resumenDelPeriodo, rangoFechasDelPeriodo,
+  filasDeEmpleadoPorFecha, rangoFechasPorFecha, resumenPorFecha,
   empleadoPorNumero, numeroDeEmpleado, registrarNumero, eliminarNumero,
   horasAcumuladas, ultimoResumen,
   guardarFilasDiarias, filaDelDia, filaDelDiaPorFecha, filasDelPeriodo, filasDelPeriodoDeEmpleado, actualizarFilaDiaria, borrarFilaDiaria, recalcularResumenEmpleado,

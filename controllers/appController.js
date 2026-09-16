@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const {
   buscarEmpleadoAppPorUsuario, empleadoAppPorId,
   crearSesionApp, renovarSesionApp, eliminarSesionApp, empleadoIdDeSesionApp,
-  obtenerFichadaHoy, resumenDelPeriodo,
+  obtenerFichadaHoy, resumenDelPeriodo, resumenPorFecha,
   estaBloqueadoLoginApp, registrarIntentoFallidoLoginApp, limpiarIntentosLoginApp,
   cambiarPasswordEmpleadoApp,
   numeroDeEmpleado, crearSolicitud, solicitudesDeEmpleado, crearSolicitudCambio, solicitudesCambioDeEmpleado,
@@ -140,18 +140,60 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const RE_PERIODO = /^\d{4}-\d{2}$/;
 const RE_HORA = /^\d{2}:\d{2}$/;
 
-// Fichadas propias del dia (estado en vivo, via HikCentral) + historial del
-// periodo con ausencias/llegadas tarde/deficit de sabado (mismo calculo que
-// usa el panel de admin, ver services/asistencia.js) + resumen de horas.
+// "Mis horas" en la app muestra el ciclo real de pago (21 de un mes al 20
+// del siguiente), no el mes calendario -- panel y bot no cambian, siguen
+// por mes calendario, esto es solo para lo que ve el empleado en el
+// celular. La etiqueta "YYYY-MM" identifica el ciclo por el mes en que
+// cierra (ej "2026-09" = 21/8 al 20/9).
+function cicloDeFecha(d) {
+  let y = d.getFullYear(), m = d.getMonth(); // m: 0-based
+  if (d.getDate() > 20) { m += 1; if (m > 11) { m = 0; y += 1; } }
+  return `${y}-${String(m + 1).padStart(2, "0")}`;
+}
+
+function rangoDelCiclo(periodo) {
+  const [y, m] = periodo.split("-").map(Number); // m: 1-based, mes en que cierra
+  const finY = m === 1 ? y - 1 : y;
+  const finM = m === 1 ? 12 : m - 1;
+  const desde = `${finY}-${String(finM).padStart(2, "0")}-21`;
+  const hasta = `${y}-${String(m).padStart(2, "0")}-20`;
+  return { desde, hasta };
+}
+
+// La tarjeta "Hoy" primero busca en fichadas_estado (poller en vivo de
+// HikCentral) y, si todavia no hay nada ahi (el poller en vivo no esta
+// configurado), cae a la fila de hoy en filas_diarias -- la que carga el
+// admin a mano con el excel exportado de HikCentral. Asi la tarjeta
+// muestra lo mismo que despues sale en el fichero, en vez de quedarse
+// vacia esperando una integracion en vivo que todavia no anda.
+function fichadaHoyConFallback(nombre, fechaHoyISO) {
+  const enVivo = obtenerFichadaHoy(nombre, fechaHoyISO);
+  if (enVivo) return enVivo;
+  const filaHoy = filaDelDiaPorFecha(nombre, fechaHoyISO);
+  if (!filaHoy || !filaHoy.ingreso) return null;
+  return {
+    ingreso_hora: filaHoy.ingreso,
+    egreso_hora: filaHoy.egreso && filaHoy.egreso !== "—" ? filaHoy.egreso : null,
+  };
+}
+
+// Fichadas propias del dia (estado en vivo, via HikCentral, con fallback a
+// filas_diarias) + historial del ciclo (21 a 20) con ausencias/llegadas
+// tarde/deficit de sabado (mismo calculo que usa el panel de admin, ver
+// services/asistencia.js) + resumen de horas -- todo por rango de fecha
+// real, no por etiqueta de periodo.
 router.get("/api/mis-fichadas", requerirAuthEmpleado, (req, res) => {
   const { nombre } = req.empleadoApp;
   const hoy = new Date();
-  const periodo = req.query.periodo || `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
-  const asistencia = calcularAsistencia(nombre, periodo);
-  const resumen = resumenDelPeriodo(periodo).find((r) => r.empleado === nombre) || null;
+  const periodo = RE_PERIODO.test(req.query.periodo || "") ? req.query.periodo : cicloDeFecha(hoy);
+  const cicloTeorico = rangoDelCiclo(periodo);
+  const hastaTope = fechaISO(hoy) < cicloTeorico.hasta ? fechaISO(hoy) : cicloTeorico.hasta;
+  const asistencia = calcularAsistencia(nombre, { desde: cicloTeorico.desde, hasta: hastaTope });
+  const resumen = resumenPorFecha(nombre, cicloTeorico.desde, hastaTope);
   res.json({
     ...asistencia,
-    hoy: obtenerFichadaHoy(nombre, fechaISO(hoy)) || null,
+    periodo,
+    hoy: fichadaHoyConFallback(nombre, fechaISO(hoy)),
     resumen,
   });
 });
