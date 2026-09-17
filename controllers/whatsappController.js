@@ -52,7 +52,7 @@ const CONTENT_SID_MENU_QR_P2 = "HX7397ec37b71690b6879d1eadce224a39";
 // aprobacion real (ver Content API -- ApprovalRequests) -- mientras esta
 // apagado, el menu principal usa el piloto de 2 botones (ya aprobado) en
 // vez de caer directo a texto.
-const MENU_BOTONES_APROBADO = false;
+const MENU_BOTONES_APROBADO = true;
 
 async function enviarMenuPrincipal(numero) {
   const contentSid = MENU_BOTONES_APROBADO ? CONTENT_SID_MENU_QR_P1 : CONTENT_SID_MENU_PILOT_2BOTONES;
