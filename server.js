@@ -13,6 +13,13 @@ const app = express();
 // hasta 10 fotos en base64 de una sola vez al terminar.
 app.use(express.json({ limit: "25mb" }));
 
+// Landing de entrada -- elegir entre la app de empleados y el panel de
+// admin. Va antes de los otros mounts para que gane sobre cualquier ruta
+// que alguno de ellos pudiera registrar accidentalmente en "/".
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "landing.html"));
+});
+
 app.use("/whatsapp", whatsappRouter);
 app.use("/panel", panelRouter);
 app.use("/app", appRouter);
