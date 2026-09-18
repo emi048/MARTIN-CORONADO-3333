@@ -35,7 +35,7 @@ const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWh
 // dentro de la sesion (el empleado ya escribio primero), y ese tipo de
 // envio no pasa por el circuito de aprobacion de plantillas -- eso solo
 // aplica a mensajes que el bot inicia en frio, fuera de la ventana de 24hs.
-const CONTENT_SID_MENU = "HXfd8f849dc8d2869dd15842a8af794148";
+const CONTENT_SID_MENU = "HX7117bacca1eafb7927c533234116814d";
 const CONTENT_SID_CORRECCION_CAMPO = "HX87778e2361558df76057ad9cc1a321d5";
 // Quick-reply reusable con el body dinamico (variable {{1}}) para mostrar
 // UN dia incompleto a la vez -- Corregir ahora / Saltar / Terminar.
@@ -630,19 +630,13 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
   const companerosValidos = enGrupoRotativo ? [...GRUPO_A, ...GRUPO_B].filter((e) => e !== empleado) : undefined;
   const resultado = await interpretarMensaje(texto, { fechaHoy: fechaISO(new Date()), companerosValidos });
 
-  if (resultado.intent === "solicitud_correccion" && resultado.completo) {
-    const correccion = {
-      fecha: resultado.fecha,
-      ingreso: resultado.campo === "ingreso" ? resultado.valor : null,
-      egreso: resultado.campo === "egreso" ? resultado.valor : null,
-    };
-    await crearSolicitudesYNotificar(empleado, numero, [correccion], texto);
-    guardarConversacion(numero, "menu");
-    return "¡Entendido! Solicitud de corrección de fichada pendiente de aprobación. Te aviso apenas el administrador la revise.";
-  }
+  // Por audio, la correccion no se intenta completar con lo que entendio la
+  // IA (fecha/hora dichas de palabra dan resultados poco confiables) -- se
+  // manda directo al mismo flujo con botones de "Corregir horarios", como si
+  // hubiese tocado esa opcion del menu.
   if (resultado.intent === "solicitud_correccion") {
-    guardarConversacion(numero, "menu");
-    return resultado.pregunta || "Me faltó algún dato -- ¿podés escribirlo?";
+    registrarMensaje(numero, empleado, "correccion");
+    return await iniciarCorreccionAutomatica(empleado, numero);
   }
   if (resultado.intent === "consulta_horas") {
     registrarMensaje(numero, empleado, "consulta_horas");
@@ -688,7 +682,7 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
 async function procesarAudioEmpleadoAsync(empleado, numero, mediaUrl) {
   try {
     const respuesta = await procesarAudioEmpleado(empleado, numero, mediaUrl);
-    await enviarWhatsapp(numero, respuesta);
+    if (respuesta) await enviarWhatsapp(numero, respuesta);
   } catch (err) {
     console.error("Error procesando audio de WhatsApp:", err.message);
     try {
@@ -786,6 +780,21 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
           "¿Qué día(s) pedís y por qué motivo? Mandá la fecha (o el rango) y el motivo, todo junto.\n" +
           "Ej: 20/9 al 22/9, viaje familiar\n(o un solo día: 20/9, turno médico)"
         );
+      }
+      // Visible para todos en la lista (no se puede ocultar un item del
+      // list-picker segun quien lo ve), pero solo responde de verdad para el
+      // equipo de mantenimiento -- al resto se le avisa que no le corresponde.
+      if (texto === "4" || textoLower === "turnos" || textoLower === "turnos de mantenimiento") {
+        if (!esDelEquipo(empleado)) {
+          guardarConversacion(numero, "menu");
+          return "Esa opción no aplica para vos -- no sos parte del equipo de mantenimiento.";
+        }
+        registrarMensaje(numero, empleado, "consulta_turnos");
+        guardarConversacion(numero, "menu");
+        const hoy = new Date();
+        const enUnaSemana = new Date(hoy);
+        enUnaSemana.setDate(enUnaSemana.getDate() + 6);
+        return mensajeTurnosMantenimiento(fechaISO(hoy), fechaISO(enUnaSemana));
       }
       // Deshacer algo ya aprobado (corrección o cambio de turno) -- no es
       // una opción del menú, es un comando de texto libre que se reconoce
