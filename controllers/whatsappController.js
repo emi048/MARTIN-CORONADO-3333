@@ -720,16 +720,20 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
 
   switch (conv.estado) {
     case "menu": {
-      if (texto === "1" || textoLower === "consultar mis horas") {
+      // El list-picker manda el "id" del item como Body (no el texto que se
+      // ve en pantalla) -- "horas"/"correccion"/"licencia" son los ids con
+      // los que se creo la plantilla menu_coro. Se acepta tambien el texto
+      // visible y el numero, por si algun cliente de WhatsApp manda otra cosa.
+      if (texto === "1" || textoLower === "horas" || textoLower === "consultar mis horas") {
         registrarMensaje(numero, empleado, "consulta_horas");
         guardarConversacion(numero, "menu");
         return mensajeHoras(empleado);
       }
-      if (texto === "2" || textoLower === "corregir horarios" || textoLower === "corrección de fichaje" || textoLower === "correccion de fichaje") {
+      if (texto === "2" || textoLower === "correccion" || textoLower === "corregir horarios" || textoLower === "corrección de fichaje" || textoLower === "correccion de fichaje") {
         registrarMensaje(numero, empleado, "correccion");
         return await iniciarCorreccionAutomatica(empleado, numero);
       }
-      if (texto === "3" || textoLower === "pedir licencia") {
+      if (texto === "3" || textoLower === "licencia" || textoLower === "pedir licencia") {
         registrarMensaje(numero, empleado, "licencia");
         guardarConversacion(numero, "licencia:fecha-motivo", {});
         return (
