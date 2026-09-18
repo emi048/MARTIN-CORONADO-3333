@@ -3,8 +3,8 @@ const path = require("path");
 const express = require("express");
 const { MessagingResponse } = require("twilio").twiml;
 const {
-  empleadoPorNumero, numeroDeEmpleado, ultimoResumen,
-  filaDelDia, filaDelDiaPorFecha, filasDelPeriodoDeEmpleado, actualizarFilaDiaria, borrarFilaDiaria, guardarFilasDiarias,
+  empleadoPorNumero, numeroDeEmpleado,
+  filaDelDia, filaDelDiaPorFecha, filasDeEmpleadoPorFecha, resumenPorFecha, actualizarFilaDiaria, borrarFilaDiaria, guardarFilasDiarias,
   filasDelPeriodo, resumenDelPeriodo, rangoFechasDelPeriodo, recalcularResumenEmpleado,
   crearSolicitud, obtenerSolicitud, resolverSolicitud, solicitudesPendientes,
   guardarSnapshotCorreccion, esUltimaCorreccionAprobada,
@@ -18,7 +18,7 @@ const {
   registrarNumero,
   empleadoAppPorNombre,
   listarPostsMuralParaEmpleado,
-  crearSolicitudLicencia, TIPOS_LICENCIA,
+  crearSolicitudLicencia,
 } = require("../services/db");
 const { enviarPushAEmpleado, enviarPushATodoElPanel } = require("../services/pushNotifications");
 const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
@@ -36,9 +36,7 @@ const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWh
 // envio no pasa por el circuito de aprobacion de plantillas -- eso solo
 // aplica a mensajes que el bot inicia en frio, fuera de la ventana de 24hs.
 const CONTENT_SID_MENU = "HXfd8f849dc8d2869dd15842a8af794148";
-const CONTENT_SID_CORRECCION_DIAS = "HXf48cfc129bf516e16293f6a5afb94657";
 const CONTENT_SID_CORRECCION_CAMPO = "HX87778e2361558df76057ad9cc1a321d5";
-const CONTENT_SID_LICENCIA_TIPO = "HX51a13f2501dd1773ef2d012ff9cab445";
 
 async function enviarInteractivo(numero, contentSid) {
   try {
@@ -197,11 +195,9 @@ function campoQueFaltaDeVerdad(empleado, fila) {
 // mano) ni el dia de hoy (probablemente todavia no volvio a fichar salida,
 // no es un dato faltante de verdad).
 function diasIncompletosDetectados(empleado) {
-  const resumen = ultimoResumen(empleado);
-  if (!resumen) return [];
-
+  const { desde, hasta } = rangoCicloActual();
   const hoy = hoyISO();
-  return filasDelPeriodoDeEmpleado(empleado, resumen.periodo)
+  return filasDeEmpleadoPorFecha(empleado, desde, hasta)
     .filter((f) => !f.licencia_tipo)
     .filter((f) => f.fecha < hoy)
     .filter((f) => (f.ingreso === "—") !== (f.egreso === "—"))
@@ -248,6 +244,22 @@ function parsearFechas(texto) {
   return fechas;
 }
 
+// Para "pedir licencia": un solo mensaje con la fecha (o rango) y el motivo
+// juntos, ej "20/9 al 22/9, viaje familiar" o "20/9 turno médico". Toma la
+// fecha (o el rango "DD/MM al DD/MM") del principio del texto y el resto,
+// sea lo que sea, queda como motivo -- no hace falta separador especial.
+function parsearFechaLicenciaConMotivo(texto) {
+  const m = texto.trim().match(
+    /^(\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{4})?)(?:\s*(?:al|a|-)\s*(\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{4})?))?\s*[,.\-–—]?\s*(.*)$/i
+  );
+  if (!m) return null;
+  const fechaDesde = parsearFecha(m[1]);
+  if (!fechaDesde) return null;
+  const fechaHasta = m[2] ? parsearFecha(m[2]) : fechaDesde;
+  if (!fechaHasta) return null;
+  return { fechaDesde, fechaHasta, motivo: (m[3] || "").trim() };
+}
+
 function hoyISO() {
   const hoy = new Date();
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
@@ -255,6 +267,29 @@ function hoyISO() {
 
 function fechaISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Mismo "ciclo" de pago (21 al 20 de cada mes) que ya usa la app de
+// empleado (ver cicloDeFecha/rangoDelCiclo en controllers/appController.js)
+// -- se duplica aca porque son pocas lineas y evita acoplar un controller
+// con otro. El "periodo" (ej "2026-09") identifica el ciclo que CIERRA ese mes.
+function cicloDeFecha(d) {
+  let y = d.getFullYear(), m = d.getMonth();
+  if (d.getDate() > 20) { m += 1; if (m > 11) { m = 0; y += 1; } }
+  return `${y}-${String(m + 1).padStart(2, "0")}`;
+}
+
+function rangoDelCiclo(periodo) {
+  const [y, m] = periodo.split("-").map(Number);
+  const finY = m === 1 ? y - 1 : y;
+  const finM = m === 1 ? 12 : m - 1;
+  const desde = `${finY}-${String(finM).padStart(2, "0")}-21`;
+  const hasta = `${y}-${String(m).padStart(2, "0")}-20`;
+  return { desde, hasta };
+}
+
+function rangoCicloActual() {
+  return rangoDelCiclo(cicloDeFecha(new Date()));
 }
 
 // "2026-06-21" -> "21/6" (sin año — el periodo de pago no coincide con el
@@ -296,9 +331,10 @@ function etiquetaPeriodo(periodo) {
 // marcando esos dias aparte para que los pueda revisar si quiere.
 function lineaDia(fila) {
   // WhatsApp no soporta color de texto (solo negrita/cursiva/tachado), asi
-  // que el feriado se marca con un icono pegado a la fecha en vez de color.
+  // que el feriado y el evento se marcan con un icono pegado a la fecha.
   const feriadoTag = FERIADOS.has(fila.fecha) ? " 🎉" : "";
-  const fechaDisplay = `${abrevDiaSemana(fila.fecha)} ${formatoDiaMes(fila.fecha)}${feriadoTag}`;
+  const eventoTag = esDiaDeEvento(fila.empleado, fila.fecha) ? " ⚡" : "";
+  const fechaDisplay = `${abrevDiaSemana(fila.fecha)} ${formatoDiaMes(fila.fecha)}${feriadoTag}${eventoTag}`;
 
   if (fila.licencia_tipo) {
     return `*${fechaDisplay}* — 🏖️ ${fila.licencia_tipo}`;
@@ -401,33 +437,34 @@ function mensajeHorasDia(empleado, fecha) {
   return `Hola ${empleado.split(" ")[0]} 👋\n\n${lineaDia(fila)}`;
 }
 
+// Periodo fijo (ciclo 21 al 20 actual, ver rangoCicloActual) en vez del
+// "periodo" que haya quedado guardado en resumen_mensual -- asi el rango
+// que ve el empleado es siempre el ciclo de pago real de hoy, sin depender
+// de con que etiqueta se importo el ultimo excel.
 function mensajeHoras(empleado) {
-  const resumen = ultimoResumen(empleado);
-  if (!resumen) return `Hola ${empleado.split(" ")[0]}, todavía no hay datos procesados para vos.`;
+  const { desde, hasta } = rangoCicloActual();
+  const filas = filasDeEmpleadoPorFecha(empleado, desde, hasta);
+  if (filas.length === 0) {
+    return `Hola ${empleado.split(" ")[0]}, todavía no hay datos cargados para el período actual (${formatoDiaMes(desde)} al ${formatoDiaMes(hasta)}).`;
+  }
 
-  const filas = filasDelPeriodoDeEmpleado(empleado, resumen.periodo);
-  // ya viene ordenado por fecha -- el "hasta" tiene que ser el ultimo dia
-  // que REALMENTE tiene datos cargados, no "hoy" (un periodo cerrado el
-  // 20/8 no llega hasta hoy 9/9, aunque hoy ya haya pasado).
-  const desde = filas.length > 0 ? filas[0].fecha : null;
-  const hasta = filas.length > 0 ? filas[filas.length - 1].fecha : null;
-  const rangoPeriodo = desde && hasta ? `${formatoDiaMes(desde)} a ${formatoDiaMes(hasta)}` : resumen.periodo;
+  const resumen = resumenPorFecha(empleado, desde, hasta);
 
   // "\n\n" (no "\n") entre dias: sin la linea en blanco todo se ve pegado en
   // un solo parrafo en el celular y las fechas no se distinguen entre si.
   const detalle = filas.map(lineaDia).join("\n\n");
   const hayFaltantes = filas.some((f) => f.alerta && !f.alerta.includes("REVISAR MANUALMENTE"));
 
-  let notas = "";
-  if (hayFaltantes) notas += "\n\n⚠️ \"sin dato\" = falta ese horario. Pedí la corrección con la opción 2 si corresponde.";
+  let notas = "\n\n⚡ = día evento (extra al 100% con piso de 8hs)";
+  if (hayFaltantes) notas += "\n⚠️ \"sin dato\" = falta ese horario. Pedí la corrección desde \"Corregir horarios\" en el menú.";
 
   return (
     `Hola ${empleado.split(" ")[0]} 👋\n` +
-    `Período: *${rangoPeriodo}*\n\n` +
+    `Período: *${formatoDiaMes(desde)} al ${formatoDiaMes(hasta)}*\n\n` +
     detalle +
     `\n\n📊 *Totales*\n` +
     `Días trabajados: *${resumen.dias}*\n` +
-    `Horas totales: *${resumen.total_hs}*\n` +
+    `Horas totales: *${resumen.totalHs}*\n` +
     `Extra 50%: *${resumen.h50}*\n` +
     `Extra 100%: *${resumen.h100}*` +
     notas
@@ -531,7 +568,6 @@ async function crearSolicitudesYNotificar(empleado, numero, correcciones, mensaj
   return ids;
 }
 
-// empleadoA cede su turno de fechaA y toma el de empleadoB en fechaB.
 async function solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, tipo, mensajeOriginal) {
   const id = crearSolicitudLicencia({
     empleado, numeroWhatsapp: numero, fechaDesde, fechaHasta, tipo, mensaje: mensajeOriginal,
@@ -540,7 +576,8 @@ async function solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHa
     await enviarWhatsapp(
       process.env.ADMIN_WHATSAPP_NUMBER,
       `📋 Nuevo pedido de licencia\nEmpleado: ${empleado}\n` +
-        `${tipo}, del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)}.\n\n` +
+        `Del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)}.\n` +
+        `Motivo: ${mensajeOriginal || "(sin especificar)"}\n\n` +
         `Se aprueba desde el panel (Pendientes → Licencias).`
     );
   }
@@ -631,6 +668,35 @@ async function procesarAudioEmpleadoAsync(empleado, numero, mediaUrl) {
   }
 }
 
+// "Corregir horarios" arranca siempre por la deteccion automatica de dias
+// incompletos (sin preguntar nada antes) -- si encuentra algo, deja al
+// empleado en "correccion:auto-listado" para que cargue los horarios que
+// faltan; si no encuentra nada, vuelve al menu. Un dia puntual que no haya
+// quedado detectado igual se puede corregir desde ese mismo estado, mandando
+// esa fecha sola (ver case "correccion:auto-listado").
+async function iniciarCorreccionAutomatica(empleado, numero) {
+  const detectados = diasIncompletosDetectados(empleado);
+  if (detectados.length === 0) {
+    guardarConversacion(numero, "menu");
+    const aviso = "No encontré ningún día con datos incompletos en tu período actual. 🎉\n\nSi igual querés corregir un día puntual, mandame esa fecha (DD/MM).";
+    return (await reenviarInteractivoConAviso(numero, CONTENT_SID_MENU, aviso)) ? null : aviso + "\n\n" + MENU_TEXT;
+  }
+  guardarConversacion(numero, "correccion:auto-listado", { detectados });
+  const listado = detectados
+    .map((d) => {
+      const rolConocido = d.heuristico === "ingreso" ? "la entrada" : "la salida";
+      return `${formatoDiaMes(d.fecha)} — no tenés ${d.campoAPedir} (tenés registrada ${rolConocido} ${d.valorConocido})`;
+    })
+    .join("\n");
+  return (
+    `Estos son tus días con datos incompletos:\n\n${listado}\n\n` +
+    `Respondé con la fecha y el horario que falta, un renglón por día. Si te falta un solo horario ese día, mandá uno; si te faltan los dos, mandá los dos (entrada y salida, en ese orden).\n` +
+    `Ej:\n${formatoDiaMes(detectados[0].fecha)} 8:00\n\n` +
+    `¿Es otro día que no está en la lista? Mandá esa fecha sola (DD/MM) y seguimos por ahí.` +
+    '\n\n(Escribí "salir" para cancelar)'
+  );
+}
+
 // ── Menu paso a paso (sin IA) ─────────────────────────────────────────────
 // Cada numero de WhatsApp tiene, en la base, en que paso del menu esta
 // (conversaciones_whatsapp). Cada mensaje entrante avanza un paso.
@@ -661,17 +727,15 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       }
       if (texto === "2" || textoLower === "corregir horarios" || textoLower === "corrección de fichaje" || textoLower === "correccion de fichaje") {
         registrarMensaje(numero, empleado, "correccion");
-        guardarConversacion(numero, "correccion:tipo-fecha", {});
-        return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_DIAS))
-          ? null
-          : "¿Cuántos días vas a corregir?\n\n1️⃣ Un solo día\n2️⃣ Varios días seguidos\n3️⃣ Detectar automático (días sin fichar)";
+        return await iniciarCorreccionAutomatica(empleado, numero);
       }
       if (texto === "3" || textoLower === "pedir licencia") {
         registrarMensaje(numero, empleado, "licencia");
-        guardarConversacion(numero, "licencia:tipo", {});
-        return (await enviarInteractivo(numero, CONTENT_SID_LICENCIA_TIPO))
-          ? null
-          : `¿Qué tipo de licencia pedís?\n\n${TIPOS_LICENCIA.join(" / ")}`;
+        guardarConversacion(numero, "licencia:fecha-motivo", {});
+        return (
+          "¿Qué día(s) pedís y por qué motivo? Mandá la fecha (o el rango) y el motivo, todo junto.\n" +
+          "Ej: 20/9 al 22/9, viaje familiar\n(o un solo día: 20/9, turno médico)"
+        ) + '\n\n(Escribí "salir" para cancelar)';
       }
       // Deshacer algo ya aprobado (corrección o cambio de turno) -- no es
       // una opción del menú, es un comando de texto libre que se reconoce
@@ -688,54 +752,6 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       // vez de tirar un bloque de texto numerado.
       registrarMensaje(numero, empleado, "otro");
       return (await enviarMenuPrincipal(numero)) ? null : MENU_TEXT;
-    }
-
-    case "correccion:tipo-fecha": {
-      const esUnDia = texto === "1" || textoLower === "un día" || textoLower === "un dia";
-      const esVariosDias = texto === "2" || textoLower === "varios días" || textoLower === "varios dias";
-      const esAutomatico = texto === "3" || textoLower === "automático" || textoLower === "automatico";
-      if (!esUnDia && !esVariosDias && !esAutomatico) {
-        return (await reenviarInteractivoConAviso(numero, CONTENT_SID_CORRECCION_DIAS, "No entendí esa opción 🤔"))
-          ? null
-          : "Elegí una opción válida: 1 (Un día), 2 (Varios seguidos) o 3 (Detectar automático).";
-      }
-      const pieSalir = '\n\n(Escribí "salir" para cancelar)';
-
-      if (esAutomatico) {
-        const detectados = diasIncompletosDetectados(empleado);
-        if (detectados.length === 0) {
-          guardarConversacion(numero, "menu");
-          const aviso = "No encontré ningún día con datos incompletos en tu período actual. 🎉";
-          return (await reenviarInteractivoConAviso(numero, CONTENT_SID_MENU, aviso)) ? null : aviso + "\n\n" + MENU_TEXT;
-        }
-        guardarConversacion(numero, "correccion:auto-listado", { detectados });
-        const listado = detectados
-          .map((d) => {
-            const rolConocido = d.heuristico === "ingreso" ? "la entrada" : "la salida";
-            return `${formatoDiaMes(d.fecha)} — no tenés ${d.campoAPedir} (tenés registrada ${rolConocido} ${d.valorConocido})`;
-          })
-          .join("\n");
-        return (
-          `Estos son tus días con datos incompletos:\n\n${listado}\n\n` +
-          `Respondé con la fecha y el horario que falta, un renglón por día. Si te falta un solo horario ese día, mandá uno; si te faltan los dos, mandá los dos (entrada y salida, en ese orden).\n` +
-          `Ej:\n${formatoDiaMes(detectados[0].fecha)} 8:00`
-        ) + pieSalir;
-      }
-
-      guardarConversacion(numero, "correccion:fecha", {});
-      if (esUnDia) return "Mandá la fecha en formato DD/MM (el año se asume el actual).\nEj: 15/7" + pieSalir;
-      return "Mandá el rango así: DD/MM al DD/MM.\nEj: 10/7 al 14/7" + pieSalir;
-    }
-
-    case "correccion:fecha": {
-      const fechas = parsearFechas(texto);
-      if (!fechas) {
-        return "Ese formato no lo pude leer. Fijate el ejemplo de arriba y probá de nuevo (o escribí \"salir\" para cancelar).";
-      }
-      guardarConversacion(numero, "correccion:campo", { fechas });
-      return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
-        ? null
-        : "¿Qué querés corregir?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
     }
 
     case "correccion:campo": {
@@ -823,6 +839,20 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
     // "salida"/"ambas" en ningun lado.
     case "correccion:auto-listado": {
       const datos = conv.datos;
+
+      // Un solo renglon con nada mas que una fecha (no del listado detectado)
+      // -- es un dia puntual que el empleado quiere corregir a mano. Se pasa
+      // al mismo paso "que corregis" (Entrada/Salida/Ambas) que ya usa el
+      // resto del flujo, en vez de pedir un horario aca sin saber a que
+      // campo va.
+      const fechaSuelta = parsearFecha(texto.trim());
+      if (fechaSuelta) {
+        guardarConversacion(numero, "correccion:campo", { fechas: [fechaSuelta] });
+        return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
+          ? null
+          : "¿Qué querés corregir de ese día?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
+      }
+
       const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
       if (lineas.length === 0) {
         return 'Mandá al menos un renglón con fecha y horario, o "salir" para cancelar.';
@@ -834,11 +864,22 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       for (const linea of lineas) {
         const partes = linea.split(/\s+/).filter(Boolean);
         const fecha = partes.length >= 2 ? parsearFecha(partes[0]) : null;
-        const detectado = fecha && datos.detectados.find((d) => d.fecha === fecha);
+        if (!fecha) { noReconocidas.push(linea); continue; }
 
-        if (!fecha || !detectado) { noReconocidas.push(linea); continue; }
+        if (partes.length === 3) {
+          // Entrada y salida explicitas -- sin ambiguedad, no hace falta que
+          // el dia este en la lista detectada (sirve para cualquier dia).
+          const ingreso = parsearHora(partes[1]);
+          const egreso = parsearHora(partes[2]);
+          if (!ingreso || !egreso) { noReconocidas.push(linea); continue; }
+          correcciones.push({ fecha, ingreso, egreso });
+          continue;
+        }
 
-        if (partes.length === 2) {
+        // Un solo horario: solo sabemos a que campo va (ingreso o egreso)
+        // para los dias que ya vinieron con la heuristica calculada.
+        const detectado = datos.detectados.find((d) => d.fecha === fecha);
+        if (partes.length === 2 && detectado) {
           const hora = parsearHora(partes[1]);
           if (!hora) { noReconocidas.push(linea); continue; }
           correcciones.push({
@@ -846,11 +887,6 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
             ingreso: detectado.campoAPedir === "ingreso" ? hora : null,
             egreso: detectado.campoAPedir === "egreso" ? hora : null,
           });
-        } else if (partes.length === 3) {
-          const ingreso = parsearHora(partes[1]);
-          const egreso = parsearHora(partes[2]);
-          if (!ingreso || !egreso) { noReconocidas.push(linea); continue; }
-          correcciones.push({ fecha, ingreso, egreso });
         } else {
           noReconocidas.push(linea);
         }
@@ -869,38 +905,34 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       return resultado + avisoNoReconocidas;
     }
 
-    case "licencia:tipo": {
-      const tipo = TIPOS_LICENCIA.find((t) => t.toLowerCase() === textoLower);
-      if (!tipo) {
-        return (await reenviarInteractivoConAviso(numero, CONTENT_SID_LICENCIA_TIPO, "No entendí esa opción 🤔"))
-          ? null
-          : `Elegí un tipo válido: ${TIPOS_LICENCIA.join(" / ")}.`;
+    case "licencia:fecha-motivo": {
+      const parseado = parsearFechaLicenciaConMotivo(texto);
+      if (!parseado) {
+        return (
+          "No pude leer la fecha. Mandá la fecha (o el rango) y el motivo, todo junto.\n" +
+          "Ej: 20/9 al 22/9, viaje familiar\n(o un solo día: 20/9, turno médico)"
+        ) + '\n\n(Escribí "salir" para cancelar)';
       }
-      guardarConversacion(numero, "licencia:fecha-desde", { tipo });
-      return `¿Desde qué día? Formato DD/MM (el año se asume el actual).\nEj: 15/7` + '\n\n(Escribí "salir" para cancelar)';
-    }
-
-    case "licencia:fecha-desde": {
-      const fechaDesde = parsearFecha(texto);
-      if (!fechaDesde) {
-        return "Ese formato no lo pude leer. Mandá la fecha como DD/MM (ej: 15/7), o escribí \"salir\" para cancelar.";
-      }
-      guardarConversacion(numero, "licencia:fecha-hasta", { ...conv.datos, fechaDesde });
-      return `¿Hasta qué día?\nEj: 20/7` + '\n\n(Escribí "salir" para cancelar)';
-    }
-
-    case "licencia:fecha-hasta": {
-      const fechaHasta = parsearFecha(texto);
-      if (!fechaHasta) {
-        return "Ese formato no lo pude leer. Mandá la fecha como DD/MM (ej: 20/7), o escribí \"salir\" para cancelar.";
-      }
-      const { tipo, fechaDesde } = conv.datos;
+      const { fechaDesde, fechaHasta, motivo } = parseado;
       if (fechaHasta < fechaDesde) {
-        return `Esa fecha es anterior al ${formatoDiaMes(fechaDesde)}. Mandá una fecha de fin válida, o escribí "salir" para cancelar.`;
+        return `La fecha de fin es anterior al ${formatoDiaMes(fechaDesde)}. Mandá el rango de nuevo, o escribí "salir" para cancelar.`;
       }
-      const id = await solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, tipo, textoOriginal);
+      if (!motivo) {
+        guardarConversacion(numero, "licencia:motivo", { fechaDesde, fechaHasta });
+        return `¿Cuál es el motivo?` + '\n\n(Escribí "salir" para cancelar)';
+      }
+      const id = await solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, "Licencia", motivo);
       guardarConversacion(numero, "menu");
-      return `📋 Pedido de licencia (${tipo}) enviado (#${id}), del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)}. Te aviso apenas el administrador lo revise.`;
+      return `📋 Pedido de licencia enviado (#${id}), del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)} (${motivo}). Te aviso apenas el administrador lo revise.`;
+    }
+
+    case "licencia:motivo": {
+      const motivo = texto.trim();
+      if (!motivo) return "Mandame el motivo de la licencia, o escribí \"salir\" para cancelar.";
+      const { fechaDesde, fechaHasta } = conv.datos;
+      const id = await solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, "Licencia", motivo);
+      guardarConversacion(numero, "menu");
+      return `📋 Pedido de licencia enviado (#${id}), del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)} (${motivo}). Te aviso apenas el administrador lo revise.`;
     }
 
     default: {
