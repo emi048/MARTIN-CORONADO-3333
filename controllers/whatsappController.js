@@ -37,10 +37,13 @@ const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWh
 // aplica a mensajes que el bot inicia en frio, fuera de la ventana de 24hs.
 const CONTENT_SID_MENU = "HXfd8f849dc8d2869dd15842a8af794148";
 const CONTENT_SID_CORRECCION_CAMPO = "HX87778e2361558df76057ad9cc1a321d5";
+// Quick-reply reusable con el body dinamico (variable {{1}}) para mostrar
+// UN dia incompleto a la vez -- Corregir ahora / Saltar / Terminar.
+const CONTENT_SID_CORRECCION_DIA_ACTUAL = "HX461dc0861e5cc885269acabcda8204a2";
 
-async function enviarInteractivo(numero, contentSid) {
+async function enviarInteractivo(numero, contentSid, variables) {
   try {
-    await enviarWhatsappInteractivo(numero, contentSid);
+    await enviarWhatsappInteractivo(numero, contentSid, variables);
     return true;
   } catch (err) {
     console.error("No se pudo mandar el mensaje interactivo:", err.message);
@@ -669,32 +672,48 @@ async function procesarAudioEmpleadoAsync(empleado, numero, mediaUrl) {
 }
 
 // "Corregir horarios" arranca siempre por la deteccion automatica de dias
-// incompletos (sin preguntar nada antes) -- si encuentra algo, deja al
-// empleado en "correccion:auto-listado" para que cargue los horarios que
-// faltan; si no encuentra nada, vuelve al menu. Un dia puntual que no haya
-// quedado detectado igual se puede corregir desde ese mismo estado, mandando
-// esa fecha sola (ver case "correccion:auto-listado").
+// incompletos (sin preguntar nada antes), y los recorre de a UNO con
+// botones (Corregir ahora / Saltar / Terminar) -- mucho mas ordenado que
+// tipear todos los dias y horarios sueltos en un solo mensaje, y no importa
+// cuantos dias haya (a diferencia de una lista, que tiene tope de 10). Los
+// que se van resolviendo se acumulan en "resueltos" y se mandan como una
+// sola solicitud (un unico aviso al admin) recien al terminar o al tocar
+// "Terminar".
 async function iniciarCorreccionAutomatica(empleado, numero) {
   const detectados = diasIncompletosDetectados(empleado);
   if (detectados.length === 0) {
-    guardarConversacion(numero, "menu");
-    const aviso = "No encontré ningún día con datos incompletos en tu período actual. 🎉\n\nSi igual querés corregir un día puntual, mandame esa fecha (DD/MM).";
-    return (await reenviarInteractivoConAviso(numero, CONTENT_SID_MENU, aviso)) ? null : aviso + "\n\n" + MENU_TEXT;
+    guardarConversacion(numero, "correccion:otro-dia", {});
+    const aviso = "No encontré ningún día con datos incompletos en tu período actual. 🎉\n\nSi igual querés corregir un día puntual, mandame esa fecha (DD/MM), o escribí \"menu\" para volver.";
+    return (await reenviarInteractivoConAviso(numero, CONTENT_SID_MENU, aviso)) ? null : aviso;
   }
-  guardarConversacion(numero, "correccion:auto-listado", { detectados });
-  const listado = detectados
-    .map((d) => {
-      const rolConocido = d.heuristico === "ingreso" ? "la entrada" : "la salida";
-      return `${formatoDiaMes(d.fecha)} — no tenés ${d.campoAPedir} (tenés registrada ${rolConocido} ${d.valorConocido})`;
-    })
-    .join("\n");
-  return (
-    `Estos son tus días con datos incompletos:\n\n${listado}\n\n` +
-    `Respondé con la fecha y el horario que falta, un renglón por día. Si te falta un solo horario ese día, mandá uno; si te faltan los dos, mandá los dos (entrada y salida, en ese orden).\n` +
-    `Ej:\n${formatoDiaMes(detectados[0].fecha)} 8:00\n\n` +
-    `¿Es otro día que no está en la lista? Mandá esa fecha sola (DD/MM) y seguimos por ahí.` +
-    '\n\n(Escribí "salir" para cancelar)'
-  );
+  return await mostrarDiaActual(numero, detectados, []);
+}
+
+// Manda (con botones) el primer dia de "pendientes" -- el orden no importa,
+// son todos dias reales con datos incompletos.
+async function mostrarDiaActual(numero, pendientes, resueltos) {
+  guardarConversacion(numero, "correccion:dia-actual", { pendientes, resueltos });
+  const d = pendientes[0];
+  const rolConocido = d.heuristico === "ingreso" ? "la entrada" : "la salida";
+  const campoFaltante = d.campoAPedir === "ingreso" ? "la entrada" : "la salida";
+  const texto = `${formatoDiaMes(d.fecha)} — te falta ${campoFaltante} (tenés registrada ${rolConocido} ${d.valorConocido})`;
+  return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_DIA_ACTUAL, { 1: texto }))
+    ? null
+    : `📅 ${texto}\n\n¿Corregimos ahora? Respondé "corregir", "saltar" o "terminar".`;
+}
+
+// Cierra el flujo secuencial: si se resolvio algun dia, se mandan todos
+// juntos como una sola tanda de solicitudes (mismo aviso unico al admin de
+// siempre); si no se resolvio ninguno (todo saltado), no se crea nada.
+async function finalizarCorreccionSecuencial(empleado, numero, resueltos, textoOriginal) {
+  guardarConversacion(numero, "menu");
+  if (resueltos.length === 0) {
+    return "No corregiste ningún día. Volvés al menú.";
+  }
+  const ids = await crearSolicitudesYNotificar(empleado, numero, resueltos, textoOriginal);
+  const cantidadDias = resueltos.length > 1 ? ` (${resueltos.length} días)` : "";
+  const listadoIds = ids.length > 1 ? `#${ids[0]} a #${ids[ids.length - 1]}` : `#${ids[0]}`;
+  return `📋 Solicitud pendiente de confirmación${cantidadDias} (${listadoIds}). Te aviso apenas el administrador la revise.`;
 }
 
 // ── Menu paso a paso (sin IA) ─────────────────────────────────────────────
@@ -841,72 +860,58 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
     // faltaba de verdad segun la deteccion) o "DD/MM HH:MM HH:MM" (entrada
     // y salida las dos, sin ambiguedad). No hace falta escribir "entrada"/
     // "salida"/"ambas" en ningun lado.
-    case "correccion:auto-listado": {
-      const datos = conv.datos;
+    case "correccion:dia-actual": {
+      const { pendientes, resueltos } = conv.datos;
+      const esCorregir = texto === "1" || textoLower === "corregir" || textoLower === "corregir ahora";
+      const esSaltar = texto === "2" || textoLower === "saltar";
+      const esTerminar = texto === "3" || textoLower === "terminar";
 
-      // Un solo renglon con nada mas que una fecha (no del listado detectado)
-      // -- es un dia puntual que el empleado quiere corregir a mano. Se pasa
-      // al mismo paso "que corregis" (Entrada/Salida/Ambas) que ya usa el
-      // resto del flujo, en vez de pedir un horario aca sin saber a que
-      // campo va.
-      const fechaSuelta = parsearFecha(texto.trim());
-      if (fechaSuelta) {
-        guardarConversacion(numero, "correccion:campo", { fechas: [fechaSuelta] });
-        return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
-          ? null
-          : "¿Qué querés corregir de ese día?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
+      if (!esCorregir && !esSaltar && !esTerminar) {
+        await enviarWhatsapp(numero, "No entendí esa opción 🤔");
+        return await mostrarDiaActual(numero, pendientes, resueltos);
+      }
+      if (esTerminar) {
+        return await finalizarCorreccionSecuencial(empleado, numero, resueltos, textoOriginal);
+      }
+      if (esSaltar) {
+        const restantes = pendientes.slice(1);
+        if (restantes.length === 0) return await finalizarCorreccionSecuencial(empleado, numero, resueltos, textoOriginal);
+        return await mostrarDiaActual(numero, restantes, resueltos);
       }
 
-      const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
-      if (lineas.length === 0) {
-        return 'Mandá al menos un renglón con fecha y horario, o "salir" para cancelar.';
+      const actual = pendientes[0];
+      guardarConversacion(numero, "correccion:dia-hora", { pendientes, resueltos, actual });
+      const verbo = actual.campoAPedir === "ingreso" ? "entraste" : "saliste";
+      return `¿A qué hora ${verbo} el ${formatoDiaMes(actual.fecha)}? Formato HH:MM (ej: 08:30).` + '\n\n(Escribí "salir" para cancelar)';
+    }
+
+    case "correccion:dia-hora": {
+      const { pendientes, resueltos, actual } = conv.datos;
+      const hora = parsearHora(texto);
+      if (!hora) return "Formato inválido. Mandá la hora como HH:MM (ej: 08:30), o escribí \"salir\" para cancelar.";
+
+      const nuevoResueltos = [...resueltos, {
+        fecha: actual.fecha,
+        ingreso: actual.campoAPedir === "ingreso" ? hora : null,
+        egreso: actual.campoAPedir === "egreso" ? hora : null,
+      }];
+      const restantes = pendientes.slice(1);
+      if (restantes.length === 0) return await finalizarCorreccionSecuencial(empleado, numero, nuevoResueltos, textoOriginal);
+      return await mostrarDiaActual(numero, restantes, nuevoResueltos);
+    }
+
+    // Cuando la deteccion automatica no encontro nada, se ofrece corregir un
+    // dia puntual a mano -- se pasa al mismo paso "que corregis" (Entrada/
+    // Salida/Ambas) que ya usa el resto del flujo.
+    case "correccion:otro-dia": {
+      const fecha = parsearFecha(texto.trim());
+      if (!fecha) {
+        return "Mandame una fecha (DD/MM) para corregir un día puntual, o escribí \"menu\" para volver.";
       }
-
-      const correcciones = [];
-      const noReconocidas = [];
-
-      for (const linea of lineas) {
-        const partes = linea.split(/\s+/).filter(Boolean);
-        const fecha = partes.length >= 2 ? parsearFecha(partes[0]) : null;
-        if (!fecha) { noReconocidas.push(linea); continue; }
-
-        if (partes.length === 3) {
-          // Entrada y salida explicitas -- sin ambiguedad, no hace falta que
-          // el dia este en la lista detectada (sirve para cualquier dia).
-          const ingreso = parsearHora(partes[1]);
-          const egreso = parsearHora(partes[2]);
-          if (!ingreso || !egreso) { noReconocidas.push(linea); continue; }
-          correcciones.push({ fecha, ingreso, egreso });
-          continue;
-        }
-
-        // Un solo horario: solo sabemos a que campo va (ingreso o egreso)
-        // para los dias que ya vinieron con la heuristica calculada.
-        const detectado = datos.detectados.find((d) => d.fecha === fecha);
-        if (partes.length === 2 && detectado) {
-          const hora = parsearHora(partes[1]);
-          if (!hora) { noReconocidas.push(linea); continue; }
-          correcciones.push({
-            fecha,
-            ingreso: detectado.campoAPedir === "ingreso" ? hora : null,
-            egreso: detectado.campoAPedir === "egreso" ? hora : null,
-          });
-        } else {
-          noReconocidas.push(linea);
-        }
-      }
-
-      if (correcciones.length === 0) {
-        return 'No pude leer ningún renglón. Fijate el formato del ejemplo (fecha y una o dos horas) y probá de nuevo, o escribí "salir" para cancelar.';
-      }
-
-      const avisoNoReconocidas = noReconocidas.length > 0
-        ? `\n\n⚠️ No pude usar estos renglones (fecha fuera de la lista o formato raro), los ignoré: ${noReconocidas.join(" / ")}`
-        : "";
-
-      const fechasCorregidas = correcciones.map((c) => c.fecha);
-      const resultado = await finalizarSolicitud(empleado, numero, fechasCorregidas, correcciones, textoOriginal);
-      return resultado + avisoNoReconocidas;
+      guardarConversacion(numero, "correccion:campo", { fechas: [fecha] });
+      return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
+        ? null
+        : "¿Qué querés corregir de ese día?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
     }
 
     case "licencia:fecha-motivo": {
@@ -940,8 +945,11 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
     }
 
     default: {
+      // Estado desconocido (ej: quedo a mitad de un flujo viejo justo cuando
+      // se redeployo el bot con otros nombres de estado) -- se resetea al
+      // menu con botones en vez de silenciarse con texto plano.
       guardarConversacion(numero, "menu");
-      return MENU_TEXT;
+      return (await enviarMenuPrincipal(numero)) ? null : MENU_TEXT;
     }
   }
 
