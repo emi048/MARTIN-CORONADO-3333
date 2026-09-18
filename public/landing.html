@@ -72,6 +72,13 @@
   }
   .btn-secondary:hover { background: rgba(255,255,255,0.05); }
   .btn-secondary .btn-icon { background: rgba(255,255,255,0.07); color: var(--text-muted); }
+  .soporte {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 22px;
+    font: 400 12px/1 var(--font-body); color: rgba(238,240,246,0.4);
+    text-decoration: none; transition: color 0.15s;
+  }
+  .soporte:hover { color: rgba(238,240,246,0.7); }
+  .soporte svg { width: 13px; height: 13px; flex-shrink: 0; }
   footer {
     position: absolute; bottom: 18px; left: 0; right: 0; text-align: center;
     font: 400 11.5px/1 var(--font-body); color: rgba(238,240,246,0.45); letter-spacing: 0.02em;
@@ -101,6 +108,10 @@
         </div>
       </a>
     </div>
+    <a class="soporte" href="mailto:fichero.martincoronado@gmail.com">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+      ¿Necesitás ayuda? fichero.martincoronado@gmail.com
+    </a>
   </div>
   <footer>Barrio Parque</footer>
 </body>
