@@ -44,6 +44,9 @@ const CONTENT_SID_CORRECCION_DIA_ACTUAL = "HX461dc0861e5cc885269acabcda8204a2";
 // motivo) que antes llevaba el pie '(Escribi "salir" para cancelar)' --
 // mismo body dinamico (variable {{1}}), un solo boton "Cancelar".
 const CONTENT_SID_PREGUNTA_CANCELAR = "HXec228a1bb05483a0b3c6700e460b692d";
+// Misma idea pero con dos botones -- para pasos donde ademas de cancelar
+// del todo (volver al menu) tiene sentido volver un solo paso atras.
+const CONTENT_SID_PREGUNTA_VOLVER = "HX7b182fccf9e9548f56b49281051af780";
 
 async function enviarInteractivo(numero, contentSid, variables) {
   try {
@@ -67,6 +70,15 @@ async function preguntaConCancelar(numero, texto) {
   return (await enviarInteractivo(numero, CONTENT_SID_PREGUNTA_CANCELAR, { 1: texto }))
     ? null
     : texto + '\n\n(Escribí "cancelar" para volver al menú)';
+}
+
+// Igual que preguntaConCancelar, pero con un boton "Volver" ademas -- para
+// pasos donde hay un paso anterior concreto al que tiene sentido volver
+// (en vez de cancelar todo y arrancar de nuevo desde el menu).
+async function preguntaConVolver(numero, texto) {
+  return (await enviarInteractivo(numero, CONTENT_SID_PREGUNTA_VOLVER, { 1: texto }))
+    ? null
+    : texto + '\n\n(Escribí "volver" o "cancelar")';
 }
 
 // Para reintentos: un mensaje de texto corto seguido del mismo interactivo
@@ -793,6 +805,10 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
     }
 
     case "correccion:campo": {
+      if (textoLower === "volver" || textoLower === "atras" || textoLower === "atrás") {
+        guardarConversacion(numero, "correccion:otro-dia", {});
+        return await preguntaConCancelar(numero, "Mandame la fecha (DD/MM) del día que querés corregir.");
+      }
       const esEntrada = texto === "1" || textoLower === "entrada";
       const esSalida = texto === "2" || textoLower === "salida";
       const esAmbas = texto === "3" || textoLower === "ambas";
@@ -810,7 +826,7 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
         const ejemploMulti = multiDia
           ? `\n\nSi cada día tuvo un horario distinto, mandá un renglón por día (en el mismo orden que las fechas), ej:\n08:00 17:00\n09:00 19:00`
           : "";
-        return await preguntaConCancelar(numero,
+        return await preguntaConVolver(numero,
           `Mandá las dos horas juntas, separadas por un espacio: entrada y salida.\nEj: 08:00 17:00 (mismo horario para ${plural})` + ejemploMulti
         );
       }
@@ -821,19 +837,25 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       const ejemploMulti = multiDia
         ? `\n\nSi cada día fue distinto, mandá un renglón por día (en el mismo orden que las fechas), ej:\n08:00\n09:00`
         : "";
-      return await preguntaConCancelar(numero,
+      return await preguntaConVolver(numero,
         `¿A qué hora ${verbo} ${plural}? Formato HH:MM (ej: 08:00, mismo horario para ${plural}).` + ejemploMulti
       );
     }
 
     case "correccion:hora": {
       const datos = conv.datos;
+      if (textoLower === "volver" || textoLower === "atras" || textoLower === "atrás") {
+        guardarConversacion(numero, "correccion:campo", datos);
+        return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
+          ? null
+          : "¿Qué querés corregir?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
+      }
       const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
 
       let horasPorFecha;
       if (lineas.length === 1) {
         const hora = parsearHora(lineas[0]);
-        if (!hora) return await preguntaConCancelar(numero, "Formato inválido. Mandá la hora como HH:MM (ej: 18:30).");
+        if (!hora) return await preguntaConVolver(numero, "Formato inválido. Mandá la hora como HH:MM (ej: 18:30).");
         horasPorFecha = datos.fechas.map(() => hora);
       } else if (lineas.length === datos.fechas.length) {
         horasPorFecha = lineas.map(parsearHora);
@@ -852,12 +874,18 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
 
     case "correccion:horas-ambas": {
       const datos = conv.datos;
+      if (textoLower === "volver" || textoLower === "atras" || textoLower === "atrás") {
+        guardarConversacion(numero, "correccion:campo", datos);
+        return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
+          ? null
+          : "¿Qué querés corregir?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
+      }
       const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
 
       let horasPorFecha;
       if (lineas.length === 1) {
         const horas = parsearDosHoras(lineas[0]);
-        if (!horas) return await preguntaConCancelar(numero, "Formato inválido. Mandá las dos horas separadas por un espacio (ej: 08:00 17:00).");
+        if (!horas) return await preguntaConVolver(numero, "Formato inválido. Mandá las dos horas separadas por un espacio (ej: 08:00 17:00).");
         horasPorFecha = datos.fechas.map(() => horas);
       } else if (lineas.length === datos.fechas.length) {
         horasPorFecha = lineas.map(parsearDosHoras);
@@ -899,13 +927,16 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       const actual = pendientes[0];
       guardarConversacion(numero, "correccion:dia-hora", { pendientes, resueltos, actual });
       const verbo = actual.campoAPedir === "ingreso" ? "entraste" : "saliste";
-      return await preguntaConCancelar(numero, `¿A qué hora ${verbo} el ${formatoDiaMes(actual.fecha)}? Formato HH:MM (ej: 08:30).`);
+      return await preguntaConVolver(numero, `¿A qué hora ${verbo} el ${formatoDiaMes(actual.fecha)}? Formato HH:MM (ej: 08:30).`);
     }
 
     case "correccion:dia-hora": {
       const { pendientes, resueltos, actual } = conv.datos;
+      if (textoLower === "volver" || textoLower === "atras" || textoLower === "atrás") {
+        return await mostrarDiaActual(numero, pendientes, resueltos);
+      }
       const hora = parsearHora(texto);
-      if (!hora) return await preguntaConCancelar(numero, "Formato inválido. Mandá la hora como HH:MM (ej: 08:30).");
+      if (!hora) return await preguntaConVolver(numero, "Formato inválido. Mandá la hora como HH:MM (ej: 08:30).");
 
       const nuevoResueltos = [...resueltos, {
         fecha: actual.fecha,
@@ -945,7 +976,7 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       }
       if (!motivo) {
         guardarConversacion(numero, "licencia:motivo", { fechaDesde, fechaHasta });
-        return await preguntaConCancelar(numero, "¿Cuál es el motivo?");
+        return await preguntaConVolver(numero, "¿Cuál es el motivo?");
       }
       const id = await solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, "Licencia", motivo);
       guardarConversacion(numero, "menu");
@@ -953,8 +984,15 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
     }
 
     case "licencia:motivo": {
+      if (textoLower === "volver" || textoLower === "atras" || textoLower === "atrás") {
+        guardarConversacion(numero, "licencia:fecha-motivo", {});
+        return await preguntaConCancelar(numero,
+          "¿Qué día(s) pedís y por qué motivo? Mandá la fecha (o el rango) y el motivo, todo junto.\n" +
+          "Ej: 20/9 al 22/9, viaje familiar\n(o un solo día: 20/9, turno médico)"
+        );
+      }
       const motivo = texto.trim();
-      if (!motivo) return await preguntaConCancelar(numero, "Mandame el motivo de la licencia.");
+      if (!motivo) return await preguntaConVolver(numero, "Mandame el motivo de la licencia.");
       const { fechaDesde, fechaHasta } = conv.datos;
       const id = await solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, "Licencia", motivo);
       guardarConversacion(numero, "menu");
