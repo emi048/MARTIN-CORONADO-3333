@@ -6,19 +6,19 @@ const {
   empleadoPorNumero, numeroDeEmpleado, ultimoResumen,
   filaDelDia, filaDelDiaPorFecha, filasDelPeriodoDeEmpleado, actualizarFilaDiaria, borrarFilaDiaria, guardarFilasDiarias,
   filasDelPeriodo, resumenDelPeriodo, rangoFechasDelPeriodo, recalcularResumenEmpleado,
-  crearSolicitud, obtenerSolicitud, resolverSolicitud, solicitudesPendientes, solicitudesDeEmpleado,
+  crearSolicitud, obtenerSolicitud, resolverSolicitud, solicitudesPendientes,
   guardarSnapshotCorreccion, esUltimaCorreccionAprobada,
-  crearSolicitudCambio, obtenerSolicitudCambio, resolverSolicitudCambio, solicitudesCambioPendientes, guardarExcepcionTurno,
-  solicitudesCambioDeEmpleado, guardarSnapshotCambio, esUltimoCambioAprobado,
+  obtenerSolicitudCambio, resolverSolicitudCambio, solicitudesCambioPendientes, guardarExcepcionTurno,
+  guardarSnapshotCambio, esUltimoCambioAprobado,
   obtenerExcepcionTurno, eliminarExcepcionTurno,
   crearSolicitudCancelacion, obtenerSolicitudCancelacion, resolverSolicitudCancelacion,
   solicitudesCancelacionPendientes, existeCancelacionPendiente,
   agregarEvento, registrarMensaje,
   obtenerConversacion, guardarConversacion, limpiarConversacion,
-  obtenerFichadaHoy, registrarNumero,
+  registrarNumero,
   empleadoAppPorNombre,
   listarPostsMuralParaEmpleado,
-  crearSolicitudLicencia, TIPOS_LICENCIA, solicitudesLicenciaDeEmpleado,
+  crearSolicitudLicencia, TIPOS_LICENCIA,
 } = require("../services/db");
 const { enviarPushAEmpleado, enviarPushATodoElPanel } = require("../services/pushNotifications");
 const { calcularHoras, getSectorDeEmpleado, normalizarNombre, todosLosEmpleados, FERIADOS, TURNOS_FIJOS_CONSERJERIA, esDiaDeEvento } = require("../services/motorCalculo");
@@ -29,49 +29,41 @@ const { generarExcel } = require("../services/generarExcel");
 const { enviarFichero } = require("../services/mailer");
 const { enviarWhatsapp, enviarDocumentoWhatsapp, enviarWhatsappVentana, enviarWhatsappInteractivo } = require("../services/twilioClient");
 
-// Menu principal partido en dos tandas de 3 botones reales (quick-reply --
-// WhatsApp no permite mas de 3 por mensaje). P1: Consultar mis horas /
-// Corrección de fichaje / Más opciones. P2 (se manda al tocar "Más
-// opciones"): Fiché hoy? / Mis solicitudes / Cambiar turno.
-// Version piloto de 2 botones -- YA APROBADA y confirmada funcionando
-// (Consultar mis horas / Corrección de fichaje). La usamos como default
-// interino mientras se aprueba la version de 3 botones de abajo.
-const CONTENT_SID_MENU_PILOT_2BOTONES = "HXa990d376bf0e842ff5dbdc33ab671a36";
+// Menu principal como lista interactiva (twilio/list-picker, un solo
+// mensaje) y pasos intermedios como quick-reply (hasta 3 botones). Ninguno
+// de estos necesita aprobacion de Meta: siempre se mandan como respuesta
+// dentro de la sesion (el empleado ya escribio primero), y ese tipo de
+// envio no pasa por el circuito de aprobacion de plantillas -- eso solo
+// aplica a mensajes que el bot inicia en frio, fuera de la ventana de 24hs.
+const CONTENT_SID_MENU = "HXfd8f849dc8d2869dd15842a8af794148";
+const CONTENT_SID_CORRECCION_DIAS = "HXf48cfc129bf516e16293f6a5afb94657";
+const CONTENT_SID_CORRECCION_CAMPO = "HX87778e2361558df76057ad9cc1a321d5";
+const CONTENT_SID_LICENCIA_TIPO = "HX51a13f2501dd1773ef2d012ff9cab445";
 
-// Version de 3 botones (Consultar mis horas / Corrección de fichaje /
-// Mis solicitudes) + segunda tanda (Fiché hoy? / Cambiar turno) al tocar
-// "más opciones". Enviadas a aprobacion de Meta, todavia pendientes.
-const CONTENT_SID_MENU_QR_P1 = "HXd4b9687441c779b2d1ff1a2bd1adaa3e";
-const CONTENT_SID_MENU_QR_P2 = "HX7397ec37b71690b6879d1eadce224a39";
-
-// OJO: Twilio ACEPTA el envio (no tira excepcion) aunque la plantilla
-// todavia no este aprobada por Meta -- el rechazo llega recien despues,
-// de forma asincronica, como status "failed" del lado de Twilio (nunca
-// como error de este lado). Por eso no alcanza con un try/catch: se
-// necesita este flag manual, prendido a mano una vez confirmada la
-// aprobacion real (ver Content API -- ApprovalRequests) -- mientras esta
-// apagado, el menu principal usa el piloto de 2 botones (ya aprobado) en
-// vez de caer directo a texto.
-const MENU_BOTONES_APROBADO = true;
-
-async function enviarMenuPrincipal(numero) {
-  const contentSid = MENU_BOTONES_APROBADO ? CONTENT_SID_MENU_QR_P1 : CONTENT_SID_MENU_PILOT_2BOTONES;
+async function enviarInteractivo(numero, contentSid) {
   try {
     await enviarWhatsappInteractivo(numero, contentSid);
     return true;
   } catch (err) {
-    console.error("No se pudo mandar el menu con botones:", err.message);
+    console.error("No se pudo mandar el mensaje interactivo:", err.message);
     return false;
   }
 }
 
-async function enviarMasOpciones(numero) {
-  if (!MENU_BOTONES_APROBADO) return false;
+async function enviarMenuPrincipal(numero) {
+  return enviarInteractivo(numero, CONTENT_SID_MENU);
+}
+
+// Para reintentos: un mensaje de texto corto seguido del mismo interactivo
+// (secuencial, no junto -- el body de un Content Template no se puede
+// prependear con texto libre sin definirlo como variable).
+async function reenviarInteractivoConAviso(numero, contentSid, aviso) {
   try {
-    await enviarWhatsappInteractivo(numero, CONTENT_SID_MENU_QR_P2);
+    await enviarWhatsapp(numero, aviso);
+    await enviarWhatsappInteractivo(numero, contentSid);
     return true;
   } catch (err) {
-    console.error("No se pudo mandar la segunda tanda de botones:", err.message);
+    console.error("No se pudo mandar el aviso + interactivo:", err.message);
     return false;
   }
 }
@@ -80,30 +72,15 @@ const { transcribirAudio } = require("../services/transcripcion");
 
 const router = express.Router();
 
-// Sin opcion 5 -- la usan Olivia y los numeros no registrados, que nunca
-// tienen un "empleado" real para chequear si es de mantenimiento.
+// Fallback de texto plano -- solo se usa si falla el envio del menu
+// interactivo, y para Olivia y los numeros no registrados (nunca llegan a
+// datos reales, no hace falta mandarles botones de verdad).
 const MENU_TEXT =
-  "¡Hola! Soy el asistente de fichaje. ¿Qué necesitás?\n\n" +
+  "¡Hola! Soy Coro 👋 ¿Qué necesitás?\n\n" +
   "1️⃣ Consultar mis horas\n" +
-  "2️⃣ Solicitar corrección de fichaje\n" +
-  "3️⃣ ¿Fiché hoy?\n" +
-  "4️⃣ Mis solicitudes\n\n" +
+  "2️⃣ Corregir horarios\n" +
+  "3️⃣ Pedir licencia\n\n" +
   'Respondé con el número de la opción (o escribí "menu" en cualquier momento para volver acá).';
-
-// La opcion 5 (cambio de turno) solo la ve el equipo de mantenimiento --
-// son los unicos con una rotacion de turnos que tenga sentido intercambiar.
-function menuTextPara(empleado) {
-  if (!esDelEquipo(empleado)) return MENU_TEXT;
-  return (
-    "¡Hola! Soy el asistente de fichaje. ¿Qué necesitás?\n\n" +
-    "1️⃣ Consultar mis horas\n" +
-    "2️⃣ Solicitar corrección de fichaje\n" +
-    "3️⃣ ¿Fiché hoy?\n" +
-    "4️⃣ Mis solicitudes\n" +
-    "5️⃣ Cambiar turno con un compañero\n\n" +
-    'Respondé con el número de la opción (o escribí "menu" en cualquier momento para volver acá).'
-  );
-}
 
 // Mensaje para cualquier numero que no sea un empleado registrado (ni Oli):
 // se les muestra el menu para no delatar nada, pero al elegir una opcion se
@@ -280,38 +257,6 @@ function fechaISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Los cambios de turno de mantenimiento son siempre sabado/domingo (entre
-// semana no se cambia nada) -- se ofrece el sabado y domingo mas cercanos
-// (incluye hoy si hoy ya es sabado o domingo) como atajos "1"/"2" en vez de
-// obligar a tipear la fecha siempre.
-function proximoSabadoYDomingo() {
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const dow = hoy.getDay(); // 0=domingo..6=sabado
-  const diasHastaSabado = (6 - dow + 7) % 7;
-  const diasHastaDomingo = (7 - dow) % 7;
-  const sabado = new Date(hoy); sabado.setDate(sabado.getDate() + diasHastaSabado);
-  const domingo = new Date(hoy); domingo.setDate(domingo.getDate() + diasHastaDomingo);
-  return { sabado: fechaISO(sabado), domingo: fechaISO(domingo) };
-}
-
-function menuFechaFindeSemana() {
-  const { sabado, domingo } = proximoSabadoYDomingo();
-  return (
-    `1️⃣ Sábado ${formatoDiaMes(sabado)}\n2️⃣ Domingo ${formatoDiaMes(domingo)}\n\n` +
-    `O escribí otra fecha en formato DD/MM.`
-  );
-}
-
-// Acepta "1"/"2" como atajo al sabado/domingo mas cercano, o una fecha
-// DD/MM tipeada a mano (para el caso menos comun de un finde mas lejano).
-function parsearFechaCambioTurno(texto) {
-  const { sabado, domingo } = proximoSabadoYDomingo();
-  if (texto.trim() === "1") return sabado;
-  if (texto.trim() === "2") return domingo;
-  return parsearFecha(texto);
-}
-
 // "2026-06-21" -> "21/6" (sin año — el periodo de pago no coincide con el
 // mes calendario, asi que mostramos el rango real de dias que se estan
 // contando en vez de la etiqueta interna del periodo, ej "2026-07").
@@ -338,24 +283,6 @@ function etiquetaPeriodo(periodo) {
   const rango = rangoFechasDelPeriodo(periodo);
   if (!rango) return periodo;
   return `${formatoDiaMes(rango.desde)} al ${formatoDiaMes(rango.hasta)}`;
-}
-
-// Matchea por nombre completo o solo el nombre de pila (como lo va a
-// escribir la mayoria: "Diego" en vez de "Diego Lastra").
-function buscarCompañeroDeEquipo(texto, exceptoEmpleado) {
-  const equipo = [...GRUPO_A, ...GRUPO_B].filter((e) => e !== exceptoEmpleado);
-  const t = normalizarNombre(texto.trim());
-  return equipo.find((e) => normalizarNombre(e) === t || normalizarNombre(e.split(" ")[0]) === t) || null;
-}
-
-const ETIQUETA_TURNO = {
-  mañana: "Mañana 6-14hs", tarde: "Tarde 13-21hs",
-  sabado_corto: "Sáb 8-12hs", sabado_largo: "Sáb 9-17hs", domingo: "Dom 9-17hs",
-  franco: "Franco", descanso: "Descanso",
-};
-
-function etiquetaTurno(turno) {
-  return turno ? (ETIQUETA_TURNO[turno.tipo] || turno.tipo) : "-";
 }
 
 // Cada dia es un bloque de 1 o 2 lineas separado del resto por una linea en
@@ -507,58 +434,6 @@ function mensajeHoras(empleado) {
   );
 }
 
-// Se basa en fichadas_estado, que alimenta el poller de HikCentral
-// (lib/monitorFichadas.js) — sin esa conexion activa esto siempre va a
-// decir "todavia no fichaste", aunque hayas fichado de verdad.
-function mensajeFichadaHoy(empleado) {
-  const f = obtenerFichadaHoy(empleado, hoyISO());
-
-  if (!f || !f.ingreso_hora) {
-    return "Todavía no vemos que hayas fichado la entrada hoy.";
-  }
-  if (!f.egreso_hora) {
-    return `Hoy fichaste entrada a las ${f.ingreso_hora}. Todavía no vemos la salida.`;
-  }
-  return `Hoy fichaste entrada a las ${f.ingreso_hora} y salida a las ${f.egreso_hora}.`;
-}
-
-const ICONO_ESTADO = { pendiente: "🕓", aprobada: "✅", rechazada: "❌" };
-
-function mensajeMisSolicitudes(empleado) {
-  const correcciones = solicitudesDeEmpleado(empleado, 20).map((s) => ({ ...s, _tipo: "correccion" }));
-  const cambios = solicitudesCambioDeEmpleado(empleado, 20).map((s) => ({ ...s, _tipo: "cambio" }));
-  const licencias = solicitudesLicenciaDeEmpleado(empleado, 20).map((s) => ({ ...s, _tipo: "licencia" }));
-  const todas = [...correcciones, ...cambios, ...licencias];
-  if (todas.length === 0) return "Todavía no hiciste ninguna solicitud.";
-
-  todas.sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
-  const ultimas = todas.slice(0, 5);
-
-  const lineas = ultimas.map((s) => {
-    const icono = ICONO_ESTADO[s.estado] || "•";
-    if (s._tipo === "correccion") {
-      const fechaDisplay = s.fecha.split("-").reverse().join("/");
-      const detalle = [];
-      if (s.ingreso_propuesto) detalle.push(`Entrada: ${s.ingreso_propuesto}`);
-      if (s.egreso_propuesto) detalle.push(`Salida: ${s.egreso_propuesto}`);
-      return `${icono} Corrección #${s.id} — ${fechaDisplay} (${detalle.join(", ")}) — ${s.estado}`;
-    }
-    if (s._tipo === "cambio") {
-      return `${icono} Cambio #${s.id} — ${s.empleado_a} <-> ${s.empleado_b} (${formatoDiaMes(s.fecha_a)} / ${formatoDiaMes(s.fecha_b)}) — ${s.estado}`;
-    }
-    return `${icono} Licencia #${s.id} (${s.tipo}) — ${formatoDiaMes(s.fecha_desde)} al ${formatoDiaMes(s.fecha_hasta)} — ${s.estado}`;
-  });
-
-  const nota = todas.length > 5
-    ? `\n\n(mostrando las últimas 5 de ${todas.length})`
-    : "";
-
-  return (
-    `📋 Tus últimas solicitudes:\n\n${lineas.join("\n")}${nota}\n\n` +
-    `Para deshacer una ya aprobada: "cancelar correccion N" o "cancelar cambio N".`
-  );
-}
-
 // Crea (si corresponde) un pedido de cancelacion sobre una correccion o un
 // cambio de turno YA APROBADO. No aplica nada todavia -- igual que una
 // correccion o un cambio nuevo, esto queda pendiente de que el admin lo
@@ -672,34 +547,13 @@ async function solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHa
   return id;
 }
 
-async function crearSolicitudCambioYNotificar(empleadoA, numeroA, empleadoB, fechaA, fechaB) {
-  const id = crearSolicitudCambio({ empleadoA, numeroWhatsappA: numeroA, empleadoB, fechaA, fechaB });
-
-  const [yA, mA, dA] = fechaA.split("-").map(Number);
-  const [yB, mB, dB] = fechaB.split("-").map(Number);
-  const turnoA = turnoRealDelDia(empleadoA, new Date(yA, mA - 1, dA));
-  const turnoB = turnoRealDelDia(empleadoB, new Date(yB, mB - 1, dB));
-
-  if (process.env.ADMIN_WHATSAPP_NUMBER) {
-    await enviarWhatsapp(
-      process.env.ADMIN_WHATSAPP_NUMBER,
-      `📋 Nuevo pedido de cambio de turno\n` +
-        `${empleadoA} cede su turno del ${formatoDiaMes(fechaA)} (${etiquetaTurno(turnoA)}) ` +
-        `y toma el de ${empleadoB} del ${formatoDiaMes(fechaB)} (${etiquetaTurno(turnoB)}).\n\n` +
-        `Respondé "aprobar cambio ${id}" o "rechazar cambio ${id}".`
-    );
-  }
-
-  return id;
-}
-
 async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
   let texto;
   try {
     texto = await transcribirAudio(mediaUrl);
   } catch (err) {
     console.error("No se pudo transcribir audio de WhatsApp:", err.message);
-    return "No pude escuchar bien el audio. Probá de nuevo o escribí tu pedido en texto.\n\n" + menuTextPara(empleado);
+    return "No pude escuchar bien el audio. Probá de nuevo o escribí tu pedido en texto.\n\n" + MENU_TEXT;
   }
   if (!texto) {
     return "No entendí nada en el audio. Probá de nuevo, más cerca del micrófono, o escribí tu pedido en texto.";
@@ -737,9 +591,8 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
       : mensajeTurnosMantenimiento(resultado.fecha_desde, resultado.fecha_hasta);
   }
   if (resultado.intent === "consulta_solicitudes") {
-    registrarMensaje(numero, empleado, "mis_solicitudes");
     guardarConversacion(numero, "menu");
-    return mensajeMisSolicitudes(empleado);
+    return "Esa opción no está disponible por ahora. Escribí \"menu\" para ver las opciones actuales.";
   }
   if (resultado.intent === "consulta_mural") {
     registrarMensaje(numero, empleado, "mural");
@@ -758,19 +611,12 @@ async function procesarAudioEmpleado(empleado, numero, mediaUrl) {
     guardarConversacion(numero, "menu");
     return resultado.pregunta || "Me faltó algún dato de la licencia -- ¿podés escribirlo?";
   }
-  if (resultado.intent === "solicitud_cambio_turno" && resultado.completo) {
-    await crearSolicitudCambioYNotificar(
-      empleado, numero, resultado.cambio_companero, resultado.cambio_fecha_propia, resultado.cambio_fecha_companero
-    );
-    guardarConversacion(numero, "menu");
-    return "¡Entendido! Pedido de cambio de turno con " + resultado.cambio_companero.split(" ")[0] + " pendiente de aprobación. Te aviso apenas el administrador lo revise.";
-  }
   if (resultado.intent === "solicitud_cambio_turno") {
     guardarConversacion(numero, "menu");
-    return resultado.pregunta || "Me faltó algún dato del cambio de turno -- ¿podés escribirlo?";
+    return "Esa opción no está disponible por ahora. Escribí \"menu\" para ver las opciones actuales.";
   }
   guardarConversacion(numero, "menu");
-  return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + menuTextPara(empleado);
+  return (resultado.respuesta || "No entendí bien el audio.") + "\n\n" + MENU_TEXT;
 }
 
 async function procesarAudioEmpleadoAsync(empleado, numero, mediaUrl) {
@@ -797,13 +643,13 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
 
   if (["menu", "menú", "cancelar", "salir", "0", "hola", "buenas"].includes(textoLower)) {
     guardarConversacion(numero, "menu");
-    return (await enviarMenuPrincipal(numero)) ? null : menuTextPara(empleado);
+    return (await enviarMenuPrincipal(numero)) ? null : MENU_TEXT;
   }
 
   const conv = obtenerConversacion(numero);
   if (!conv) {
     guardarConversacion(numero, "menu");
-    return (await enviarMenuPrincipal(numero)) ? null : menuTextPara(empleado);
+    return (await enviarMenuPrincipal(numero)) ? null : MENU_TEXT;
   }
 
   switch (conv.estado) {
@@ -813,109 +659,54 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
         guardarConversacion(numero, "menu");
         return mensajeHoras(empleado);
       }
-      if (texto === "2" || textoLower === "corrección de fichaje" || textoLower === "correccion de fichaje") {
+      if (texto === "2" || textoLower === "corregir horarios" || textoLower === "corrección de fichaje" || textoLower === "correccion de fichaje") {
         registrarMensaje(numero, empleado, "correccion");
         guardarConversacion(numero, "correccion:tipo-fecha", {});
-        return (
-          "¿Cuántos días vas a corregir?\n\n" +
-          "1️⃣ Un solo día\n" +
-          "2️⃣ Varios días seguidos\n" +
-          "3️⃣ Detectar automático (días sin fichar)\n" +
-          "0️⃣ Salir"
-        );
+        return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_DIAS))
+          ? null
+          : "¿Cuántos días vas a corregir?\n\n1️⃣ Un solo día\n2️⃣ Varios días seguidos\n3️⃣ Detectar automático (días sin fichar)";
       }
-      if (textoLower === "más opciones" || textoLower === "mas opciones") {
-        return (await enviarMasOpciones(numero)) ? null : menuTextPara(empleado);
-      }
-      if (texto === "3" || textoLower === "fiché hoy?" || textoLower === "fiche hoy?") {
-        registrarMensaje(numero, empleado, "fichada_hoy");
-        guardarConversacion(numero, "menu");
-        return mensajeFichadaHoy(empleado);
-      }
-      if (texto === "4" || textoLower === "mis solicitudes") {
-        registrarMensaje(numero, empleado, "mis_solicitudes");
-        guardarConversacion(numero, "menu");
-        return mensajeMisSolicitudes(empleado);
-      }
-      if ((texto === "5" || textoLower === "cambiar turno") && esDelEquipo(empleado)) {
-        registrarMensaje(numero, empleado, "cambio_turno");
-        guardarConversacion(numero, "cambio:fecha-propia", {});
-        return (
-          `¿Qué día querés cambiar?\n\n${menuFechaFindeSemana()}` +
-          '\n\n(Escribí "salir" para cancelar)'
-        );
-      }
-      if (textoLower === "cambiar turno") {
-        guardarConversacion(numero, "menu");
-        return "Esa opción no aplica para vos -- no sos parte del equipo rotativo de mantenimiento.";
+      if (texto === "3" || textoLower === "pedir licencia") {
+        registrarMensaje(numero, empleado, "licencia");
+        guardarConversacion(numero, "licencia:tipo", {});
+        return (await enviarInteractivo(numero, CONTENT_SID_LICENCIA_TIPO))
+          ? null
+          : `¿Qué tipo de licencia pedís?\n\n${TIPOS_LICENCIA.join(" / ")}`;
       }
       // Deshacer algo ya aprobado (corrección o cambio de turno) -- no es
-      // una opción numerada del menú, es un comando de texto libre que se
-      // reconoce desde "menu" igual que hace el admin con "aprobar N".
+      // una opción del menú, es un comando de texto libre que se reconoce
+      // desde "menu" igual que hace el admin con "aprobar N". El cambio de
+      // turno ya no se puede pedir nuevo desde el bot, pero un cambio viejo
+      // ya aprobado todavía se puede deshacer así.
       const matchCancelar = texto.match(/^cancelar\s+(correcci[oó]n|cambio)\s+(\d+)$/i);
       if (matchCancelar) {
         registrarMensaje(numero, empleado, "cancelacion");
         const tipo = /^correcci/i.test(matchCancelar[1]) ? "correccion" : "cambio";
         return await manejarPedidoCancelacion(empleado, numero, tipo, Number(matchCancelar[2]));
       }
-      // No matcheo ninguna opcion valida -- siempre el mismo mensaje corto
-      // con el menu completo, sin intentar adivinar si es una consulta real.
+      // No matcheo ninguna opcion valida -- reenvía el menú con botones en
+      // vez de tirar un bloque de texto numerado.
       registrarMensaje(numero, empleado, "otro");
-      guardarConversacion(numero, "menu");
-      return "No es una opción correcta, elegí cualquiera de estas opciones:\n\n" + menuTextPara(empleado);
-    }
-
-    case "cambio:fecha-propia": {
-      const fecha = parsearFechaCambioTurno(texto);
-      if (!fecha) return `Ese formato no lo pude leer.\n\n${menuFechaFindeSemana()}\n\n(o "salir" para cancelar)`;
-      const [y, m, d] = fecha.split("-").map(Number);
-      const turnoPropio = turnoRealDelDia(empleado, new Date(y, m - 1, d));
-      if (!turnoPropio || turnoPropio.tipo === "franco" || turnoPropio.tipo === "descanso") {
-        return `Ese día (${formatoDiaMes(fecha)}) ya lo tenés libre, no hay turno para cambiar. Probá con otra fecha, o "salir" para cancelar.`;
-      }
-      guardarConversacion(numero, "cambio:companero", { fechaA: fecha });
-      const opciones = [...GRUPO_A, ...GRUPO_B].filter((e) => e !== empleado).map((e) => e.split(" ")[0]).join(", ");
-      return `¿Con quién lo cambiás? Mandá el nombre (${opciones}).` + '\n\n(Escribí "salir" para cancelar)';
-    }
-
-    case "cambio:companero": {
-      const companero = buscarCompañeroDeEquipo(texto, empleado);
-      if (!companero) {
-        const opciones = [...GRUPO_A, ...GRUPO_B].filter((e) => e !== empleado).map((e) => e.split(" ")[0]).join(", ");
-        return `No encontré a esa persona en el equipo de mantenimiento. Opciones: ${opciones}.` + '\n\n(Escribí "salir" para cancelar)';
-      }
-      guardarConversacion(numero, "cambio:fecha-companero", { ...conv.datos, companero });
-      return (
-        `¿Qué día de ${companero.split(" ")[0]} tomás vos a cambio?\n\n${menuFechaFindeSemana()}` +
-        '\n\n(Escribí "salir" para cancelar)'
-      );
-    }
-
-    case "cambio:fecha-companero": {
-      const fechaB = parsearFechaCambioTurno(texto);
-      if (!fechaB) return `Ese formato no lo pude leer.\n\n${menuFechaFindeSemana()}\n\n(o "salir" para cancelar)`;
-      const { fechaA, companero } = conv.datos;
-      const [y, m, d] = fechaB.split("-").map(Number);
-      const turnoCompanero = turnoRealDelDia(companero, new Date(y, m - 1, d));
-      if (!turnoCompanero || turnoCompanero.tipo === "franco" || turnoCompanero.tipo === "descanso") {
-        return `${companero.split(" ")[0]} ya tiene libre ese día (${formatoDiaMes(fechaB)}), no hay turno para tomar. Probá con otra fecha, o "salir" para cancelar.`;
-      }
-      const id = await crearSolicitudCambioYNotificar(empleado, numero, companero, fechaA, fechaB);
-      guardarConversacion(numero, "menu");
-      return `📋 Pedido de cambio enviado (#${id}). Te aviso apenas el administrador lo revise.`;
+      return (await enviarMenuPrincipal(numero)) ? null : MENU_TEXT;
     }
 
     case "correccion:tipo-fecha": {
-      if (!["1", "2", "3"].includes(texto)) {
-        return "Elegí una opción válida: 1 (Un día), 2 (Varios seguidos), 3 (Detectar automático) o 0 (Salir).";
+      const esUnDia = texto === "1" || textoLower === "un día" || textoLower === "un dia";
+      const esVariosDias = texto === "2" || textoLower === "varios días" || textoLower === "varios dias";
+      const esAutomatico = texto === "3" || textoLower === "automático" || textoLower === "automatico";
+      if (!esUnDia && !esVariosDias && !esAutomatico) {
+        return (await reenviarInteractivoConAviso(numero, CONTENT_SID_CORRECCION_DIAS, "No entendí esa opción 🤔"))
+          ? null
+          : "Elegí una opción válida: 1 (Un día), 2 (Varios seguidos) o 3 (Detectar automático).";
       }
       const pieSalir = '\n\n(Escribí "salir" para cancelar)';
 
-      if (texto === "3") {
+      if (esAutomatico) {
         const detectados = diasIncompletosDetectados(empleado);
         if (detectados.length === 0) {
           guardarConversacion(numero, "menu");
-          return "No encontré ningún día con datos incompletos en tu período actual. 🎉\n\n" + menuTextPara(empleado);
+          const aviso = "No encontré ningún día con datos incompletos en tu período actual. 🎉";
+          return (await reenviarInteractivoConAviso(numero, CONTENT_SID_MENU, aviso)) ? null : aviso + "\n\n" + MENU_TEXT;
         }
         guardarConversacion(numero, "correccion:auto-listado", { detectados });
         const listado = detectados
@@ -932,7 +723,7 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       }
 
       guardarConversacion(numero, "correccion:fecha", {});
-      if (texto === "1") return "Mandá la fecha en formato DD/MM (el año se asume el actual).\nEj: 15/7" + pieSalir;
+      if (esUnDia) return "Mandá la fecha en formato DD/MM (el año se asume el actual).\nEj: 15/7" + pieSalir;
       return "Mandá el rango así: DD/MM al DD/MM.\nEj: 10/7 al 14/7" + pieSalir;
     }
 
@@ -942,13 +733,19 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
         return "Ese formato no lo pude leer. Fijate el ejemplo de arriba y probá de nuevo (o escribí \"salir\" para cancelar).";
       }
       guardarConversacion(numero, "correccion:campo", { fechas });
-      const plural = fechas.length > 1 ? "esos días" : "ese día";
-      return `¿Qué querés corregir de ${plural}?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas\n0️⃣ Salir`;
+      return (await enviarInteractivo(numero, CONTENT_SID_CORRECCION_CAMPO))
+        ? null
+        : "¿Qué querés corregir?\n\n1️⃣ Entrada\n2️⃣ Salida\n3️⃣ Ambas";
     }
 
     case "correccion:campo": {
-      if (!["1", "2", "3"].includes(texto)) {
-        return "Elegí una opción válida: 1 (Entrada), 2 (Salida), 3 (Ambas) o 0 (Salir).";
+      const esEntrada = texto === "1" || textoLower === "entrada";
+      const esSalida = texto === "2" || textoLower === "salida";
+      const esAmbas = texto === "3" || textoLower === "ambas";
+      if (!esEntrada && !esSalida && !esAmbas) {
+        return (await reenviarInteractivoConAviso(numero, CONTENT_SID_CORRECCION_CAMPO, "No entendí esa opción 🤔"))
+          ? null
+          : "Elegí una opción válida: 1 (Entrada), 2 (Salida) o 3 (Ambas).";
       }
       const datos = conv.datos;
       const plural = datos.fechas.length > 1 ? "esos días" : "ese día";
@@ -956,7 +753,7 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       const pieSalir = '\n\n(Escribí "salir" para cancelar)';
       const multiDia = datos.fechas.length > 1;
 
-      if (texto === "3") {
+      if (esAmbas) {
         guardarConversacion(numero, "correccion:horas-ambas", datos);
         const ejemploMulti = multiDia
           ? `\n\nSi cada día tuvo un horario distinto, mandá un renglón por día (en el mismo orden que las fechas), ej:\n08:00 17:00\n09:00 19:00`
@@ -964,7 +761,7 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
         return `Mandá las dos horas juntas, separadas por un espacio: entrada y salida.\nEj: 08:00 17:00 (mismo horario para ${plural})` + ejemploMulti + pieSalir;
       }
 
-      const campo = texto === "1" ? "ingreso" : "egreso";
+      const campo = esEntrada ? "ingreso" : "egreso";
       guardarConversacion(numero, "correccion:hora", { ...datos, campo });
       const verbo = campo === "ingreso" ? "ingresaste" : "saliste";
       const ejemploMulti = multiDia
@@ -1072,9 +869,43 @@ async function procesarMensajeEmpleado(empleado, numero, textoOriginal) {
       return resultado + avisoNoReconocidas;
     }
 
+    case "licencia:tipo": {
+      const tipo = TIPOS_LICENCIA.find((t) => t.toLowerCase() === textoLower);
+      if (!tipo) {
+        return (await reenviarInteractivoConAviso(numero, CONTENT_SID_LICENCIA_TIPO, "No entendí esa opción 🤔"))
+          ? null
+          : `Elegí un tipo válido: ${TIPOS_LICENCIA.join(" / ")}.`;
+      }
+      guardarConversacion(numero, "licencia:fecha-desde", { tipo });
+      return `¿Desde qué día? Formato DD/MM (el año se asume el actual).\nEj: 15/7` + '\n\n(Escribí "salir" para cancelar)';
+    }
+
+    case "licencia:fecha-desde": {
+      const fechaDesde = parsearFecha(texto);
+      if (!fechaDesde) {
+        return "Ese formato no lo pude leer. Mandá la fecha como DD/MM (ej: 15/7), o escribí \"salir\" para cancelar.";
+      }
+      guardarConversacion(numero, "licencia:fecha-hasta", { ...conv.datos, fechaDesde });
+      return `¿Hasta qué día?\nEj: 20/7` + '\n\n(Escribí "salir" para cancelar)';
+    }
+
+    case "licencia:fecha-hasta": {
+      const fechaHasta = parsearFecha(texto);
+      if (!fechaHasta) {
+        return "Ese formato no lo pude leer. Mandá la fecha como DD/MM (ej: 20/7), o escribí \"salir\" para cancelar.";
+      }
+      const { tipo, fechaDesde } = conv.datos;
+      if (fechaHasta < fechaDesde) {
+        return `Esa fecha es anterior al ${formatoDiaMes(fechaDesde)}. Mandá una fecha de fin válida, o escribí "salir" para cancelar.`;
+      }
+      const id = await solicitarLicenciaYNotificar(empleado, numero, fechaDesde, fechaHasta, tipo, textoOriginal);
+      guardarConversacion(numero, "menu");
+      return `📋 Pedido de licencia (${tipo}) enviado (#${id}), del ${formatoDiaMes(fechaDesde)} al ${formatoDiaMes(fechaHasta)}. Te aviso apenas el administrador lo revise.`;
+    }
+
     default: {
       guardarConversacion(numero, "menu");
-      return menuTextPara(empleado);
+      return MENU_TEXT;
     }
   }
 
